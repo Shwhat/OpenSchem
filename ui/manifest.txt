@@ -1,0 +1,28 @@
+# Script load order. The exe and the tests both inline these into index.html in this order.
+# files.js must stay last: it starts the application.
+vendor/jspdf.umd.min.js
+vendor/svg2pdf.umd.min.js
+js/core.js
+js/residential.js
+js/migrate.js
+js/render.js
+js/reports.js
+js/floor.js
+js/demo-home.js
+js/ribbon.js
+js/symbol-editor.js
+js/theme.js
+js/macros.js
+js/cables.js
+js/revisions.js
+js/pdf.js
+js/todo.js
+js/host.js
+js/state.js
+js/canvas.js
+js/editing.js
+js/panels.js
+js/menus.js
+js/dialogs.js
+js/demo-industrial.js
+js/files.js

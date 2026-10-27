@@ -43,13 +43,43 @@ OpenSchem stores settings, the user symbol and macro library, and autosave data 
 - Windows 10 (21H2 or later) or Windows 11
 - Microsoft Edge WebView2 Runtime (included with current Windows versions)
 
-## Building
+## Project layout
 
-The application is a Go host (`main_windows.go`) that embeds the web interface in `ui/`.
+```
+main_windows.go      Windows host: window, file dialogs, data folder, close prompt
+win32_windows.go     Windows API helpers
+ui/index.html        Page skeleton
+ui/style.css         All styles, including dark theme
+ui/manifest.txt      Script load order (used by the exe, the tests and tools/assemble.py)
+ui/js/               Application code, one file per area
+ui/vendor/           Third-party libraries (PDF export)
+tests/               Automated tests
+tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser
+```
+
+## Building
 
 ```
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H windowsgui -s -w" -o OpenSchem.exe .
 ```
+
+The interface can also be run in any browser for development: `python3 tools/assemble.py` writes `build/openschem.html`.
+
+## Testing
+
+The tests open the interface in headless Chromium and exercise it end to end (placing and wiring devices, reports, floor plans, the symbol editor, macros, PDF export, file format upgrades).
+
+```
+npm install
+npx playwright install chromium
+npm test
+```
+
+Run a single area with `npm test -- floor` (matches test file names).
+
+## Project file format
+
+Projects are JSON. Each file records its format version (`ver`) and the app version that saved it. Older files are upgraded automatically when opened; files from a newer version open only after a warning. Format changes are added as steps in `ui/js/migrate.js`.
 
 ## Third-party components
 

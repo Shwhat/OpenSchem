@@ -1,6 +1,7 @@
 OpenSchem.exe
 *.exe
-test.html
+build/
+node_modules/
 OpenSchem Data/
 *.osp.bak
 *.tmp

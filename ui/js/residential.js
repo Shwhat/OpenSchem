@@ -75,8 +75,6 @@ Object.assign(SYM, {
             texts: () => [[0, 0.8, 'APPL', 2.2, true]] }, RES),
 });
 SYMORDER.push('rpnl', 'rbrk1', 'rbrk2', 'rbrkgf', 'rbrkaf', 'rnbar', 'rgbar', 'rswt', 'rsw3', 'rsw4', 'rdim', 'rout', 'routgf', 'routsw', 'rout240', 'rlgt', 'rfan', 'rsmk', 'rjbx', 'rapp');
-const RES_QUICK = ['rbrk1', 'rbrkgf', 'rswt', 'rsw3', 'rdim', 'rout', 'routgf', 'rlgt', 'rfan', 'rsmk', 'rjbx', 'rnbar', 'rgbar'];
-const FP_QUICK = ['rout', 'routgf', 'routsw', 'rout240', 'rlgt', 'rfan', 'rswt', 'rsw3', 'rsw4', 'rdim', 'rsmk', 'rjbx', 'rapp', 'rpnl'];
 const BRK_LOAD = { rbrk1: [1], rbrkgf: [1, 3], rbrkaf: [1, 3], rbrk2: [1, 3] };
 
 // ---------- project settings ----------

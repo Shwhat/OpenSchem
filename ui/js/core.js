@@ -156,7 +156,7 @@ const lastMain = {};
 let clip = null;
 
 function newProject() {
-  return { app: 'OpenSchem', ver: 1, name: 'New project', company: '', author: '', created: today(),
+  return { app: 'OpenSchem', ver: FORMAT_VERSION, name: 'New project', company: '', author: '', created: today(),
            wireScheme: 'seq', wireStart: 1, potNames: true,
            pages: [newPage('', '', '1', 'Cover / main power')] };
 }

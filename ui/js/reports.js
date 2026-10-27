@@ -194,3 +194,95 @@ async function exportTerminals() {
   const p = await host.saveText(csv, (P.name || 'project').replace(/[\\/:*?"<>|]/g, '_') + ' terminals.csv');
   if (p) flash('Exported ' + p);
 }
+
+// ---------- extra reports: connection list, cables, cover, contents, revisions ----------
+const CONN_COLS = () => S().reportCols === 'plain'
+  ? [{ h: 'Wire', w: 26, a: 'middle' }, { h: 'From', w: 112 }, { h: 'To', w: 112 }, { h: 'Color', w: 26, a: 'middle' }, { h: 'Size', w: 30, a: 'middle' }, { h: 'Cable', w: 34 }, { h: 'Page', w: 60 }]
+  : [{ h: 'Wire no.', w: 26, a: 'middle' }, { h: 'Source', w: 112 }, { h: 'Target', w: 112 }, { h: 'Color', w: 26, a: 'middle' }, { h: 'Cross-section', w: 30, a: 'middle' }, { h: 'Cable', w: 34 }, { h: 'Page / column', w: 60 }];
+function connectionRows() {
+  const rows = [];
+  const cabOf = new Map();
+  for (const pg of P.pages) for (const c of pg.cables || []) for (const cr of cableCrossings(pg, c)) cabOf.set(cr.w.id, c.tag);
+  for (const pg of P.pages) {
+    if (isFloor(pg)) continue;
+    for (const w of pg.wires) {
+      const [f, t] = wireEnds(pg, w);
+      if (!f && !t) continue;
+      rows.push({ cells: [WN.get(w.id) || '', f, t, w.color || '', w.awg ? w.awg + ' AWG' : (w.cs || ''), cabOf.get(w.id) || '', pageName(pg) + '.' + colOf(w.pts[0][0])], goto: w.id, link: pg.id });
+    }
+  }
+  return rows;
+}
+const CAB_COLS = () => [{ h: home() ? 'Cable' : 'Cable (-W)', w: 40 }, { h: 'Type', w: 50 }, { h: 'Length', w: 26, a: 'middle' }, { h: 'Cond.', w: 18, a: 'middle' }, { h: 'From', w: 112 }, { h: 'To', w: 112 }, { h: 'Page', w: 42 }];
+const CABD_COLS = () => [{ h: 'Cable / conductor', w: 60 }, { h: 'Color', w: 26, a: 'middle' }, { h: 'Wire', w: 26, a: 'middle' }, { h: 'From', w: 130 }, { h: 'To', w: 130 }, { h: 'Page', w: 28 }];
+function cableData() {
+  const out = [];
+  for (const pg of P.pages) for (const c of pg.cables || []) {
+    const cr = cableCrossings(pg, c);
+    const conds = cr.map(x => { const e = wireEnds(pg, x.w); const flip = (c.y1 === c.y2) ? x.w.pts[0][1] > x.w.pts[x.w.pts.length - 1][1] : x.w.pts[0][0] > x.w.pts[x.w.pts.length - 1][0]; return { color: condColor(c, x), wire: WN.get(x.w.id) || '', from: flip ? e[1] : e[0], to: flip ? e[0] : e[1] }; });
+    const dev = s => [...new Set(s.split(', ').map(t => t.split(':')[0]).filter(Boolean))].join(', ');
+    out.push({ c, pg, conds, from: dev(conds.map(x => x.from).join(', ')), to: dev(conds.map(x => x.to).join(', ')) });
+  }
+  return out.sort((a, b) => natCmp(a.c.tag, b.c.tag));
+}
+const TOC_COLS = () => [{ h: 'Page', w: 56 }, { h: 'Description', w: 170 }, { h: home() ? 'Circuit' : 'Function (=)', w: 56 }, { h: home() ? 'Room' : 'Location (+)', w: 56 }, { h: 'Rev', w: 22, a: 'middle' }, { h: 'Type', w: 40 }];
+const REV_COLS = () => [{ h: 'Rev', w: 20, a: 'middle' }, { h: 'Date', w: 34 }, { h: 'Description', w: 170 }, { h: 'By', w: 46 }, { h: 'Pages changed', w: 130 }];
+function lastRev(pg) { return (pg.revs || []).slice(-1)[0] || ''; }
+function mkReport(list, base, rows, cols, extra) {
+  const sh = paginate(cols, rows);
+  sh.forEach((rws, i) => list.push(Object.assign({ id: `${base.id}:${i + 1}`, fn: '', loc: '', num: `${base.num}.${i + 1}`, cols, rows: rws, sheet: i + 1, sheets: sh.length, items: [], wires: [] }, base, { id: `${base.id}:${i + 1}`, num: `${base.num}.${i + 1}` }, extra || {})));
+}
+function buildExtraReports(reps) {
+  // connection list
+  const cr = connectionRows();
+  if (cr.length) mkReport(reps, { id: 'rep:conn', report: 'conn', num: 'CON', desc: 'Connection list', title: 'Connection list' }, cr, CONN_COLS());
+  // cables
+  const cd = cableData();
+  if (cd.length) {
+    mkReport(reps, { id: 'rep:cab', report: 'cables', num: 'CAB', desc: 'Cable overview', title: 'Cable overview' },
+      cd.map(x => ({ cells: [home() ? 'Cable ' + x.c.tag.replace(/^W/, '') : fl(x.c.fn, x.c.loc) + '-' + x.c.tag, x.c.ctype || '', x.c.len || '', String(x.conds.length), x.from, x.to, pageName(x.pg)], goto: x.c.id, link: x.pg.id })), CAB_COLS());
+    const rows = [];
+    for (const x of cd) {
+      rows.push({ cells: [(home() ? 'Cable ' + x.c.tag.replace(/^W/, '') : '-' + x.c.tag) + (x.c.ctype ? '  ' + x.c.ctype : ''), '', '', '', '', pageName(x.pg)], goto: x.c.id, link: x.pg.id, cls: 'grp' });
+      x.conds.forEach((k, i) => rows.push({ cells: [`  ${i + 1}`, k.color, k.wire, k.from, k.to, ''], goto: x.c.id, link: x.pg.id }));
+    }
+    mkReport(reps, { id: 'rep:cabd', report: 'cabdiag', num: 'CABD', desc: 'Cable diagrams', title: 'Cable diagrams' }, rows, CABD_COLS());
+  }
+  // revisions
+  if ((P.revs || []).length) {
+    const all = P.pages;
+    mkReport(reps, { id: 'rep:rev', report: 'rev', num: 'REV', desc: 'Revision overview', title: 'Revision overview' },
+      P.revs.map(r => ({ cells: [r.rev + (r.closed ? '' : ' (open)'), r.date || '', r.desc || '', r.by || '', all.filter(p => (p.revs || []).includes(r.rev)).map(pageName).join(', ')] })), REV_COLS());
+  }
+}
+function buildFrontPages(reps) {
+  const front = [];
+  if (P.cover !== false) front.push({ id: 'rep:cover:1', report: 'cover', front: true, fn: '', loc: '', num: 'COVER.1', desc: 'Cover sheet', title: 'Cover sheet', cols: [], rows: [], sheet: 1, sheets: 1, items: [], wires: [] });
+  if (P.toc !== false) {
+    const later = P.pages.concat(reps);
+    const rowFor = p => ({ cells: [pageName(p), p.desc || '', p.report || isFloor(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? 'Report' : isFloor(p) ? 'Floor plan' : 'Schematic'], goto: 'page:' + p.id, link: p.id });
+    let n = 1, sheets;
+    for (let pass = 0; pass < 4; pass++) {
+      const tocRows = []; for (let i = 0; i < n; i++) tocRows.push({ cells: [`Contents ${i + 1}`, 'Table of contents', '', '', '', 'Report'] });
+      const coverRow = P.cover !== false ? [{ cells: ['Cover sheet', P.name || '', '', '', '', 'Report'], goto: 'page:rep:cover:1', link: 'rep:cover:1' }] : [];
+      sheets = paginate(TOC_COLS(), coverRow.concat(tocRows, later.map(rowFor)));
+      if (sheets.length === n) break; n = sheets.length;
+    }
+    sheets.forEach((rws, i) => front.push({ id: `rep:toc:${i + 1}`, report: 'toc', front: true, fn: '', loc: '', num: `TOC.${i + 1}`, desc: 'Table of contents', title: 'Table of contents', cols: TOC_COLS(), rows: rws, sheet: i + 1, sheets: sheets.length, items: [], wires: [] }));
+  }
+  return front;
+}
+function coverSVG(pg) {
+  const all = allPages();
+  let s = frameSVG(pg, all.indexOf(pg), all.length);
+  const cx = (SH.x0 + SH.x1) / 2;
+  s += `<text class="t" x="${cx}" y="70" font-size="12" font-weight="bold" text-anchor="middle">${esc(P.name || '')}</text>`;
+  if (P.desc) String(P.desc).split('\n').forEach((l, i) => { s += `<text class="t" x="${cx}" y="${88 + i * 7}" font-size="5" text-anchor="middle">${esc(l)}</text>`; });
+  const rows = [['Company', P.company], ['Drawn by', P.author], ['Created', P.created], ['Last modified', P.modified || P.created], ['Pages', String(all.length)], ['Current revision', ((P.revs || []).slice(-1)[0] || {}).rev || '-']];
+  rows.forEach(([k, v], i) => {
+    const y = 140 + i * 11;
+    s += `<text class="t tc" x="${cx - 6}" y="${y}" font-size="4" text-anchor="end">${esc(k)}</text><text class="t" x="${cx + 6}" y="${y}" font-size="4.4" font-weight="bold">${esc(v || '')}</text>`;
+  });
+  s += `<line class="frame2" x1="${cx - 90}" y1="${126}" x2="${cx + 90}" y2="${126}"/>`;
+  return s;
+}

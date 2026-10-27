@@ -52,7 +52,7 @@ function usedUserDefs() {
   for (const k of used) { const d = LIB.symbols.find(s => s.key === k) || (P.userSyms || {})[k]; if (d) out[k] = d; }
   return out;
 }
-function projectJSON() { P.userSyms = usedUserDefs(); return JSON.stringify(P, null, 1); }
+function projectJSON() { P.userSyms = usedUserDefs(); stampVersion(P); return JSON.stringify(P, null, 1); }
 function registerProjectSyms(p) {
   for (const [k, d] of Object.entries(p.userSyms || {})) if (!SYM[k]) registerUserSym(d);
 }
