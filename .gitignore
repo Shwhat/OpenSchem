@@ -1,0 +1,6 @@
+OpenSchem.exe
+*.exe
+test.html
+OpenSchem Data/
+*.osp.bak
+*.tmp

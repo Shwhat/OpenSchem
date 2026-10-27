@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OpenSchem</title>
+<style>/*CSS*/</style>
+</head>
+<body>
+<div id="app">
+  <div id="menubar">
+    <div class="menu" data-menu="file">File</div>
+    <div class="menu" data-menu="edit">Edit</div>
+    <div class="menu" data-menu="page">Page</div>
+    <div class="menu" data-menu="project">Project</div>
+    <div class="menu" data-menu="view">View</div>
+    <div class="menu" data-menu="help">Help</div>
+    <div id="docname"></div>
+  </div>
+  <div id="toolbar"></div>
+  <div id="main">
+    <aside id="left">
+      <div class="tabs">
+        <button class="tab active" data-tab="pages">Pages</button>
+        <button class="tab" data-tab="devices">Devices</button>
+        <button class="tab" data-tab="symbols">Symbols</button>
+        <button class="tab" data-tab="todo">To-do</button>
+      </div>
+      <div class="tabbody" id="tab-pages"></div>
+      <div class="tabbody hidden" id="tab-devices"></div>
+      <div class="tabbody hidden" id="tab-symbols"></div>
+      <div class="tabbody hidden" id="tab-todo"></div>
+    </aside>
+    <section id="center">
+      <div id="pagetabs"></div>
+      <div id="canvaswrap">
+        <svg id="canvas" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet">
+          <g id="content"></g>
+          <g id="overlay"></g>
+        </svg>
+      </div>
+    </section>
+    <aside id="right">
+      <div class="panelhead">Properties</div>
+      <div id="props"></div>
+    </aside>
+  </div>
+  <div id="status">
+    <span id="st-mode"></span>
+    <span id="st-pos"></span>
+    <span id="st-zoom"></span>
+    <span id="st-snap"></span>
+    <span id="st-msg"></span>
+  </div>
+</div>
+<div id="dropdown" class="hidden"></div>
+<dialog id="dlg"><form method="dialog" id="dlgform"><div class="dlghead" id="dlgtitle"></div><div id="dlgbody"></div><div class="dlgbtns" id="dlgbtns"></div></form></dialog>
+<div id="printarea"></div>
+<script>/*JS*/</script>
+</body>
+</html>
