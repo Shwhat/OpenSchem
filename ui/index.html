@@ -18,39 +18,39 @@
   </div>
   <div id="toolbar"></div>
   <div id="main">
-    <aside id="left">
-      <div class="tabs">
-        <button class="tab active" data-tab="pages">Pages</button>
-        <button class="tab" data-tab="devices">Devices</button>
-        <button class="tab" data-tab="symbols">Symbols</button>
-        <button class="tab" data-tab="todo">To-do</button>
-      </div>
-      <div class="tabbody" id="tab-pages"></div>
-      <div class="tabbody hidden" id="tab-devices"></div>
-      <div class="tabbody hidden" id="tab-symbols"></div>
-      <div class="tabbody hidden" id="tab-todo"></div>
-    </aside>
-    <section id="center">
-      <div id="pagetabs"></div>
-      <div id="canvaswrap">
-        <svg id="canvas" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet">
-          <g id="content"></g>
-          <g id="overlay"></g>
-        </svg>
-      </div>
-    </section>
-    <aside id="right">
-      <div class="panelhead">Properties</div>
-      <div id="props"></div>
-    </aside>
+    <div id="dock-left" class="dock hidden"></div>
+    <div id="dockmid">
+      <section id="center">
+        <div id="pagetabs"></div>
+        <div id="canvaswrap">
+          <svg id="canvas" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet">
+            <g id="content"></g>
+            <g id="overlay"></g>
+          </svg>
+        </div>
+      </section>
+      <div id="dock-bottom" class="dock hidden"></div>
+    </div>
+    <div id="dock-right" class="dock hidden"></div>
   </div>
+  <div id="cmdbar" class="hidden"><span id="cmdprompt">Command:</span><input id="cmdinput" autocomplete="off" spellcheck="false"></div>
   <div id="status">
     <span id="st-mode"></span>
     <span id="st-pos"></span>
     <span id="st-zoom"></span>
     <span id="st-snap"></span>
+    <span id="st-prec"></span>
     <span id="st-msg"></span>
   </div>
+</div>
+<div id="dockfloat"></div>
+<div id="dockhint" class="hidden"></div>
+<div id="dockstore" class="hidden">
+  <div class="tabbody" id="tab-pages"></div>
+  <div class="tabbody" id="tab-devices"></div>
+  <div class="tabbody" id="tab-symbols"></div>
+  <div class="tabbody" id="tab-todo"></div>
+  <div id="props"></div>
 </div>
 <div id="dropdown" class="hidden"></div>
 <dialog id="dlg"><form method="dialog" id="dlgform"><div class="dlghead" id="dlgtitle"></div><div id="dlgbody"></div><div class="dlgbtns" id="dlgbtns"></div></form></dialog>

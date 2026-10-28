@@ -1,7 +1,7 @@
 // ---------- graphics on pages: line, polyline, rectangle, circle, dimension, image ----------
 // Stored per page in pg.gfx as { id, t, pts: [[x, y], ...], w, dash, color, fill, text, asset, layer }.
 const GFX_TYPES = { line: 'Line', poly: 'Polyline', rect: 'Rectangle', circle: 'Circle', dim: 'Dimension', image: 'Image' };
-const DASH = { solid: '', dash: '2,1', dot: '0.3,0.9', dashdot: '3,1,0.5,1' };
+const DASH = { solid: '', dash: '2,1', hidden: '1,0.6', center: '4,1,1,1', dot: '0.3,0.9', dashdot: '3,1,0.5,1' };
 let gdraft = null;
 const gfxOK = pg => pg && !pg.report && !isFloor(pg);
 function gfxBox(g) {

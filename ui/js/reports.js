@@ -60,6 +60,7 @@ function bomRows() {
     if (part) add('p:' + part, { part, desc, tech, missing: false, first: src }, ident);
     else add('d:' + d.key, { part: '', desc, tech, missing: true, first: src }, ident);
   }
+  blockBomAdd(add);
   for (const pg of P.pages) for (const c of pg.cables || []) {
     const part = c.part || ''; const type = c.ctype || 'unspecified';
     add(part ? 'p:' + part : 'cab:' + type, { part, desc: 'Cable, ' + type, tech: '', missing: !part, first: { id: c.id } }, (home() ? 'Cable ' + c.tag.replace(/^W/, '') : '-' + c.tag) + (c.len ? ' (' + c.len + ')' : ''));
@@ -239,6 +240,7 @@ function mkReport(list, base, rows, cols, extra) {
   sh.forEach((rws, i) => list.push(Object.assign({ id: `${base.id}:${i + 1}`, fn: '', loc: '', num: `${base.num}.${i + 1}`, cols, rows: rws, sheet: i + 1, sheets: sh.length, items: [], wires: [] }, base, { id: `${base.id}:${i + 1}`, num: `${base.num}.${i + 1}` }, extra || {})));
 }
 function buildExtraReports(reps) {
+  buildOpeningReport(reps);
   // connection list
   const cr = connectionRows();
   if (cr.length) mkReport(reps, { id: 'rep:conn', report: 'conn', num: 'CON', desc: 'Connection list', title: 'Connection list' }, cr, CONN_COLS());

@@ -28,7 +28,8 @@ function addTodoForSelection() {
 function renderTodo() {
   const el = $('#tab-todo'); if (!el || !P) return;
   const all = todos(); const open = all.filter(t => !t.done).length;
-  const tab = $('[data-tab="todo"]'); if (tab) tab.innerHTML = 'To-do' + (open ? ` <span class="tcount">${open}</span>` : '');
+  PANEL_BADGE.todo = open || '';
+  const tab = $('[data-dtab="todo"]'); if (tab) tab.innerHTML = panelLabel('todo') + (tab.classList.contains('active') ? '<span class="tabx" data-dclose="todo" title="Close panel">\u00d7</span>' : '');
   if (el.classList.contains('hidden')) return;
   const list = all.filter(t => todoFilter === 'all' || (todoFilter === 'open' ? !t.done : t.done));
   const f = (k, l) => `<button class="btn small${todoFilter === k ? ' primary' : ''}" data-tdf="${k}">${l}</button>`;

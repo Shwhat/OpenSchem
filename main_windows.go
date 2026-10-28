@@ -131,7 +131,7 @@ func main() {
 	})
 
 	// portable data folder (preferences, symbol/macro/parts library)
-	dataFiles := map[string]bool{"prefs.json": true, "library.json": true, "parts.json": true}
+	dataFiles := map[string]bool{"prefs.json": true, "library.json": true, "parts.json": true, "blocks.json": true}
 	w.Bind("osReadData", func(name string) string {
 		if !dataFiles[name] {
 			return ""

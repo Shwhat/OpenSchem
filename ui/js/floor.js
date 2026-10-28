@@ -63,6 +63,7 @@ function findFp(id) {
     const pl = lv.places.find(p => p.id === id); if (pl) return { lv, pl, kind: 'place' };
     const r = lv.rooms.find(r => r.id === id); if (r) return { lv, r, kind: 'room' };
     if (id === 'img:' + lv.id) return { lv, kind: 'img' };
+    const sh = lvShapes(lv).find(x => x.id === id); if (sh) return { lv, s: sh, kind: 'shape' };
   }
   return null;
 }
@@ -70,7 +71,7 @@ const itemById = id => { const f = findItem(id); return f && f.it; };
 function autoRoom(lv, pl) { const r = roomAt(lv, [pl.x, pl.y]); const it = itemById(pl.item); if (r && it) it.loc = r.name; }
 function fpViewName(pg) {
   if (pg.view === 'room') { const lv = levelOf(pg); const r = lv && lv.rooms.find(r => r.id === pg.room); return r ? 'Room: ' + r.name : 'Room'; }
-  return pg.view === 'area' ? 'Detail area' : 'Whole level';
+  return pg.view === 'area' ? 'Detail area' : pg.view === 'sheet' ? 'View sheet' : 'Whole level';
 }
 
 // ---------- floor-plan symbols ----------
@@ -132,6 +133,7 @@ function fpIcon(sym) {
 function floorSVG(pg, o = {}) {
   const all = allPages();
   let s = frameSVG(pg, all.indexOf(pg), all.length);
+  if (pg.view === 'sheet') return s + sheetViewsSVG(pg, o);
   const lv = levelOf(pg); if (!lv) return s;
   const t = fpXform(pg);
   s += `<defs><clipPath id="fpc-${pg.id}"><rect x="${DA.x0}" y="${DA.y0}" width="${DA.x1 - DA.x0}" height="${DA.y1 - DA.y0}"/></clipPath></defs>`;
@@ -141,42 +143,7 @@ function floorSVG(pg, o = {}) {
     s += `<defs><pattern id="fgp-${pg.id}" x="${-g / 2}" y="${-g / 2}" width="${g}" height="${g}" patternUnits="userSpaceOnUse"><circle cx="${g / 2}" cy="${g / 2}" r="${0.12 / Math.max(1, t.s / 2)}" class="grid"/></pattern></defs>`;
     s += `<rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="url(#fgp-${pg.id})" pointer-events="none"/>`;
   }
-  const im = lv.image;
-  if (im && P.assets[im.asset]) {
-    const isSel = !o.print && sel.has('img:' + lv.id);
-    s += `<image href="${P.assets[im.asset]}" x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" opacity="${im.opacity ?? 0.5}" preserveAspectRatio="none" ${im.locked ? 'pointer-events="none"' : `data-id="img:${lv.id}"`}/>`;
-    if (isSel) s += `<rect x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" fill="none" stroke="#1f6fff" stroke-width="0.5" stroke-dasharray="2,1.5" pointer-events="none"/>`;
-  }
-  for (const r of lv.rooms) {
-    const isSel = !o.print && sel.has(r.id);
-    if (isRound(r)) { const [x0, y0, x1, y1] = bboxPts(r.pts); s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><ellipse class="roomp" cx="${r2((x0 + x1) / 2)}" cy="${r2((y0 + y1) / 2)}" rx="${r2((x1 - x0) / 2)}" ry="${r2((y1 - y0) / 2)}"/></g>`; }
-    else s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><polygon class="roomp" points="${r.pts.map(p => p.join(',')).join(' ')}"/></g>`;
-  }
-  for (const r of lv.rooms) {
-    const b = bboxPts(r.pts); const c = [(b[0] + b[2]) / 2, isRound(r) ? (b[1] + b[3]) / 2 + 1.4 : b[1] + Math.min(9, (b[3] - b[1]) / 2)];
-    s += `<text class="roomname" x="${r2(c[0])}" y="${r2(c[1])}" font-size="4" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
-  }
-  const pmap = new Map(lv.places.map(pl => [pl.item, pl]));
-  if (S().switchLegs && lyOn('legs', o)) {
-    for (const [a, b] of computeLegs()) {
-      const p1 = pmap.get(a), p2 = pmap.get(b); if (!p1 || !p2) continue;
-      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, dx = p2.x - p1.x, dy = p2.y - p1.y;
-      const cx = mx - dy * 0.25, cy = my + dx * 0.25;
-      const it = itemById(a); const col = S().circuitColors && it && it.fn ? circuitColor(it.fn) : '#666';
-      s += `<path class="leg" d="M${r2(p1.x)},${r2(p1.y)}Q${r2(cx)},${r2(cy)} ${r2(p2.x)},${r2(p2.y)}" stroke="${col}"/>`;
-    }
-  }
-  for (const pl of lv.places) { const it = itemById(pl.item); if (it) s += fpPlaceSVG(pl, it, !o.print && sel.has(pl.id)); }
-  // resize handles on a single selected room: corners and wall midpoints
-  const rs = !o.print && sel.size === 1 && lv.rooms.find(r => sel.has(r.id));
-  if (rs) {
-    const hr = r2(1.3 / t.s), n = rs.pts.length;
-    rs.pts.forEach((a, i) => {
-      const b = rs.pts[(i + 1) % n]; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-      s += `<rect class="rhandle redge" data-rh="e:${rs.id}:${i}" x="${r2(mx - hr)}" y="${r2(my - hr)}" width="${r2(hr * 2)}" height="${r2(hr * 2)}" style="cursor:${a[1] === b[1] ? 'ns-resize' : a[0] === b[0] ? 'ew-resize' : 'move'}"/>`;
-    });
-    rs.pts.forEach((a, i) => { s += `<circle class="rhandle" data-rh="v:${rs.id}:${i}" cx="${a[0]}" cy="${a[1]}" r="${hr}"/>`; });
-  }
+  s += floorContentSVG(pg, lv, t, o);
   s += '</g></g>';
   // circuit legend
   if (S().circuitColors && lyOn('legend', o)) {
@@ -196,61 +163,145 @@ function floorSVG(pg, o = {}) {
   return s;
 }
 
+// the drawing of a level: image, rooms, walls, shapes, switch legs and devices (t: view transform)
+function floorContentSVG(pg, lv, t, o) {
+  let s = '';
+  const im = lv.image;
+  if (im && P.assets[im.asset]) {
+    const isSel = !o.print && !o.vp && sel.has('img:' + lv.id);
+    s += `<image href="${P.assets[im.asset]}" x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" opacity="${im.opacity ?? 0.5}" preserveAspectRatio="none" ${im.locked ? 'pointer-events="none"' : `data-id="img:${lv.id}"`}/>`;
+    if (isSel) s += `<rect x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" fill="none" stroke="#1f6fff" stroke-width="0.5" stroke-dasharray="2,1.5" pointer-events="none"/>`;
+  }
+  for (const r of lv.rooms) {
+    const isSel = !o.print && !o.vp && sel.has(r.id);
+    if (isRound(r)) { const [x0, y0, x1, y1] = bboxPts(r.pts); s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><ellipse class="roomp" cx="${r2((x0 + x1) / 2)}" cy="${r2((y0 + y1) / 2)}" rx="${r2((x1 - x0) / 2)}" ry="${r2((y1 - y0) / 2)}"/></g>`; }
+    else s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><polygon class="roomp" points="${r.pts.map(p => p.join(',')).join(' ')}"/></g>`;
+  }
+  for (const r of lv.rooms) {
+    const b = bboxPts(r.pts); const c = [(b[0] + b[2]) / 2, isRound(r) ? (b[1] + b[3]) / 2 + 1.4 : b[1] + Math.min(9, (b[3] - b[1]) / 2)];
+    s += `<text class="roomname" x="${r2(c[0])}" y="${r2(c[1])}" font-size="4" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
+  }
+  s += wallsSVG(lv, t.s, o);
+  s += fpShapesSVG(lv, t.s, o);
+  const pmap = new Map(lv.places.map(pl => [pl.item, pl]));
+  if (S().switchLegs && lyOn('legs', o)) {
+    for (const [a, b] of computeLegs()) {
+      const p1 = pmap.get(a), p2 = pmap.get(b); if (!p1 || !p2) continue;
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const cx = mx - dy * 0.25, cy = my + dx * 0.25;
+      const it = itemById(a); const col = S().circuitColors && it && it.fn ? circuitColor(it.fn) : '#666';
+      s += `<path class="leg" d="M${r2(p1.x)},${r2(p1.y)}Q${r2(cx)},${r2(cy)} ${r2(p2.x)},${r2(p2.y)}" stroke="${col}"/>`;
+    }
+  }
+  for (const pl of lv.places) { const it = itemById(pl.item); if (it) s += fpPlaceSVG(pl, it, !o.print && !o.vp && sel.has(pl.id)); }
+  // resize handles on a single selected room: corners and wall midpoints
+  const rs = !o.print && !o.vp && sel.size === 1 && lv.rooms.find(r => sel.has(r.id));
+  if (rs) {
+    const hr = r2(1.3 / t.s), n = rs.pts.length;
+    rs.pts.forEach((a, i) => {
+      const b = rs.pts[(i + 1) % n]; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      s += `<rect class="rhandle redge" data-rh="e:${rs.id}:${i}" x="${r2(mx - hr)}" y="${r2(my - hr)}" width="${r2(hr * 2)}" height="${r2(hr * 2)}" style="cursor:${a[1] === b[1] ? 'ns-resize' : a[0] === b[0] ? 'ew-resize' : 'move'}"/>`;
+    });
+    rs.pts.forEach((a, i) => { s += `<circle class="rhandle" data-rh="v:${rs.id}:${i}" cx="${a[0]}" cy="${a[1]}" r="${hr}"/>`; });
+  }
+  if (!o.print && !o.vp) s += gripsSVG(lv, t);
+  return s;
+}
+
 // ---------- floor-plan interaction ----------
+let fAim = null;           // last cursor point after snapping, in plan coordinates (typed lengths aim at it)
+// One drawing point from a mouse position: grid, direction lock (ortho or polar), object snap, shared walls.
+// o.last previous point, o.skip rooms to leave out, o.extra points of the shape being drawn, o.walls false to skip wall sharing.
+function fpPoint(pg, lv, raw, o = {}) {
+  const sp = [fsnap(raw[0]), fsnap(raw[1])];
+  const tr = trackPoint(o.last, sp);
+  const hit = osnapFind(pg, lv, raw, { last: o.last, skip: o.skip, extra: o.extra });
+  if (hit) return { p: hit.p, hit, sp };
+  let q = tr.p;
+  if (o.walls !== false && !tr.tracked) {
+    const rs = roomSnap(pg, lv, q, o.skip);
+    if (rs.hit) {
+      q = rs.p;
+      if (o.last && PREFS.ortho) q = Math.abs(sp[0] - o.last[0]) >= Math.abs(sp[1] - o.last[1]) ? [q[0], o.last[1]] : [o.last[0], q[1]];
+      return { p: q, wall: true, sp };
+    }
+  }
+  return { p: q, tracked: tr.tracked, sp };
+}
+const fpMark = (pg, r) => r.hit ? osnapMarker(pg, r.hit) : r.wall ? snapMark(pg, r.p) : '';
+const BOX_MODES = ['room', 'roomoval', 'roomcirc', 'area'];
+
+function fpPlaceAt(pg, lv, q) {
+  const keep = placeItemId;
+  commit(() => {
+    let it;
+    if (keep) it = itemById(keep);
+    else { it = makeItem(placeSym, 0, 0, 0, { fn: '', loc: '' }); P.pool.push(it); }
+    if (!it) return;
+    const old = placeOf(it.id); if (old) old.lv.places = old.lv.places.filter(x => x !== old.pl);
+    const pl = { id: uid(), item: it.id, x: q[0], y: q[1], rot: placeRot }; lv.places.push(pl); autoRoom(lv, pl); sel = new Set([pl.id]);
+  });
+  if (keep) setMode('select'); else { const s = toSheet(pg, q[0], q[1]); drawFpGhost(pg, ...s); }
+}
+// adds a corner to the room shape being drawn; closing on the first corner finishes it
+function fpPolyAdd(pg, q, sp) {
+  if (!fpoly) fpoly = [q];
+  else {
+    const f = fpoly[0], l = fpoly[fpoly.length - 1];
+    if (fpoly.length > 2 && (ptDist(q, f) < 3 || (sp && ptDist(sp, f) < 3))) { finishPoly(pg); return; }
+    if (ptDist(q, l) < 0.01) return;
+    fpoly.push(q);
+  }
+  drawPolyPrev(pg, q);
+}
+function fpBoxStart(pg, q) { fbox = { start: q, cur: q, armed: false }; fAim = q; }
+
 function fpDown(e, pg, mx, my) {
+  if (isSheet(pg)) { sheetDown(e, pg, mx, my); return; }
   const lv = levelOf(pg); if (!lv) return;
   const p = toPlan(pg, mx, my); const sp = [fsnap(p[0]), fsnap(p[1])];
-  if (mode === 'fpplace') {
-    const keep = placeItemId;
-    commit(() => {
-      let it;
-      if (keep) it = itemById(keep);
-      else { it = makeItem(placeSym, 0, 0, 0, { fn: '', loc: '' }); P.pool.push(it); }
-      if (!it) return;
-      const old = placeOf(it.id); if (old) old.lv.places = old.lv.places.filter(x => x !== old.pl);
-      const pl = { id: uid(), item: it.id, x: sp[0], y: sp[1], rot: placeRot }; lv.places.push(pl); autoRoom(lv, pl); sel = new Set([pl.id]);
-    });
-    if (keep) setMode('select'); else drawFpGhost(pg, mx, my);
-    return;
+  if (gripOp) { if (gripOp.lv !== lv) gripCancel(); else { gripDown(pg, lv, p); return; } }
+  if (mode.startsWith('d:')) { if (DRAW && DRAW.T.picking && DRAW.T.picking(DRAW)) drawPick(e, pg, lv, p); else drawDown(pg, lv, p); return; }
+  if (mode === 'fpplace') { fpPlaceAt(pg, lv, fpPoint(pg, lv, p, { walls: false }).p); return; }
+  if (BOX_MODES.includes(mode)) {
+    const r = fpPoint(pg, lv, p, { walls: mode !== 'area' });
+    if (fbox && fbox.armed) { fbox.cur = mode === 'roomcirc' ? squareFrom(fbox.start, r.p) : r.p; fpFinishBox(pg); return; }
+    fpBoxStart(pg, r.p); return;
   }
-  if (mode === 'room' || mode === 'area' || mode === 'roomoval' || mode === 'roomcirc') { const st = mode !== 'area' ? roomSnap(pg, lv, sp).p : sp; fbox = { start: st, cur: st }; return; }
   if (mode === 'roompoly') {
-    if (!fpoly) fpoly = [sp];
-    else {
-      const f = fpoly[0];
-      if (fpoly.length > 2 && Math.hypot(sp[0] - f[0], sp[1] - f[1]) < 3) { finishPoly(pg); return; }
-      const l = fpoly[fpoly.length - 1];
-      const o = Math.abs(sp[0] - l[0]) >= Math.abs(sp[1] - l[1]) ? [sp[0], l[1]] : [l[0], sp[1]];
-      const rs = roomSnap(pg, lv, o).p;
-      fpoly.push(Math.abs(sp[0] - l[0]) >= Math.abs(sp[1] - l[1]) ? [rs[0], l[1]] : [l[0], rs[1]]);
-    }
-    if (fpoly.length === 1) fpoly[0] = roomSnap(pg, lv, fpoly[0]).p;
-    drawPolyPrev(pg, sp); return;
+    const r = fpPoint(pg, lv, p, { last: fpoly && fpoly[fpoly.length - 1], extra: fpoly || [] });
+    fpPolyAdd(pg, r.p, sp); return;
   }
+  const gp = e.target.closest('[data-grip]');
+  // a device grip: dragging moves the device as before, a click makes the grip hot
+  const isDevMove = gp && /^p:.*:0$/.test(gp.dataset.grip);
+  if (gp && !e.shiftKey && !e.ctrlKey && !isDevMove) { gripStart(pg, lv, gp.dataset.grip); return; }
+  const devGrip = isDevMove ? gp.dataset.grip : null;
   const rh = e.target.closest('[data-rh]');
   if (rh) {
     const [kind, rid, i] = rh.dataset.rh.split(':'); const rm = lv.rooms.find(r => r.id === rid);
     if (rm) { fdrag = { start: p, pre: snapshot(), handle: { kind, rm, i: +i, orig: clone(rm.pts) }, lv, moved: false }; return; }
   }
-  const id = hitId(e);
+  const id = devGrip ? devGrip.split(":")[1] : hitId(e);
   if (id) {
     if (e.shiftKey || e.ctrlKey) { sel.has(id) ? sel.delete(id) : sel.add(id); render(); return; }
     if (!sel.has(id)) { sel = new Set([id]); render(); }
-    fdrag = { start: p, pre: snapshot(), orig: clone({ rooms: lv.rooms, places: lv.places, image: lv.image }), lv, moved: false, d: [0, 0] };
+    fdrag = { start: p, pre: snapshot(), orig: clone({ rooms: lv.rooms, places: lv.places, image: lv.image, shapes: lvShapes(lv) }), lv, moved: false, d: [0, 0], devGrip };
   } else {
     if (!e.shiftKey) { sel.clear(); render(); }
     fbox = { start: sp, cur: sp, select: true };
   }
 }
 function fpMove(pg, mx, my) {
-  const p = toPlan(pg, mx, my);
-  $('#st-pos').textContent = `X ${fsnap(p[0])}  Y ${fsnap(p[1])}  |  Page ${pageName(pg)}`;
+  if (isSheet(pg)) { sheetMove(pg, mx, my); return; }
+  const p = toPlan(pg, mx, my); const lv = levelOf(pg);
+  $('#st-pos').textContent = `${fmtXY(pg, [fsnap(p[0]), fsnap(p[1])])}  |  Page ${pageName(pg)}`;
+  if (gripOp) { gripMove(pg, lv, p); return; }
+  if (mode.startsWith('d:') && !(fbox && fbox.select)) { drawMove(pg, lv, p); return; }
   if (mode === 'fpplace') { drawFpGhost(pg, mx, my); return; }
   if (mode === 'roompoly') {
-    const lv = levelOf(pg); let q = [fsnap(p[0]), fsnap(p[1])];
-    if (fpoly) { const l = fpoly[fpoly.length - 1]; q = Math.abs(q[0] - l[0]) >= Math.abs(q[1] - l[1]) ? [q[0], l[1]] : [l[0], q[1]]; }
-    const rs = roomSnap(pg, lv, q);
-    if (fpoly) drawPolyPrev(pg, rs.p, rs.hit); else $('#overlay').innerHTML = rs.hit ? snapMark(pg, rs.p) : '';
+    const r = fpPoint(pg, lv, p, { last: fpoly && fpoly[fpoly.length - 1], extra: fpoly || [] }); fAim = r.p;
+    if (fpoly) drawPolyPrev(pg, r.p, r); else $('#overlay').innerHTML = fpMark(pg, r);
     return;
   }
   if (fdrag && fdrag.handle) { resizeRoom(pg, fdrag, p); return; }
@@ -259,7 +310,7 @@ function fpMove(pg, mx, my) {
     if (d[0] === fdrag.d[0] && d[1] === fdrag.d[1]) return;
     fdrag.d = d; fdrag.moved = true;
     const lv = fdrag.lv, o = clone(fdrag.orig);
-    lv.rooms = o.rooms; lv.places = o.places; lv.image = o.image;
+    lv.rooms = o.rooms; lv.places = o.places; lv.image = o.image; lv.shapes = o.shapes;
     for (const pl of lv.places) if (sel.has(pl.id)) { pl.x += d[0]; pl.y += d[1]; }
     const moving = new Set(lv.rooms.filter(r => sel.has(r.id)).map(r => r.id));
     if (moving.size) {
@@ -274,22 +325,45 @@ function fpMove(pg, mx, my) {
     }
     for (const r of lv.rooms) if (sel.has(r.id)) r.pts = r.pts.map(q => [r2(q[0] + d[0]), r2(q[1] + d[1])]);
     if (lv.image && sel.has('img:' + lv.id)) { lv.image.x += d[0]; lv.image.y += d[1]; }
+    const T = tMove(d); for (const sh of lv.shapes) if (sel.has(sh.id)) transformShape(sh, T);
     renderCanvas(); return;
   }
   if (fbox) {
     let mark = '';
-    fbox.cur = [fsnap(p[0]), fsnap(p[1])];
-    if (mode === 'room' || mode === 'roomoval' || mode === 'roomcirc') { const rs = roomSnap(pg, levelOf(pg), fbox.cur); fbox.cur = rs.p; if (rs.hit) mark = snapMark(pg, rs.p); }
-    if (mode === 'roomcirc') fbox.cur = squareFrom(fbox.start, fbox.cur);
-    const a = toSheet(pg, ...fbox.start), b = toSheet(pg, ...fbox.cur);
-    const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]), w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
-    $('#overlay').innerHTML = (mode === 'roomoval' || mode === 'roomcirc' ? `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}" style="stroke-opacity:.35"/><ellipse class="selbox" cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>` : `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}"/>`) + mark;
-    return;
+    if (fbox.select) fbox.cur = [fsnap(p[0]), fsnap(p[1])];
+    else {
+      const r = fpPoint(pg, lv, p, { walls: mode !== 'area' }); fbox.cur = r.p; mark = fpMark(pg, r);
+      if (mode === 'roomcirc') fbox.cur = squareFrom(fbox.start, fbox.cur);
+    }
+    fAim = fbox.cur; fpBoxOverlay(pg, mark); return;
   }
-  if (mode === 'room' || mode === 'roomoval' || mode === 'roomcirc') { const rs = roomSnap(pg, levelOf(pg), [fsnap(p[0]), fsnap(p[1])]); $('#overlay').innerHTML = rs.hit ? snapMark(pg, rs.p) : ''; }
+  if (BOX_MODES.includes(mode) || mode === 'roompoly') { const r = fpPoint(pg, lv, p, { walls: mode !== 'area' }); fAim = r.p; $('#overlay').innerHTML = fpMark(pg, r); }
+}
+// rubber band for boxes: room shapes, selection windows (solid, left to right) and crossings (dashed, right to left)
+function fpBoxOverlay(pg, mark) {
+  const lv = levelOf(pg), a = fbox.start, b = fbox.cur; const A = toSheet(pg, ...a), B = toSheet(pg, ...b);
+  const x = Math.min(A[0], B[0]), y = Math.min(A[1], B[1]), w = Math.abs(B[0] - A[0]), h = Math.abs(B[1] - A[1]); const u = 1 / (view.s || 1);
+  let s;
+  if (fbox.select) s = `<rect class="selbox ${b[0] < a[0] ? 'cross' : 'win'}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
+  else {
+    s = mode === 'roomoval' || mode === 'roomcirc' ? `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}" style="stroke-opacity:.35"/><ellipse class="selbox" cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>` : `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
+    const W = formatLength(toRealMm(lv, Math.abs(b[0] - a[0]))), H = formatLength(toRealMm(lv, Math.abs(b[1] - a[1])));
+    s += `<text class="rdout" x="${B[0] + 8 * u}" y="${B[1] - 8 * u}" font-size="${11 * u}" style="stroke-width:${2.5 * u}">${esc(mode === 'roomcirc' ? 'Ø ' + W : W + ' × ' + H)}</text>`;
+  }
+  $('#overlay').innerHTML = s + mark;
 }
 const squareFrom = (a, b) => { const s = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); return [a[0] + Math.sign(b[0] - a[0] || 1) * s, a[1] + Math.sign(b[1] - a[1] || 1) * s]; };
+// does a polygon outline touch a rectangle [x0, y0, x1, y1]? (crossing selection)
+function polyTouchesRect(pts, r) {
+  const sides = [[[r[0], r[1]], [r[2], r[1]]], [[r[2], r[1]], [r[2], r[3]]], [[r[2], r[3]], [r[0], r[3]]], [[r[0], r[3]], [r[0], r[1]]]];
+  for (const p of pts) if (p[0] >= r[0] && p[0] <= r[2] && p[1] >= r[1] && p[1] <= r[3]) return true;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; for (const s of sides) if (segCross(a, b, s[0], s[1])) return true; }
+  return false;
+}
 function fpUp(pg) {
+  if (isSheet(pg)) { sheetUp(pg); return; }
+  if (gripOp) { gripUp(pg); return; }
+  if (fdrag && !fdrag.moved && fdrag.devGrip) { const k = fdrag.devGrip; fdrag = null; gripStart(pg, levelOf(pg), k); gripOp.pressed = false; return; }
   if (fdrag) {
     if (fdrag.moved) {
       const lv = fdrag.lv; for (const pl of lv.places) if (sel.has(pl.id) || fdrag.handle) autoRoom(lv, pl);
@@ -299,15 +373,29 @@ function fpUp(pg) {
   }
   if (!fbox) return;
   const [a, b] = [fbox.start, fbox.cur]; const r = [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
-  const was = fbox; fbox = null; $('#overlay').innerHTML = '';
-  if (was.select) {
-    const lv = levelOf(pg);
+  if (fbox.select) {
+    const was = fbox; fbox = null; $('#overlay').innerHTML = '';
+    const lv = levelOf(pg); const crossing = was.cur[0] < was.start[0];
     if (r[2] - r[0] > 1 || r[3] - r[1] > 1) {
-      for (const pl of lv.places) if (pl.x >= r[0] && pl.x <= r[2] && pl.y >= r[1] && pl.y <= r[3]) sel.add(pl.id);
-      for (const rm of lv.rooms) { const bb = bboxPts(rm.pts); if (bb[0] >= r[0] && bb[2] <= r[2] && bb[1] >= r[1] && bb[3] <= r[3]) sel.add(rm.id); }
+      for (const pl of lv.places) {
+        const dx = Math.max(r[0] - pl.x, 0, pl.x - r[2]), dy = Math.max(r[1] - pl.y, 0, pl.y - r[3]);
+        if (crossing ? Math.hypot(dx, dy) <= 5.5 : !dx && !dy) sel.add(pl.id);
+      }
+      for (const rm of lv.rooms) {
+        if (crossing) { if (polyTouchesRect(roomPoly(rm), r)) sel.add(rm.id); }
+        else { const bb = bboxPts(rm.pts); if (bb[0] >= r[0] && bb[2] <= r[2] && bb[1] >= r[1] && bb[3] <= r[3]) sel.add(rm.id); }
+      }
+      for (const sh of lvShapes(lv)) if (selectable(sh) && shapeInRect(sh, r, crossing)) sel.add(sh.id);
     }
     render(); return;
   }
+  // a click without dragging keeps the first corner, so the second corner can be clicked or typed
+  if (!fbox.armed && (r[2] - r[0] < 4 || r[3] - r[1] < 4)) { fbox.armed = true; return; }
+  fpFinishBox(pg);
+}
+function fpFinishBox(pg) {
+  const was = fbox; fbox = null; $('#overlay').innerHTML = '';
+  const [a, b] = [was.start, was.cur]; const r = [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
   if (r[2] - r[0] < 4 || r[3] - r[1] < 4) return;
   if (mode === 'area') { commit(() => { pg.area = r; }); setMode('select'); zoomFit(); return; }
   if (mode === 'room') addRoom(pg, rectPts(r));
@@ -317,7 +405,7 @@ function fpUp(pg) {
 // drag a corner (neighbouring walls stay square) or a wall (moves both of its corners)
 function resizeRoom(pg, fd, p) {
   const { kind, rm, i, orig } = fd.handle; const lv = fd.lv; const n = orig.length;
-  const skip = new Set([rm.id]); const q = roomSnap(pg, lv, [fsnap(p[0]), fsnap(p[1])], skip).p;
+  const skip = new Set([rm.id]); const q = fpPoint(pg, lv, p, { skip }).p;
   const pts = clone(orig);
   if (kind === 'v') {
     const v = orig[i];
@@ -338,14 +426,14 @@ function resizeRoom(pg, fd, p) {
     pts.splice(0, 4, ...rectPts([x0, y0, x1, y1]));
   }
   const bb = bboxPts(pts); if (bb[2] - bb[0] < 2 || bb[3] - bb[1] < 2) return;
-  rm.pts = pts.map(x => [r2(x[0]), r2(x[1])]); fd.moved = true; renderCanvas();
+  rm.pts = pts.map(x => [r2(x[0]), r2(x[1])]); delete rm.auto; fd.moved = true; renderCanvas();
 }
-function addRoom(pg, pts, shape) {
+function addRoom(pg, pts, shape, onMade) {
   dialog('New room', [['name', 'Room name', '']], v => {
     if (!v.name) return false;
     const lv = levelOf(pg);
     commit(() => {
-      const rm = { id: uid(), name: v.name, pts }; if (shape) rm.shape = shape; lv.rooms.push(rm);
+      const rm = { id: uid(), name: v.name, pts }; if (shape) rm.shape = shape; lv.rooms.push(rm); if (onMade) onMade(rm);
       for (const pl of lv.places) if (inPoly([pl.x, pl.y], roomPoly(rm))) autoRoom(lv, pl);
       sel = new Set([rm.id]);
     });
@@ -355,32 +443,39 @@ function finishPoly(pg) {
   const pts = fpoly; fpoly = null; $('#overlay').innerHTML = '';
   if (pts && pts.length >= 3) addRoom(pg, pts);
 }
-function drawPolyPrev(pg, cur, hit) {
+function drawPolyPrev(pg, cur, r = {}) {
   if (!fpoly) return;
   const pts = fpoly.concat([cur]).map(q => toSheet(pg, ...q));
   const f = toSheet(pg, ...fpoly[0]);
-  $('#overlay').innerHTML = `<path class="wprev" d="M${pts.map(q => q.join(',')).join('L')}"/><circle class="cpt" cx="${f[0]}" cy="${f[1]}" r="1.6"/>` + (hit ? snapMark(pg, cur) : '');
+  $('#overlay').innerHTML = `<path class="wprev" d="M${pts.map(q => q.join(',')).join('L')}"/><circle class="cpt" cx="${f[0]}" cy="${f[1]}" r="1.6"/>` + fpMark(pg, Object.assign({ p: cur }, r)) + trackOverlay(pg, fpoly[fpoly.length - 1], cur, r.tracked);
 }
 function drawFpGhost(pg, mx, my) {
   const sym = placeItemId ? (itemById(placeItemId) || {}).sym : placeSym; if (!sym) return;
-  const p = toPlan(pg, mx, my); const t = fpXform(pg);
-  $('#overlay').innerHTML = `<g transform="translate(${t.tx},${t.ty}) scale(${t.s})">${fpPlaceSVG({ x: fsnap(p[0]), y: fsnap(p[1]), rot: placeRot }, { sym, tag: '' }, false, true)}</g>`;
+  const lv = levelOf(pg); const p = toPlan(pg, mx, my); const t = fpXform(pg);
+  const r = lv ? fpPoint(pg, lv, p, { walls: false }) : { p: [fsnap(p[0]), fsnap(p[1])] }; fAim = r.p;
+  $('#overlay').innerHTML = `<g transform="translate(${t.tx},${t.ty}) scale(${t.s})">${fpPlaceSVG({ x: r.p[0], y: r.p[1], rot: placeRot }, { sym, tag: '' }, false, true)}</g>` + fpMark(pg, r);
 }
 function fpDelete() {
-  const pg = page(); const lv = levelOf(pg); if (!lv || !sel.size) return;
+  const pg = page(); if (isSheet(pg)) { if ((pg.vps || []).some(v => sel.has(v.id))) commit(() => { pg.vps = pg.vps.filter(v => !sel.has(v.id)); sel.clear(); }); return; }
+  const lv = levelOf(pg); if (!lv || !sel.size) return;
   commit(() => {
     const gone = lv.places.filter(pl => sel.has(pl.id)).map(pl => pl.item);
     lv.places = lv.places.filter(pl => !sel.has(pl.id));
     P.pool = P.pool.filter(it => !gone.includes(it.id));
     lv.rooms = lv.rooms.filter(r => !sel.has(r.id));
+    const goneS = withHosted(lv, sel); lv.shapes = lvShapes(lv).filter(s => !goneS.has(s.id));
     if (lv.image && sel.has('img:' + lv.id)) { delete P.assets[lv.image.asset]; lv.image = null; }
     sel.clear();
   });
 }
 function fpRotate() {
   const lv = levelOf(page()); if (!lv) return;
-  const pls = lv.places.filter(pl => sel.has(pl.id)); if (!pls.length) return;
-  commit(() => pls.forEach(pl => pl.rot = ((pl.rot || 0) + 90) % 360));
+  const pls = lv.places.filter(pl => sel.has(pl.id)); const shs = lvShapes(lv).filter(s => sel.has(s.id));
+  if (!pls.length && !shs.length) return;
+  commit(() => {
+    pls.forEach(pl => pl.rot = ((pl.rot || 0) + 90) % 360);
+    if (shs.length) { const b = bboxPts(shs.flatMap(s => { const x = shapeBox(s); return [[x[0], x[1]], [x[2], x[3]]]; })); const T = tRotate(rp(midPt([b[0], b[1]], [b[2], b[3]])), 90); shs.forEach(s => transformShape(s, T)); }
+  });
 }
 
 // ---------- floor-plan pages, levels, images ----------
@@ -391,7 +486,7 @@ function addFloorPage() {
   dialog('New floor plan page', [
     ['level', 'Level', cur || '__new', 'select', lvs.map(l => [l.id, l.name]).concat([['__new', 'New level...']])],
     ['newLevel', 'New level name', lvs.length ? '' : 'Main floor'],
-    ['view', 'Shows', 'level', 'select', [['level', 'Whole level'], ...(rooms.length ? [['room', 'Single room']] : []), ['area', 'Custom area (drag a box)']]],
+    ['view', 'Shows', 'level', 'select', [['level', 'Whole level'], ...(rooms.length ? [['room', 'Single room']] : []), ['area', 'Custom area (drag a box)'], ['sheet', 'Several views (view sheet)']]],
     ...(rooms.length ? [['room', 'Room (single room view)', rooms[0][0], 'select', rooms]] : []),
     ['desc', 'Description', ''],
   ], v => {
@@ -405,16 +500,17 @@ function addFloorPage() {
     if (lvId === '__new' && !v.newLevel) { alert('Enter a name for the new level.'); return false; }
     let np;
     commit(() => {
-      if (lvId === '__new') { const lv = { id: uid(), name: v.newLevel, rooms: [], places: [], image: null }; P.levels.push(lv); lvId = lv.id; }
+      if (lvId === '__new') { const lv = { id: uid(), name: v.newLevel, rooms: [], places: [], image: null, scale: defaultScale() }; P.levels.push(lv); lvId = lv.id; }
       const lv = P.levels.find(l => l.id === lvId);
       const num = Math.max(0, ...P.pages.filter(p => p.kind === 'floor' && p.level === lvId).map(p => parseInt(p.num, 10) || 0)) + 1;
       const rm = lv.rooms.find(r => r.id === v.room);
       const desc = v.desc || (v.view === 'room' && rm ? rm.name : v.view === 'area' ? lv.name + ' detail' : lv.name);
-      np = newFloorPage(lvId, num, desc, v.view, v.view === 'room' ? { room: v.room } : {});
+      np = newFloorPage(lvId, num, v.view === 'sheet' && !v.desc ? 'Views' : desc, v.view, v.view === 'room' ? { room: v.room } : v.view === 'sheet' ? { vps: [] } : {});
       P.pages.push(np); sortPages(); curId = np.id; sel.clear();
     });
     zoomFit();
     if (v.view === 'area') { setMode('area'); flash('Drag a box around the area this page should show'); }
+    if (v.view === 'sheet') addView();
   });
 }
 function importImage() {
@@ -457,7 +553,12 @@ function unplacedDevices() {
   const placed = new Set(); for (const lv of P.levels || []) for (const pl of lv.places) placed.add(pl.item);
   return [...allItems()].filter(it => SYM[it.sym] && SYM[it.sym].fp && !placed.has(it.id)).sort((a, b) => natCmp(a.tag, b.tag));
 }
+function roomRealInfo(lv, r) {
+  const k = lvScale(lv), bb = bboxPts(r.pts);
+  return `${formatLength((bb[2] - bb[0]) * k)} x ${formatLength((bb[3] - bb[1]) * k)}, ${formatArea(polyArea(roomPoly(r)) * k * k)}`;
+}
 function renderFloorProps(pg) {
+  if (isSheet(pg)) { renderSheetProps(pg); return; }
   const el = $('#props'); const lv = levelOf(pg); const ids = [...sel];
   if (!lv) { el.innerHTML = '<div class="note">This page has no level.</div>'; return; }
   const ckRows = () => {
@@ -481,15 +582,17 @@ function renderFloorProps(pg) {
     }
     if (f && f.kind === 'room') {
       const n = lv.places.filter(pl => inPoly([pl.x, pl.y], roomPoly(f.r))).length;
-      el.innerHTML = `<div class="ident">${esc(f.r.name)}</div><div class="sub">Room, ${n} device(s)</div><div class="pgrp"><h4>Room</h4>${row('room.name', 'Name', f.r.name)}${f.r.pts.length === 4 ? row('room.shape', 'Shape', '', 'select', [['', 'Rectangle'], ['ellipse', 'Oval'], ['circle', 'Round']].map(([k, l]) => `<option value="${k}" ${(f.r.shape || '') === k ? 'selected' : ''}>${l}</option>`).join('')) : ''}<div class="note">Drag a corner or the square on a wall to resize the room. Renaming a room updates the room of every device in it.</div></div><div class="btnrow"><button class="btn" data-act="delSel">Delete room</button></div>`;
+      el.innerHTML = `<div class="ident">${esc(f.r.name)}</div><div class="sub">Room, ${n} device(s), ${esc(roomRealInfo(lv, f.r))}</div><div class="pgrp"><h4>Room</h4>${row('room.name', 'Name', f.r.name)}${f.r.pts.length === 4 ? row('room.shape', 'Shape', '', 'select', [['', 'Rectangle'], ['ellipse', 'Oval'], ['circle', 'Round']].map(([k, l]) => `<option value="${k}" ${(f.r.shape || '') === k ? 'selected' : ''}>${l}</option>`).join('')) : ''}<div class="note">Drag a corner or the square on a wall to resize the room. Renaming a room updates the room of every device in it.</div></div><div class="btnrow"><button class="btn" data-act="delSel">Delete room</button></div>`;
       return;
     }
   }
+  const shs = lvShapes(lv).filter(s => sel.has(s.id));
+  if (shs.length && shs.length === ids.length) { el.innerHTML = shapePropsHTML(pg, lv, shs); return; }
   if (ids.length > 1) { el.innerHTML = `<div class="ident">${ids.length} objects selected</div><div class="btnrow"><button class="btn" data-act="rotateSel">Rotate (R)</button><button class="btn" data-act="delSel">Delete</button></div>`; return; }
   const im = lv.image;
   const un = unplacedDevices();
   el.innerHTML = `<div class="ident">${esc(pageName(pg))}</div><div class="sub">${esc(pg.desc)} · ${esc(fpViewName(pg))}</div>
-    <div class="pgrp"><h4>Page</h4>${row('fpg.desc', 'Description', pg.desc)}${row('lv.name', 'Level name', lv.name)}${pg.view === 'area' ? '<div class="btnrow"><button class="btn small" data-act="setArea">Redraw area</button></div>' : ''}</div>
+    <div class="pgrp"><h4>Page</h4>${row('fpg.desc', 'Description', pg.desc)}${row('lv.name', 'Level name', lv.name)}${row('lv.scale', 'Drawing scale', formatScale(lvScale(lv)), 'text', 'list="dl-scale"')}<datalist id="dl-scale">${scaleOptions(unitsOf()).map(o => `<option value="${esc(o[0])}">`).join('')}</datalist>${pg.view === 'area' ? '<div class="btnrow"><button class="btn small" data-act="setArea">Redraw area</button></div>' : ''}</div>
     <div class="pgrp"><h4>Background image</h4>${im ? `${row('img.opacity', 'Opacity', Math.round((im.opacity ?? 0.5) * 100), 'number', 'min="5" max="100" step="5"')}${row('img.w', 'Width (mm)', im.w, 'number', 'step="1"')}
       <div class="prow"><label>Locked</label><input type="checkbox" data-k="img.locked" ${im.locked ? 'checked' : ''} style="width:auto"></div>
       <div class="btnrow"><button class="btn small" data-act="importImage">Replace</button><button class="btn small" data-act="fitImage">Fit to page</button><button class="btn small" data-act="removeImage">Remove</button></div>`
@@ -500,7 +603,10 @@ function renderFloorProps(pg) {
 }
 function fpPropChange(scope, key, v) {
   const pg = page(); const lv = levelOf(pg);
+  if (scope === 'shp') { const list = lvShapes(lv).filter(s => sel.has(s.id)); if (list.length) commit(() => { for (const s of list) applyShapeProp(pg, lv, s, key, v); }); return true; }
+  if (scope === 'vp') { vpPropChange(pg, key, v); return true; }
   if (scope === 'fpg') { commit(() => { pg[key] = v; }, { props: false }); return true; }
+  if (scope === 'lv' && lv && key === 'scale') { const r = parseScale(v); if (!r) { flash('Could not read that scale. Try 1/4 in = 1 ft or 1:50'); renderProps(); return true; } setLevelScale(lv, r); return true; }
   if (scope === 'lv' && lv) { commit(() => { lv[key] = v; }, { props: false }); return true; }
   if (scope === 'img' && lv && lv.image) {
     commit(() => {
@@ -545,4 +651,9 @@ function showOnFloor(itemId) {
   const pg = (isFloor(page()) && page().level === p.lv.id ? page() : null) || P.pages.find(x => x.kind === 'floor' && x.level === p.lv.id && x.view === 'level') || P.pages.find(x => x.kind === 'floor' && x.level === p.lv.id);
   if (!pg) return;
   curId = pg.id; sel = new Set([p.pl.id]); render(); const s = toSheet(pg, p.pl.x, p.pl.y); centerOn(s[0], s[1]);
+}
+function showShape(lv, s) {
+  const pg = (isFloor(page()) && page().level === lv.id && page().view !== 'sheet' ? page() : null) || P.pages.find(x => x.kind === 'floor' && x.level === lv.id && x.view === 'level') || P.pages.find(x => x.kind === 'floor' && x.level === lv.id);
+  if (!pg) return;
+  curId = pg.id; sel = new Set([s.id]); render(); const b = shapeBox(s); const c = toSheet(pg, (b[0] + b[2]) / 2, (b[1] + b[3]) / 2); centerOn(c[0], c[1]);
 }

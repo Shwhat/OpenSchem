@@ -2,8 +2,8 @@
 // FORMAT_VERSION is stored in every saved .osp file as "ver". When the stored data layout changes,
 // bump FORMAT_VERSION and add a step to MIGRATIONS that upgrades a file from the previous version.
 // Files are upgraded one step at a time on open, so any older file can be read.
-const APP_VERSION = '1.9.0';
-const FORMAT_VERSION = 2;
+const APP_VERSION = '1.12.0';
+const FORMAT_VERSION = 3;
 
 const MIGRATIONS = {
   // 1 -> 2: files written by 1.0 to 1.3 (fields were added over time without a version bump).
@@ -17,6 +17,11 @@ const MIGRATIONS = {
       for (const it of pg.items) if (it.rot == null && it.sym !== 'text') it.rot = 0;
       pg.wires = pg.wires.filter(w => Array.isArray(w.pts) && w.pts.length >= 2);
     }
+  },
+  // 2 -> 3: floor plans get units (feet and inches by default) and a drawing scale per level (1/4" = 1' for existing plans).
+  2(p) {
+    p.units = p.units === 'metric' ? 'metric' : 'imperial';
+    for (const lv of p.levels || []) if (!(lv.scale > 0)) lv.scale = 48;
   },
 };
 

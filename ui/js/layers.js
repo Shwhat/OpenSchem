@@ -19,7 +19,7 @@ function lyOn(k, o) {
 }
 const userLayers = () => (P && P.ulayers) || [];
 const layerOf = obj => obj && obj.layer ? userLayers().find(l => l.id === obj.layer) : null;
-function objShown(obj, o) { const l = layerOf(obj); return !l || (printOut(o) ? !l.noprint : !l.hide); }
+function objShown(obj, o) { if (o && o.hideLayers && obj && obj.layer && o.hideLayers.includes(obj.layer)) return false; const l = layerOf(obj); return !l || (printOut(o) ? !l.noprint : !l.hide); }
 const objLocked = obj => { const l = layerOf(obj); return !!(l && l.lock); };
 const selectable = obj => objShown(obj) && !objLocked(obj);
 // new objects go on the active layer (if it is visible and unlocked)

@@ -32,6 +32,7 @@ function renderDevices() {
 }
 function gotoItem(id) {
   if (String(id).startsWith('page:')) { goPage(id.slice(5)); return; }
+  const fs = findShape(id); if (fs) { showShape(fs.lv, fs.s); return; }
   const f = findItem(id); if (!f) return;
   if (!f.pg) { showOnFloor(id); return; }
   if (f.cab) { curId = f.pg.id; sel = new Set([id]); render(); centerOn(f.cab.x1, f.cab.y1); return; }

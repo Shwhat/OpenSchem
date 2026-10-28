@@ -159,7 +159,7 @@ $('#tab-pages').addEventListener('mouseover', e => {
     const pg = allPages().find(p => p.id === it.dataset.page); if (!pg) return;
     let pv = $('#navprev'); if (!pv) { pv = document.createElement('div'); pv.id = 'navprev'; document.body.appendChild(pv); }
     pv.innerHTML = thumbSVG(pg, 'pv') + `<div class="tcap"><b>${esc(pageName(pg))}</b> ${esc(navLeafText(pg))}</div>`;
-    const r = it.getBoundingClientRect(); const lr = $('#left').getBoundingClientRect();
+    const r = it.getBoundingClientRect(); const lr = $('#tab-pages').getBoundingClientRect();
     pv.style.left = (lr.right + 6) + 'px'; pv.style.top = Math.max(4, Math.min(r.top - 40, innerHeight - 290)) + 'px';
     pv.classList.add('show');
   }, 450);

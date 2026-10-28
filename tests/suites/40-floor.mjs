@@ -53,7 +53,7 @@ export const tests = {
   'single-room page option only once rooms exist': async t => {
     await t.open();
     await t.eval(() => addFloorPage());
-    t.eq(await t.eval(() => [...document.querySelectorAll('#dlgbody select[name=view] option')].map(o => o.value)), ['level', 'area']);
+    t.eq(await t.eval(() => [...document.querySelectorAll('#dlgbody select[name=view] option')].map(o => o.value)), ['level', 'area', 'sheet']);
     await t.confirm();
     await t.eval(() => { levelOf(page()).rooms.push({ id: 'r1', name: 'Kitchen', pts: [[40, 40], [120, 40], [120, 120], [40, 120]] }); render(); addFloorPage(); });
     await t.page.selectOption('#dlgbody select[name="view"]', 'room'); await t.confirm();

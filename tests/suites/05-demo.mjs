@@ -30,7 +30,16 @@ export const tests = {
         layer: (P.ulayers || []).length > 0 && items.some(i => i.layer),
         parts: Object.values(P.parts || {}).some(p => p.price), partSize: Object.values(P.parts || {}).some(p => p.w),
         load: items.some(i => i.va), run: items.some(i => i.run), revs: (P.revs || []).length > 0, todos: (P.todos || []).length > 0,
-        reports: ['cover', 'toc', 'panel', 'bom', 'term', 'conn', 'cables', 'cabdiag', 'rev'].filter(r => !reps.has(r)),
+        reports: ['cover', 'toc', 'panel', 'bom', 'term', 'conn', 'cables', 'cabdiag', 'rev', 'doors'].filter(r => !reps.has(r)),
+        shapes: ['line', 'pline', 'arc', 'circle', 'ellipse', 'spline', 'text'].filter(k => !(lv.shapes || []).some(x => x.t === k)),
+        plineKinds: (lv.shapes || []).some(x => x.t === 'pline' && x.closed && x.b) && (lv.shapes || []).some(x => x.t === 'pline' && x.wd) && (lv.shapes || []).some(x => x.t === 'pline' && !x.closed && x.b),
+        walls: (lv.shapes || []).filter(x => x.t === 'wall').length >= 8,
+        doorStyles: [...new Set((lv.shapes || []).filter(x => x.t === 'opening' && x.kind === 'door').map(x => x.style))].sort(),
+        openKinds: [...new Set((lv.shapes || []).filter(x => x.t === 'opening').map(x => x.kind))].sort(),
+        dims: [...new Set((lv.shapes || []).filter(x => x.t === 'dim').map(x => x.kind))].sort(), assocDims: (lv.shapes || []).some(x => x.t === 'dim' && x.r1),
+        annot: ['leader', 'hatch', 'insert'].filter(k => !(lv.shapes || []).some(x => x.t === k)), blockLinked: (lv.shapes || []).some(x => x.t === 'insert' && x.vals && x.vals.PART) && (lv.shapes || []).some(x => x.t === 'insert' && x.vals && x.vals.CIRCUIT),
+        extras: (lv.shapes || []).some(x => x.t === 'ellipse' && x.a0 != null) && (lv.shapes || []).some(x => x.t === 'text' && x.align && x.text.includes('\n')) && ['hidden', 'center'].every(k => (lv.shapes || []).some(x => x.dash === k)),
+        sheet: P.pages.some(p => p.view === 'sheet' && p.vps.length >= 2 && p.vps.some(v => v.scale > 0)),
         layoutPlaced: P.pages.some(p => p.kind === 'layout' && p.lay.some(o => o.t === 'dev') && p.lay.some(o => o.t === 'rail') && p.lay.some(o => o.t === 'duct')),
       };
     });
@@ -41,6 +50,9 @@ export const tests = {
     t.eq(f.rooms, ['circle', 'ellipse', 'rect'], 'room shapes'); t.ok(f.floorOnly && f.legs, 'floor-only device and switch legs');
     t.ok(f.layer, 'user layer in use'); t.ok(f.parts && f.partSize, 'parts with prices and sizes');
     t.ok(f.load && f.run, 'load and run length'); t.ok(f.revs && f.todos, 'revisions and to-dos');
+    t.eq(f.shapes, [], 'floor plan shapes missing');
+    t.ok(f.walls, 'walls'); t.eq(f.doorStyles, ['bifold', 'double', 'garage', 'pocket', 'single', 'sliding']); t.eq(f.openKinds, ['door', 'opening', 'window']);
+    t.eq(f.dims, ['ali', 'lin']); t.ok(f.assocDims, 'dimensions tied to walls'); t.eq(f.annot, [], 'leader, hatch and blocks'); t.ok(f.blockLinked, 'block attributes on the BOM and loads'); t.ok(f.sheet, 'view sheet'); t.ok(f.extras, 'elliptical arc, multi-line text, hidden and center lines'); t.ok(f.plineKinds, 'rounded, wide and arc polylines');
     t.eq(f.reports, [], 'reports missing'); t.ok(f.layoutPlaced, 'panel layout with devices, rails and ducts');
   },
   'demo project pages render, and the voltage drop shows on the panel schedule': async t => {

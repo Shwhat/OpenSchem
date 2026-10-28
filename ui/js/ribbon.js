@@ -66,11 +66,95 @@ const RI = {
   parts: '<svg viewBox="0 0 20 20"><path d="M10 2l7 3.5v9L10 18l-7-3.5v-9z" fill="#f4e2c2" stroke="#8a6d1d" stroke-width="1.1"/><path d="M3 5.5l7 3.5 7-3.5M10 9v9" fill="none" stroke="#8a6d1d" stroke-width="1.1"/></svg>',
   label: '<svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="16" fill="#fff" stroke="#556" stroke-width="1.2"/><path d="M10 2v16M3 6h14M3 10h14M3 14h14" stroke="#556" stroke-width=".8"/></svg>',
   load: '<svg viewBox="0 0 20 20"><path d="M11 2L5 11h4l-1 7 6-9h-4z" fill="#f5c542" stroke="#8a6d1d" stroke-width="1"/></svg>',
+  osnap: '<svg viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" fill="none" stroke="#2b3442" stroke-width="1.2"/><rect x="2.5" y="2.5" width="3" height="3" fill="#fff" stroke="#c0392b" stroke-width="1.2"/><path d="M10 4v12M4 10h12" stroke="#c0392b" stroke-width=".8" stroke-dasharray="1.5 1.5"/></svg>',
+  ortho: '<svg viewBox="0 0 20 20"><path d="M4 16V4M4 16h12" fill="none" stroke="#2b3442" stroke-width="1.6"/><path d="M4 4l-1.5 2.5M4 4l1.5 2.5M16 16l-2.5-1.5M16 16l-2.5 1.5" stroke="#2b3442" stroke-width="1.2"/></svg>',
+  polar: '<svg viewBox="0 0 20 20"><path d="M3 16h14M3 16L14 5" stroke="#2b3442" stroke-width="1.5"/><path d="M9 16a6 6 0 0 0-1.8-4.2" fill="none" stroke="#c0392b" stroke-width="1.3"/></svg>',
+  cmdline: '<svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="1.5" fill="#1d232c" stroke="#2b3442"/><path d="M5 8.5l2.5 1.5L5 11.5M9.5 12h4" fill="none" stroke="#8fd18f" stroke-width="1.3"/></svg>',
+  scale: '<svg viewBox="0 0 20 20"><path d="M2 14h16M2 11v6M6 12.5v3M10 11v6M14 12.5v3M18 11v6" stroke="#2b3442" stroke-width="1.2" fill="none"/><path d="M4 7h5M6.5 4.5v5" stroke="#1f5fbf" stroke-width="1.2"/></svg>',
+  darc: '<svg viewBox="0 0 20 20"><path d="M3 15A8 8 0 0 1 17 9" fill="none" stroke="#2b3442" stroke-width="1.6"/><rect x="1.8" y="13.8" width="2.4" height="2.4" fill="#1f5fbf"/><rect x="15.8" y="7.8" width="2.4" height="2.4" fill="#1f5fbf"/></svg>',
+  dcircle2: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#2b3442" stroke-width="1.5"/><path d="M3.5 10h13" stroke="#1f5fbf" stroke-width="1.1"/><circle cx="3.5" cy="10" r="1.2" fill="#1f5fbf"/><circle cx="16.5" cy="10" r="1.2" fill="#1f5fbf"/></svg>',
+  dcircle3: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#2b3442" stroke-width="1.5"/><circle cx="10" cy="3.5" r="1.2" fill="#1f5fbf"/><circle cx="4.4" cy="13.3" r="1.2" fill="#1f5fbf"/><circle cx="15.6" cy="13.3" r="1.2" fill="#1f5fbf"/></svg>',
+  dellipse: '<svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="7.5" ry="4.5" fill="none" stroke="#2b3442" stroke-width="1.5" transform="rotate(-20 10 10)"/></svg>',
+  dpolygon: '<svg viewBox="0 0 20 20"><path d="M10 2.5l6.5 3.75v7.5L10 17.5l-6.5-3.75v-7.5z" fill="none" stroke="#2b3442" stroke-width="1.5"/></svg>',
+  drect: '<svg viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="10" rx="3" fill="none" stroke="#2b3442" stroke-width="1.5"/></svg>',
+  dspline: '<svg viewBox="0 0 20 20"><path d="M2 14C5 2 9 18 12 8S17 5 18 7" fill="none" stroke="#2b3442" stroke-width="1.6"/></svg>',
+  dtext: '<svg viewBox="0 0 20 20"><path d="M4 4h12M10 4v13" stroke="#2b3442" stroke-width="2"/><path d="M3 18h6" stroke="#1f5fbf" stroke-width="1.2"/></svg>',
+  dmkroom: '<svg viewBox="0 0 20 20"><path d="M3 6c0-2 2-3 4-3h6c2 0 4 1 4 3v8c0 2-2 3-4 3H7c-2 0-4-1-4-3z" fill="#eef3fb" stroke="#2b3442" stroke-width="1.3" stroke-dasharray="2 1.5"/><path d="M7 10h6M10 7v6" stroke="#1e7a3c" stroke-width="1.6"/></svg>',
+  emove: '<svg viewBox="0 0 20 20"><path d="M10 2v16M2 10h16M10 2l-2.5 2.5M10 2l2.5 2.5M10 18l-2.5-2.5M10 18l2.5-2.5M2 10l2.5-2.5M2 10l2.5 2.5M18 10l-2.5-2.5M18 10l-2.5 2.5" fill="none" stroke="#2b3442" stroke-width="1.4"/></svg>',
+  ecopy: '<svg viewBox="0 0 20 20"><rect x="3" y="3" width="9" height="9" fill="none" stroke="#2b3442" stroke-width="1.4"/><rect x="8" y="8" width="9" height="9" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  erotate: '<svg viewBox="0 0 20 20"><path d="M15.5 7A6.5 6.5 0 1 0 16 12" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M16 3v4.5h-4.5" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  escale: '<svg viewBox="0 0 20 20"><rect x="3" y="9" width="8" height="8" fill="none" stroke="#2b3442" stroke-width="1.4"/><rect x="3" y="3" width="14" height="14" fill="none" stroke="#1f5fbf" stroke-width="1.4" stroke-dasharray="2 1.5"/><path d="M11 9l5-5" fill="none" stroke="#2b3442" stroke-width="1.4"/></svg>',
+  emirror: '<svg viewBox="0 0 20 20"><path d="M10 2v16" stroke="#c0392b" stroke-width="1.2" stroke-dasharray="2 1.5"/><path d="M8 5L3 15h5z" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M12 5l5 10h-5z" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  eoffset: '<svg viewBox="0 0 20 20"><path d="M3 16V8a5 5 0 0 1 5-5h9" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M7 17V9a2 2 0 0 1 2-2h8" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  etrim: '<svg viewBox="0 0 20 20"><path d="M10 2v16" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M2 10h8" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><path d="M10 10h8" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="2 1.5"/></svg>',
+  eextend: '<svg viewBox="0 0 20 20"><path d="M17 2v16" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M2 10h9" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><path d="M11 10h6" fill="none" stroke="#1f5fbf" stroke-width="1.4" stroke-dasharray="2 1.5"/><path d="M14 7.5l2.5 2.5-2.5 2.5" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  efillet: '<svg viewBox="0 0 20 20"><path d="M3 17V10a7 7 0 0 1 7-7h7" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M3 3v14M3 3h14" stroke="#9aa5b3" stroke-width=".8" stroke-dasharray="1.5 1.5" fill="none"/></svg>',
+  echamfer: '<svg viewBox="0 0 20 20"><path d="M3 17V9l6-6h8" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M3 3v6M3 3h6" stroke="#9aa5b3" stroke-width=".8" stroke-dasharray="1.5 1.5" fill="none"/></svg>',
+  ebreak: '<svg viewBox="0 0 20 20"><path d="M2 10h6M12 10h6" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M8 7v6M12 7v6" stroke="#c0392b" stroke-width="1.2"/></svg>',
+  ejoin: '<svg viewBox="0 0 20 20"><path d="M2 14l6-6M12 8l6 6" fill="none" stroke="#2b3442" stroke-width="1.4"/><path d="M8 8h4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  eexplode: '<svg viewBox="0 0 20 20"><path d="M4 4l3 3M16 4l-3 3M4 16l3-3M16 16l-3-3M10 2v4M10 14v4M2 10h4M14 10h4" fill="none" stroke="#2b3442" stroke-width="1.4"/></svg>',
+  earect: '<svg viewBox="0 0 20 20"><rect x="2.5" y="2.5" width="4" height="4" fill="none" stroke="#2b3442" stroke-width="1.4"/><rect x="8" y="2.5" width="4" height="4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><rect x="13.5" y="2.5" width="4" height="4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><rect x="2.5" y="8" width="4" height="4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><rect x="8" y="8" width="4" height="4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><rect x="13.5" y="8" width="4" height="4" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  eapolar: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="1.2" fill="#2b3442"/><circle cx="10" cy="3.5" r="2" fill="none" stroke="#2b3442" stroke-width="1.4"/><circle cx="16" cy="12" r="2" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><circle cx="4" cy="12" r="2" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><circle cx="10" cy="16.5" r="2" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  eapath: '<svg viewBox="0 0 20 20"><path d="M2 16C6 4 14 4 18 16" fill="none" stroke="#9aa5b3" stroke-width="1"/><circle cx="3.5" cy="13" r="1.6" fill="none" stroke="#2b3442" stroke-width="1.4"/><circle cx="10" cy="7" r="1.6" fill="none" stroke="#1f5fbf" stroke-width="1.4"/><circle cx="16.5" cy="13" r="1.6" fill="none" stroke="#1f5fbf" stroke-width="1.4"/></svg>',
+  efront: '<svg viewBox="0 0 20 20"><rect x="2" y="2" width="10" height="10" fill="#dbe3ee" stroke="#9aa5b3"/><rect x="7" y="7" width="11" height="11" fill="#1f5fbf" stroke="#2b3442"/></svg>',
+  eback: '<svg viewBox="0 0 20 20"><rect x="7" y="7" width="11" height="11" fill="#1f5fbf" stroke="#2b3442"/><rect x="2" y="2" width="10" height="10" fill="#dbe3ee" stroke="#9aa5b3"/></svg>',
+  wwall: '<svg viewBox="0 0 20 20"><path d="M2 6h16v4H2z" fill="#c9ced5" stroke="#2b3442" stroke-width="1.2"/><path d="M14 10v8h4v-8" fill="#c9ced5" stroke="#2b3442" stroke-width="1.2"/></svg>',
+  wset: '<svg viewBox="0 0 20 20"><path d="M2 8h16v4H2z" fill="#c9ced5" stroke="#2b3442" stroke-width="1.1"/><path d="M6 4v12M14 4v12" stroke="#1f5fbf" stroke-width="1"/><path d="M4 4h4M12 4h4" stroke="#1f5fbf"/></svg>',
+  wdoor: '<svg viewBox="0 0 20 20"><path d="M2 16h3M15 16h3" stroke="#2b3442" stroke-width="2.4"/><path d="M5 16V6" stroke="#2b3442" stroke-width="1.5"/><path d="M5 6a10 10 0 0 1 10 10" fill="none" stroke="#1f5fbf" stroke-width="1"/></svg>',
+  wdouble: '<svg viewBox="0 0 20 20"><path d="M1 16h2M17 16h2" stroke="#2b3442" stroke-width="2.4"/><path d="M3 16V9M17 16V9" stroke="#2b3442" stroke-width="1.5"/><path d="M3 9a7 7 0 0 1 7 7M17 9a7 7 0 0 0-7 7" fill="none" stroke="#1f5fbf" stroke-width="1"/></svg>',
+  wpocket: '<svg viewBox="0 0 20 20"><path d="M1 14h18v3H1z" fill="#c9ced5" stroke="#2b3442" stroke-width="1"/><path d="M8 15.5h-6" stroke="#1f5fbf" stroke-width="1.4" stroke-dasharray="1.5 1"/><path d="M8 13v5M17 13v5" stroke="#2b3442"/></svg>',
+  wbifold: '<svg viewBox="0 0 20 20"><path d="M1 16h3M16 16h3" stroke="#2b3442" stroke-width="2.4"/><path d="M4 16l3-6 3 6 3-6 3 6" fill="none" stroke="#1f5fbf" stroke-width="1.3"/></svg>',
+  wslide: '<svg viewBox="0 0 20 20"><path d="M1 12h2M17 12h2" stroke="#2b3442" stroke-width="5"/><path d="M3 10.5h8M9 13.5h8" stroke="#1f5fbf" stroke-width="1.6"/></svg>',
+  wgarage: '<svg viewBox="0 0 20 20"><path d="M1 16h2M17 16h2" stroke="#2b3442" stroke-width="2.4"/><path d="M3 16h14" stroke="#2b3442" stroke-width="1.4"/><path d="M3 16V4h14v12" fill="none" stroke="#1f5fbf" stroke-width="1" stroke-dasharray="2 1.2"/></svg>',
+  wwindow: '<svg viewBox="0 0 20 20"><path d="M1 8h3v4H1zM16 8h3v4h-3z" fill="#c9ced5" stroke="#2b3442"/><path d="M4 8h12M4 12h12M4 9.5h12M4 10.5h12" stroke="#1f5fbf" stroke-width=".7"/></svg>',
+  wopen: '<svg viewBox="0 0 20 20"><path d="M1 8h4v4H1zM15 8h4v4h-4z" fill="#c9ced5" stroke="#2b3442"/><path d="M5 8h10M5 12h10" stroke="#1f5fbf" stroke-width=".8" stroke-dasharray="1.5 1"/></svg>',
+  wroom: '<svg viewBox="0 0 20 20"><path d="M2 2h16v16H2z" fill="none" stroke="#2b3442" stroke-width="2.4"/><path d="M4 4h12v12H4z" fill="#dce8fb"/><circle cx="10" cy="10" r="1.6" fill="#1e7a3c"/></svg>',
+  vsheet: '<svg viewBox="0 0 20 20"><rect x="2" y="3" width="16" height="14" fill="#fff" stroke="#556" stroke-width="1.1"/><rect x="4" y="5" width="7" height="6" fill="#dce8fb" stroke="#1f5fbf" stroke-width=".8"/><rect x="12.5" y="5" width="4" height="4" fill="#dce8fb" stroke="#1f5fbf" stroke-width=".8"/><path d="M4 13h5M12.5 11h3" stroke="#556" stroke-width=".8"/></svg>',
+  vadd: '<svg viewBox="0 0 20 20"><rect x="2" y="4" width="12" height="10" fill="#dce8fb" stroke="#1f5fbf" stroke-width="1" stroke-dasharray="2 1"/><path d="M15 12v6M12 15h6" stroke="#1e7a3c" stroke-width="1.8"/></svg>',
+  adlin: '<svg viewBox="0 0 20 20"><path d="M3 4v10M17 4v10" stroke="#2b3442" stroke-width="1"/><path d="M3 11h14" stroke="#1f5fbf" stroke-width="1.2"/><path d="M2 12l2-2M16 12l2-2" stroke="#1f5fbf" stroke-width="1.2"/><text x="10" y="9" font-size="5" text-anchor="middle" font-family="Arial" fill="#2b3442">12</text></svg>',
+  adali: '<svg viewBox="0 0 20 20"><path d="M3 15l10-10" stroke="#2b3442" stroke-width="1"/><path d="M6 17l10-10" stroke="#1f5fbf" stroke-width="1.2"/><path d="M3 15l3 2M13 5l3 2" stroke="#9aa5b3" stroke-width=".8"/></svg>',
+  adang: '<svg viewBox="0 0 20 20"><path d="M3 17h14M3 17l9-12" stroke="#2b3442" stroke-width="1.1"/><path d="M12 17a9 9 0 0 0-3.5-7" fill="none" stroke="#1f5fbf" stroke-width="1.2"/></svg>',
+  adrad: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#2b3442" stroke-width="1.1"/><path d="M10 10l5-5" stroke="#1f5fbf" stroke-width="1.2"/><circle cx="10" cy="10" r=".9" fill="#1f5fbf"/></svg>',
+  addia: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#2b3442" stroke-width="1.1"/><path d="M5 15l10-10" stroke="#1f5fbf" stroke-width="1.2"/></svg>',
+  adstyle: '<svg viewBox="0 0 20 20"><path d="M3 14h14" stroke="#1f5fbf" stroke-width="1.2"/><path d="M3 10v6M17 10v6" stroke="#2b3442"/><path d="M2 15l2-2M16 15l2-2" stroke="#1f5fbf"/><path d="M5 3h10v5H5z" fill="#eef3fb" stroke="#2b3442" stroke-width=".8"/></svg>',
+  adarrow: '<svg viewBox="0 0 20 20"><path d="M2 7h7M11 13h7" stroke="#2b3442" stroke-width="1.1"/><path d="M2 7l3-1.5v3z" fill="#1f5fbf"/><path d="M17 12l2 2M10 12l2 2" stroke="#1f5fbf" stroke-width="1.3"/></svg>',
+  aleader: '<svg viewBox="0 0 20 20"><path d="M3 16l7-7h7" fill="none" stroke="#2b3442" stroke-width="1.2"/><path d="M3 16l1-3.5 2.5 2.5z" fill="#2b3442"/><path d="M11 6h6" stroke="#1f5fbf" stroke-width="1.2"/></svg>',
+  ahatch: '<svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="#2b3442" stroke-width="1.2"/><path d="M3 9l6-6M3 15l12-12M7 17l10-10M13 17l4-4" stroke="#1f5fbf" stroke-width=".9"/></svg>',
+  ahset: '<svg viewBox="0 0 20 20"><rect x="2" y="2" width="9" height="9" fill="none" stroke="#2b3442"/><path d="M2 7l5-5M5 11l6-6" stroke="#1f5fbf" stroke-width=".8"/><circle cx="14.5" cy="14.5" r="3.5" fill="none" stroke="#2b3442" stroke-width="1.2"/><circle cx="14.5" cy="14.5" r="1" fill="#2b3442"/></svg>',
+  ablock: '<svg viewBox="0 0 20 20"><rect x="2" y="5" width="9" height="11" fill="#eef3fb" stroke="#2b3442"/><rect x="9" y="3" width="9" height="7" rx="1.5" fill="#dce8fb" stroke="#1f5fbf"/><circle cx="6" cy="10" r="2" fill="none" stroke="#2b3442"/></svg>',
+  ainsert: '<svg viewBox="0 0 20 20"><rect x="3" y="3" width="10" height="8" rx="1.5" fill="#dce8fb" stroke="#1f5fbf"/><path d="M14 10v7M10.5 13.5h7" stroke="#1e7a3c" stroke-width="1.8"/><path d="M5 6h6" stroke="#2b3442"/></svg>',
+  xdxfin: '<svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="16" fill="#fff" stroke="#556" stroke-width="1.1"/><text x="10" y="9" font-size="4.6" font-family="Arial" font-weight="bold" text-anchor="middle" fill="#b3261e">DXF</text><path d="M10 11v6M7 14l3 3 3-3" fill="none" stroke="#1e7a3c" stroke-width="1.5"/></svg>',
+  xdxfout: '<svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="16" fill="#fff" stroke="#556" stroke-width="1.1"/><text x="10" y="9" font-size="4.6" font-family="Arial" font-weight="bold" text-anchor="middle" fill="#b3261e">DXF</text><path d="M10 17v-6M7 14l3-3 3 3" fill="none" stroke="#1f5fbf" stroke-width="1.5"/></svg>',
+  xsvg: '<svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="16" fill="#fff" stroke="#556" stroke-width="1.1"/><text x="10" y="12" font-size="4.6" font-family="Arial" font-weight="bold" text-anchor="middle" fill="#c06000">SVG</text></svg>',
+  xpng: '<svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="16" fill="#fff" stroke="#556" stroke-width="1.1"/><path d="M5 15l3-4 2 2 3-4 2 6z" fill="#7fb3e6"/><circle cx="7" cy="6" r="1.4" fill="#f5c542"/></svg>',
   cl: '<svg viewBox="0 0 20 20"><path d="M10 2v16" stroke="#2b3442" stroke-width="1.4"/><text x="12" y="8" font-size="6" font-family="Arial" fill="#2b3442">13</text><text x="12" y="16" font-size="6" font-family="Arial" fill="#2b3442">14</text></svg>',
 };
 
 // command registry: id -> [label, icon, action, active?]
 const CMDS = {
+  importDXF: ['Import DXF', 'xdxfin', 'importDXF'], exportDXF: ['Export DXF', 'xdxfout', 'exportDXF'], exportSVG: ['SVG', 'xsvg', 'exportSVG'], exportPNG: ['PNG', 'xpng', 'exportPNG'],
+  dDimLin: ['Linear', 'adlin', 'dDimLin', () => mode === 'd:dimlin'], dDimAli: ['Aligned', 'adali', 'dDimAli', () => mode === 'd:dimali'], dDimAng: ['Angular', 'adang', 'dDimAng', () => mode === 'd:dimang'],
+  dDimRad: ['Radius', 'adrad', 'dDimRad', () => mode === 'd:dimrad'], dDimDia: ['Diameter', 'addia', 'dDimDia', () => mode === 'd:dimdia'], dimStyleDlg: ['Dim styles', 'adstyle', 'dimStyleDlg'],
+  toggleDimArrows: ['Ticks / arrows', 'adarrow', 'toggleDimArrows', () => isFloor(page()) && curDimStyle().arrow === 'arrow'], dLeader: ['Leader', 'aleader', 'dLeader', () => mode === 'd:leader'],
+  dHatch: ['Hatch', 'ahatch', 'dHatch', () => mode === 'd:hatch'], hatchSettingsDlg: ['Hatch settings', 'ahset', 'hatchSettingsDlg'], insertDlg: ['Insert block', 'ainsert', 'insertDlg', () => mode === 'd:insert'], dBlock: ['Create block', 'ablock', 'dBlock', () => mode === 'd:block'],
+  newViewSheet: ['View sheet', 'vsheet', 'newViewSheet'], addView: ['Add view', 'vadd', 'addView', () => mode === 'vpadd'],
+  dWall: ['Wall', 'wwall', 'dWall', () => mode === 'd:wall'], wallSettingsDlg: ['Wall settings', 'wset', 'wallSettingsDlg'],
+  dDoor: ['Door', 'wdoor', 'dDoor', () => mode === 'd:door:single' || mode === 'd:door'], dDoorDouble: ['Double door', 'wdouble', 'dDoorDouble', () => mode === 'd:door:double'], dDoorPocket: ['Pocket door', 'wpocket', 'dDoorPocket', () => mode === 'd:door:pocket'],
+  dDoorBifold: ['Bifold door', 'wbifold', 'dDoorBifold', () => mode === 'd:door:bifold'], dDoorSliding: ['Sliding door', 'wslide', 'dDoorSliding', () => mode === 'd:door:sliding'], dDoorGarage: ['Garage door', 'wgarage', 'dDoorGarage', () => mode === 'd:door:garage'],
+  dWindow: ['Window', 'wwindow', 'dWindow', () => mode === 'd:window'], dOpening: ['Opening', 'wopen', 'dOpening', () => mode === 'd:opening'], dRoomPick: ['Room from walls', 'wroom', 'dRoomPick', () => mode === 'd:roompick'],
+  eMove: ['Move', 'emove', 'eMove', () => mode === 'd:move'], eCopy: ['Copy', 'ecopy', 'eCopy', () => mode === 'd:copy'], eRotate: ['Rotate', 'erotate', 'eRotate', () => mode === 'd:rotate'],
+  eScale: ['Scale', 'escale', 'eScale', () => mode === 'd:scale'], eMirror: ['Mirror', 'emirror', 'eMirror', () => mode === 'd:mirror'], eOffset: ['Offset', 'eoffset', 'eOffset', () => mode === 'd:offset'],
+  eTrim: ['Trim', 'etrim', 'eTrim', () => mode === 'd:trim'], eExtend: ['Extend', 'eextend', 'eExtend', () => mode === 'd:extend'], eFillet: ['Fillet', 'efillet', 'eFillet', () => mode === 'd:fillet'],
+  eChamfer: ['Chamfer', 'echamfer', 'eChamfer', () => mode === 'd:chamfer'], eBreak: ['Break', 'ebreak', 'eBreak', () => mode === 'd:break'], eBreakAt: ['Break at point', 'ebreak', 'eBreakAt', () => mode === 'd:breakat'],
+  eJoin: ['Join', 'ejoin', 'eJoin'], eExplode: ['Explode', 'eexplode', 'eExplode'], eArrayRect: ['Array', 'earect', 'eArrayRect', () => mode === 'd:arrayrect'],
+  eArrayPolar: ['Polar array', 'eapolar', 'eArrayPolar', () => mode === 'd:arraypolar'], eArrayPath: ['Path array', 'eapath', 'eArrayPath', () => mode === 'd:arraypath'],
+  eFront: ['Bring to front', 'efront', 'eFront'], eBack: ['Send to back', 'eback', 'eBack'],
+  dLine: ['Line', 'gline', 'dLine', () => mode === 'd:line'], dPline: ['Polyline', 'gpoly', 'dPline', () => mode === 'd:pline'], dArc: ['Arc', 'darc', 'dArc', () => mode === 'd:arc'],
+  dCircle: ['Circle', 'gcircle', 'dCircle', () => mode === 'd:circle'], dCircle2p: ['Circle 2 pt', 'dcircle2', 'dCircle2p', () => mode === 'd:circle:2p'], dCircle3p: ['Circle 3 pt', 'dcircle3', 'dCircle3p', () => mode === 'd:circle:3p'],
+  dEllipse: ['Ellipse', 'dellipse', 'dEllipse', () => mode === 'd:ellipse'], dPolygon: ['Polygon', 'dpolygon', 'dPolygon', () => mode === 'd:polygon'], dRect: ['Rectangle', 'drect', 'dRect', () => mode === 'd:rect'],
+  dSpline: ['Spline', 'dspline', 'dSpline', () => mode === 'd:spline'], dText: ['Text', 'dtext', 'dText', () => mode === 'd:text'], shapeToRoom: ['Make room', 'dmkroom', 'shapeToRoom'],
+  toggleOsnap: ['Object snap', 'osnap', 'toggleOsnap', () => osnapMaster()], toggleOrtho: ['Ortho', 'ortho', 'toggleOrtho', () => PREFS.ortho], togglePolar: ['Polar', 'polar', 'togglePolar', () => PREFS.polar],
+  osnapDlg: ['Snap settings', 'settings', 'osnapDlg'], toggleCmdline: ['Command line', 'cmdline', 'toggleCmdline', () => PREFS.cmdline], scaleDlg: ['Drawing scale', 'scale', 'scaleDlg'],
   fileNew: ['New', 'newp', 'fileNew'], openFile: ['Open', 'open', 'openFile'], save: ['Save', 'save', 'save'],
   paste: ['Paste', 'paste', 'paste'], cut: ['Cut', 'cut', 'cut'], copySel: ['Copy', 'copy', 'copySel'],
   undo: ['Undo', 'undo', 'undo'], redo: ['Redo', 'redo', 'redo'],
@@ -114,11 +198,29 @@ const DEFAULT_RIBBON = [
     { name: 'Home', items: ['sym:rbrk1', 'sym:rbrkgf', 'sym:rswt', 'sym:rsw3', 'sym:rdim', 'sym:rout', 'sym:routgf', 'sym:rlgt', 'sym:rfan', 'sym:rsmk', 'sym:rjbx', 'sym:rnbar'] },
   ] },
   { id: 'floor', name: 'Floor plan', contextual: true, groups: [
-    { name: 'Draw', items: ['selectMode', 'roomMode', 'roomPolyMode', 'roomCircMode', 'roomOvalMode', 'importImage'] },
+    { name: 'Walls', items: ['selectMode', 'dWall', 'wallSettingsDlg', 'dDoor', 'dDoorDouble', 'dDoorPocket', 'dDoorBifold', 'dDoorSliding', 'dDoorGarage', 'dWindow', 'dOpening'] },
+    { name: 'Rooms', items: ['dRoomPick', 'roomMode', 'roomPolyMode', 'roomCircMode', 'roomOvalMode', 'importImage'] },
+    { name: 'Draw', items: ['dLine', 'dPline', 'dArc', 'dCircle', 'dCircle2p', 'dCircle3p', 'dEllipse', 'dPolygon', 'dRect', 'dSpline', 'dText', 'shapeToRoom'] },
     { name: 'Outlets', items: ['sym:rout', 'sym:routgf', 'sym:routsw', 'sym:rout240'] },
     { name: 'Lights and switches', items: ['sym:rlgt', 'sym:rfan', 'sym:rswt', 'sym:rsw3', 'sym:rsw4', 'sym:rdim'] },
     { name: 'Other', items: ['sym:rsmk', 'sym:rjbx', 'sym:rapp', 'sym:rpnl'] },
     { name: 'Modify', items: ['rotateSel', 'delSel', 'toggleSnap', 'alignToGrid'] },
+    { name: 'Sheets', items: ['newViewSheet', 'addView'] },
+    { name: 'Exchange', items: ['importDXF', 'exportDXF', 'exportSVG', 'exportPNG'] },
+    { name: 'Precision', items: ['toggleOsnap', 'toggleOrtho', 'togglePolar', 'osnapDlg', 'scaleDlg', 'toggleCmdline'] },
+  ] },
+  { id: 'fmodify', name: 'Modify', contextual: true, groups: [
+    { name: 'Move and copy', items: ['selectMode', 'eMove', 'eCopy', 'eRotate', 'eScale', 'eMirror'] },
+    { name: 'Edit', items: ['eOffset', 'eTrim', 'eExtend', 'eFillet', 'eChamfer', 'eBreak', 'eBreakAt', 'eJoin', 'eExplode', 'delSel'] },
+    { name: 'Arrays', items: ['eArrayRect', 'eArrayPolar', 'eArrayPath'] },
+    { name: 'Order', items: ['eFront', 'eBack'] },
+    { name: 'Undo', items: ['undo', 'redo'] },
+  ] },
+  { id: 'fannot', name: 'Annotate', contextual: true, groups: [
+    { name: 'Dimensions', items: ['dDimLin', 'dDimAli', 'dDimAng', 'dDimRad', 'dDimDia', 'dimStyleDlg', 'toggleDimArrows'] },
+    { name: 'Text', items: ['dText', 'dLeader'] },
+    { name: 'Hatch', items: ['dHatch', 'hatchSettingsDlg'] },
+    { name: 'Blocks', items: ['insertDlg', 'dBlock'] },
   ] },
   { id: 'view', name: 'View', groups: [
     { name: 'Zoom', items: ['zoomFit', 'zoomWindow', 'zoomPrev', 'zoomIn', 'zoomOut'] },
@@ -132,14 +234,18 @@ const DEFAULT_RIBBON = [
     { name: 'Numbering', items: ['renumberDlg', 'wireDlg', 'lockWires', 'terminalEditor'] },
     { name: 'Reports', items: ['goToc', 'goPanel', 'goBOM', 'goConn', 'goCables', 'goTerms'] },
     { name: 'Revisions', items: ['revisionsDlg'] },
-    { name: 'Export', items: ['exportPDF', 'exportPanel', 'exportBOM', 'exportTerminals'] },
+    { name: 'Export', items: ['exportPDF', 'exportSVG', 'exportPNG', 'exportPanel', 'exportBOM', 'exportTerminals'] },
     { name: 'Excel', items: ['exportDevicesXlsx', 'importDevicesXlsx', 'exportBOMXlsx'] },
     { name: 'Symbols and parts', items: ['symbolLibrary', 'newSymbol', 'partsDlg'] },
     { name: 'Home', items: ['loadDefaultsDlg', 'panelDirectoryDlg'] },
   ] },
 ];
 let ribbonTab = 'home', lastPageKind = null;
-const ribbonDef = () => PREFS.ribbon || DEFAULT_RIBBON;
+function ribbonDef() {
+  if (!PREFS.ribbon) return DEFAULT_RIBBON;
+  const have = new Set(PREFS.ribbon.map(t => t.id)); const add = DEFAULT_RIBBON.filter(t => t.contextual && !have.has(t.id));
+  return add.length ? PREFS.ribbon.concat(add) : PREFS.ribbon;
+}
 function cmdInfo(id) {
   if (id.startsWith('sym:')) {
     const k = id.slice(4); const d = SYM[k]; if (!d) return null;
@@ -160,7 +266,7 @@ function renderToolbar() {
   const tabs = def.filter(t => !t.contextual || fp);
   if (!tabs.some(t => t.id === ribbonTab)) ribbonTab = (tabs[0] || {}).id;
   const tab = tabs.find(t => t.id === ribbonTab);
-  let s = '<div class="rtabs">' + tabs.map(t => `<div class="rtab${t.id === ribbonTab ? ' active' : ''}${t.contextual ? ' ctx' : ''}" data-rtab="${esc(t.id)}">${esc(t.name)}</div>`).join('') + '</div><div class="rpanel">';
+  let s = '<div class="rtabs">' + tabs.map(t => `<div class="rtab${t.id === ribbonTab ? ' active' : ''}${t.contextual ? ' ctx' : ''}" data-rtab="${esc(t.id)}">${esc(t.name)}</div>`).join('') + (typeof workspaceSelectHTML === 'function' ? workspaceSelectHTML() : '') + '</div><div class="rpanel">';
   for (const g of (tab ? tab.groups : [])) {
     const items = g.items.map(id => {
       const ci = cmdInfo(id); if (!ci) return '';

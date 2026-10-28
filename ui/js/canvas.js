@@ -32,18 +32,23 @@ function centerOn(x, y) { const r = svg.getBoundingClientRect(); view.x = x - r.
 
 // ---------- modes ----------
 function setMode(m, sym, itemId) {
-  mode = m; placeSym = sym || null; wireDraft = null; gdraft = null; placeItemId = itemId || null; fpoly = null; fbox = null;
+  if (gripOp) gripCancel();
+  mode = m; placeSym = sym || null; wireDraft = null; gdraft = null; placeItemId = itemId || null; fpoly = null; fbox = null; drawReset(m);
   $('#overlay').innerHTML = '';
   svg.classList.toggle('cross', m !== 'select');
   renderToolbar(); renderStatus();
   document.querySelectorAll('.symcard').forEach(c => c.classList.toggle('on', c.dataset.sym === placeSym));
+  if (P && isFloor(page())) renderCanvas();
 }
 function renderStatus() {
   const pg = page();
-  const names = { select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag a box)', roomoval: 'Draw oval room (drag a box)', roomcirc: 'Draw round room (drag from one side)', roompoly: 'Draw room shape (click corners, click the first corner to close)', area: 'Drag a box around the area to show', lplace: 'Place device footprint', lrail: 'DIN rail: drag along the plate', lduct: 'Wire duct: drag along the plate', 'g:line': 'Line: click start and end', 'g:poly': 'Polyline: click points, double click to finish', 'g:rect': 'Rectangle: click two corners', 'g:circle': 'Circle: click center, then a point on the edge', 'g:dim': 'Dimension: click start and end', zoomwin: 'Zoom window: drag a box around the area to zoom to', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
-  $('#st-mode').textContent = names[mode] + (mode === 'place' || mode === 'fpplace' ? '  (R rotate, right click / Esc to end)' : mode === 'wire' ? '  (click points, double click / Esc to finish)' : '');
+  const names = { vpadd: 'Add view (drag a box)', select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag or click two corners, or type a size)', roomoval: 'Draw oval room (drag or click two corners)', roomcirc: 'Draw round room (drag from one side, or type a diameter)', roompoly: 'Draw room shape (click corners or type lengths, click the first corner to close)', area: 'Drag a box around the area to show', lplace: 'Place device footprint', lrail: 'DIN rail: drag along the plate', lduct: 'Wire duct: drag along the plate', 'g:line': 'Line: click start and end', 'g:poly': 'Polyline: click points, double click to finish', 'g:rect': 'Rectangle: click two corners', 'g:circle': 'Circle: click center, then a point on the edge', 'g:dim': 'Dimension: click start and end', zoomwin: 'Zoom window: drag a box around the area to zoom to', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
+  $('#st-mode').textContent = (gripOp ? 'Grip: ' + GRIP_NAMES[gripOp.mode] + '  (Space next mode, C copy, Esc cancel)' : names[mode] || (DRAW ? 'Draw: ' + DRAW.T.name + '  (Enter or right click to finish, Esc to end)' : mode)) + (mode === 'place' || mode === 'fpplace' ? '  (R rotate, right click / Esc to end)' : mode === 'wire' ? '  (click points, double click / Esc to finish)' : '');
   $('#st-pos').textContent = `Page ${pageName(pg)}`;
   $('#st-snap').textContent = `Snap ${PREFS.snap ? 'on' : 'off'} · grid ${isFloor(pg) ? PREFS.gridFp : PREFS.gridSch} mm`;
+  const fp = isFloor(pg);
+  $('#st-prec').innerHTML = fp ? `<span class="pt${osnapMaster() ? ' on' : ''}" data-act="toggleOsnap" title="Object snap (F3)">OSNAP</span><span class="pt${PREFS.ortho ? ' on' : ''}" data-act="toggleOrtho" title="Ortho (F8)">ORTHO</span><span class="pt${PREFS.polar ? ' on' : ''}" data-act="togglePolar" title="Polar tracking (F10)">POLAR</span>` : '';
+  cmdSync();
 }
 
 // ---------- pointer interaction ----------
@@ -69,7 +74,8 @@ svg.addEventListener('mousedown', e => {
   closeMenus();
   const [mx, my] = toMM(e); const sx = snap(mx), sy = snap(my);
   if (e.button === 1 || (e.button === 0 && spaceDown)) { pan = { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y }; svg.classList.add('pan'); e.preventDefault(); return; }
-  if (e.button === 2) { if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
+  if (e.button === 2 && mode === 'select' && isFloor(page()) && !isSheet(page())) { const id = hitId(e); const f = id && findShape(id); if (f && shapeRoomPts(f.s)) { sel = new Set([id]); render(); shapeToRoom(); return; } }
+  if (e.button === 2) { if (gripOp) { gripCancel(); return; } if (DRAW && drawEnter()) return; if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
   if (e.button !== 0) return;
   if (mode === 'zoomwin') { zwin = { start: [mx, my], cur: [mx, my] }; return; }
   const pg = page();
@@ -140,10 +146,10 @@ window.addEventListener('mousemove', e => {
     zwin.cur = toMM(e); const [a, b] = zwin.start, [c, d] = zwin.cur;
     $('#overlay').innerHTML = `<rect class="zoombox" x="${Math.min(a, c)}" y="${Math.min(b, d)}" width="${Math.abs(c - a)}" height="${Math.abs(d - b)}"/>`; return;
   }
-  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox) return;
+  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox && !gripOp) return;
   const [mx, my] = toMM(e);
   if (isLayout(page())) { if (mode.startsWith('g:')) gfxPreview(snap(mx), snap(my)); else layMove(page(), mx, my); return; }
-  if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox) fpMove(page(), mx, my); return; }
+  if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox || gripOp) fpMove(page(), mx, my); return; }
   $('#st-pos').textContent = `X ${snap(mx)}  Y ${snap(my)}  |  Column ${colOf(mx)}  |  Page ${pageName(page())}`;
   if (mode === 'macro') { drawMacroGhost(mx, my); return; }
   if (mode === 'cable') {
@@ -178,7 +184,7 @@ window.addEventListener('mouseup', e => {
     setMode(zwPrev); return;
   }
   if (isLayout(page()) && (ldrag || lbox)) { layUp(page()); return; }
-  if (isFloor(page()) && (fdrag || fbox)) { fpUp(page()); return; }
+  if (isFloor(page()) && (fdrag || fbox || gripOp)) { fpUp(page()); return; }
   if (cdrag) {
     const { a, b } = cdrag; cdrag = null; $('#overlay').innerHTML = '';
     if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) >= 4) {
@@ -216,6 +222,7 @@ svg.addEventListener('dblclick', e => {
   if (mode === 'g:poly') { if (gdraft) gfxFinish(page()); return; }
   if (mode === 'wire') { if (wireDraft) finishWire(); return; }
   if (mode === 'roompoly') { if (fpoly) { fpoly.pop(); finishPoly(page()); } return; }
+  if (isSheet(page())) { const f = e.target.closest('[data-vp]'); const v = f && page().vps.find(x => x.id === f.dataset.vp); if (v) vpOpen(v); return; }
   if (isFloor(page())) { const inp = $('#props input'); if (hitId(e) && inp) { inp.focus(); inp.select(); } return; }
   const id = hitId(e); if (!id) return;
   const f = findItem(id);
@@ -333,11 +340,21 @@ function finishWire() {
 }
 
 // ---------- keyboard ----------
+// Esc: finish or cancel the command in progress, then clear the selection
+function escapeCommand() {
+  if (gripOp) { gripCancel(); return; }
+  if (DRAW && drawEscape()) return;
+  if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode.startsWith('g:') && gdraft) { gdraft = null; $('#overlay').innerHTML = ''; } else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); }
+  closeMenus();
+}
 window.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || tag === 'select') { if (e.key === 'Escape') e.target.blur(); return; }
   if ($('#dlg').open) return;
   const k = e.key.toLowerCase(), c = e.ctrlKey || e.metaKey;
+  if (!c && !e.altKey && fpAwaiting() && /^[0-9.'"@#,<\-\/]$/.test(e.key)) { e.preventDefault(); cmdType(e.key); return; }
+  if (!c && !e.altKey && (DRAW || gripOp) && /^[a-z]$/i.test(e.key)) { e.preventDefault(); cmdType(e.key); return; }
+  if (k === ' ' && gripOp) { e.preventDefault(); gripCycle(); return; }
   if (k === ' ') { spaceDown = true; e.preventDefault(); return; }
   if (c && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   else if (c && k === 'y') { e.preventDefault(); redo(); }
@@ -350,7 +367,11 @@ window.addEventListener('keydown', e => {
   else if (c && k === 'v') { e.preventDefault(); paste(); }
   else if (c && k === 'a') { e.preventDefault(); ACTIONS.selAll(); }
   else if (c && k === 'f') { e.preventDefault(); findDlg(); }
-  else if (k === 'escape') { if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode.startsWith('g:') && gdraft) { gdraft = null; $('#overlay').innerHTML = ''; } else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); } closeMenus(); }
+  else if (k === 'escape') escapeCommand();
+  else if (k === 'enter') { if (gripOp || DRAW) { e.preventDefault(); fpTyped(''); } else if (fpAwaiting() && mode === 'roompoly' && fpoly) fpTyped(''); else if (PREFS.cmdline) { e.preventDefault(); cmdFocus(); } }
+  else if (k === 'f3') { e.preventDefault(); toggleOsnap(); }
+  else if (k === 'f8') { e.preventDefault(); toggleOrtho(); }
+  else if (k === 'f10') { e.preventDefault(); togglePolar(); }
   else if (k === 'delete' || k === 'backspace') delSel();
   else if (k === 'r') { if (mode === 'place' || mode === 'fpplace') { placeRot = (placeRot + 90) % 360; const r = svg.getBoundingClientRect(); drawGhost(...toMM({ clientX: lastMouse[0], clientY: lastMouse[1] })); } else rotateSel(); }
   else if (k === 'tab') {

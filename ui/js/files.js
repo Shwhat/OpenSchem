@@ -61,7 +61,7 @@ setInterval(() => { if (dirty) host.autosave(JSON.stringify({ path: filePath, pr
 
 // ---------- startup ----------
 async function start() {
-  await loadPrefs(); applyTheme(); await loadLibrary(); await loadParts(); LIB.macros = LIB.macros || [];
+  await loadPrefs(); applyTheme(); dockInit(); await loadLibrary(); await loadBlocks(); await loadParts(); LIB.macros = LIB.macros || [];
   P = ensureProject(newProject()); curId = P.pages[0].id;
   renderSymbols(); renderToolbar();
   render(); zoomFit();

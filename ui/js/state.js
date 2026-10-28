@@ -13,7 +13,7 @@ function flash(m) { $('#st-msg').textContent = m; clearTimeout(flashT); flashT =
 
 // ---------- main render ----------
 let symKey = '', lastSchemId = null;
-function render(o = {}) {
+function render0(o = {}) {
   buildIndex(); if (syncDeviceBoxes()) buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
   applyLayerStyles(); renderCanvas();
   renderPages(); renderPageTabs(); renderToolbar();
@@ -30,3 +30,5 @@ function updateTitle() {
   host.title(`${dirty ? '* ' : ''}${P.name} - OpenSchem`);
   host.setDirty(dirty);
 }
+
+function render(o) { if (P && typeof refreshAutoRooms === 'function') refreshAutoRooms(); return render0(o); }

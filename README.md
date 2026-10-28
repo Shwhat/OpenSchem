@@ -31,6 +31,21 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 - Rooms drawn as boxes, shapes, round or oval rooms with automatic wall snapping, resized by dragging corners or walls, and image import for tracing
 - Devices shared between schematic and floor plan, with automatic room assignment
 - Circuit colors and automatically generated switch legs
+- Real units: feet and inches (default) or metric per project, with a drawing scale per level (1/4" = 1', 1:50, ...). Length fields accept `12'6"`, `12' 6 1/2"`, `150"` and `3.5 m`
+- Precision drafting: object snaps (endpoint, midpoint, center, intersection, perpendicular, nearest, quadrant) with markers, ortho and polar tracking (F3, F8, F10), typed lengths and coordinates while drawing (`10'`, `@12',8'`, `10'<45`, `#x,y`), window (left to right) and crossing (right to left) selection
+- Draw tools on floor plans: line, polyline (line and tangent arc segments, start and end widths), arc (3 points or center, start, end), circle (radius, diameter, 2 points, 3 points), ellipse, regular polygon (inscribed, circumscribed or by edge), rectangle with rounded or cut corners, spline and text, all with snaps and typed lengths
+- Grips on selected shapes and devices: drag or click-click to stretch, Space cycles through move, rotate, scale and mirror, with copies and typed angles or factors
+- Shape properties (color, line width, line type, fill, layer, sizes) and Make room to turn a closed shape into a room
+- Edit tools on floor plans: move, copy, rotate, scale (with reference), mirror, offset, trim, extend, fillet and chamfer (lines, walls and polyline corners), break, break at point, join, explode, rectangular, polar and path arrays, and draw order. They work on shapes, walls, rooms and devices (copied devices get new tags)
+- Walls with presets (2x4 interior 4.5", 2x6 exterior 6.5", mobile home 2x3 interior 3.5" and 2x4 exterior 4.5") or a custom thickness, the reference line on the center or either face, clean mitered corners and tees, and a stored height for elevations
+- Doors (single, double, pocket, bifold, sliding, garage), windows and cased openings placed in walls; they follow their wall, carry tags (D1, W1) and fill a door and window schedule report
+- Rooms made by clicking inside walls, and view sheets that put several views of floor plans (whole level, a room or an area) on one page, each at its own scale with a title
+- Dimensions (linear, aligned, angular, radius, diameter) that follow the geometry they measure, dimension styles (text size, units, precision, architectural ticks or arrowheads), and leaders
+- Hatching by clicking inside an area (solid, diagonal, crosshatch, dots, brick, concrete, wood, insulation), with islands left open
+- Blocks with attributes: a starter library of furniture, plumbing fixtures, appliances and mechanical equipment in the data folder, your own blocks, and project copies of every block used. PART goes on the bill of materials; LOAD with CIRCUIT adds to the circuit's load calculation
+- DXF import (ASCII, R12 to 2018) onto a floor plan level, DXF export (R2000) of a level, and SVG or PNG export of any page
+- Optional command line with command names and short aliases (RM, RS, ZE, UNDO, OSNAP, ...)
+- Dockable panels (Pages, Devices, Symbols, To-do, Properties): float, dock left, right or bottom, stack as tabs, resize, and save arrangements as named workspaces (Schematic, Floor plan, Home wiring, Reports built in)
 
 **Panel layout**
 - Panel layout pages drawn to scale, with the enclosure, DIN rails, wire ducts and device footprints sized from the parts database
@@ -58,7 +73,7 @@ Help > Open demo project opens one project that uses every feature (pump station
 
 ## Data storage
 
-OpenSchem stores settings, the user symbol and macro library, the parts database (parts.json) and autosave data in an `OpenSchem Data` folder next to the executable. If that location is not writable, it uses `%LOCALAPPDATA%\OpenSchem`.
+OpenSchem stores settings, the user symbol and macro library, the parts database (parts.json), the block library (blocks.json), saved workspaces and autosave data in an `OpenSchem Data` folder next to the executable. If that location is not writable, it uses `%LOCALAPPDATA%\OpenSchem`.
 
 ## Requirements
 
@@ -73,9 +88,9 @@ win32_windows.go     Windows API helpers
 ui/index.html        Page skeleton
 ui/style.css         All styles, including dark theme
 ui/manifest.txt      Script load order (used by the exe, the tests and tools/assemble.py)
-ui/js/               Application code, one file per area (navigator.js: page tree and thumbnails, layers.js: layers)
+ui/js/               Application code, one file per area (navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dock.js: panels and workspaces)
 ui/vendor/           Third-party libraries (PDF export)
-tests/               Automated tests
+tests/               Automated tests (tests/fixtures holds DXF files made by make_dxf.py)
 tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser
 ```
 

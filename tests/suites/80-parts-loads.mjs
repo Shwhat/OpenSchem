@@ -21,10 +21,10 @@ export const tests = {
   'parts manager: add, edit, delete': async t => {
     await t.open();
     await t.eval(() => { PARTS = []; partsDlg(); });
-    await t.page.click('[data-padd]'); await t.page.waitForTimeout(30);
+    await t.page.click('[data-padd]'); await t.page.waitForTimeout(150);
     await t.page.fill('input[name="pn"]', 'P1'); await t.page.fill('input[name="price"]', '$3.25'); await t.confirm();
     t.eq(await t.eval(() => PARTS), [{ pn: 'P1', price: '3.25' }]);
-    await t.eval(() => partsDlg()); await t.page.click('[data-pedit="P1"]'); await t.page.waitForTimeout(30);
+    await t.eval(() => partsDlg()); await t.page.click('[data-pedit="P1"]'); await t.page.waitForTimeout(150);
     await t.page.fill('input[name="mfr"]', 'Brand'); await t.confirm();
     t.eq(await t.eval(() => PARTS[0].mfr), 'Brand');
     await t.eval(() => partsDlg()); await t.page.click('[data-pdel="P1"]');

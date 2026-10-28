@@ -69,7 +69,7 @@ function demoHome() {
   // US wire colors
   for (let pass = 0; pass < 3; pass++) for (const pg of p.pages) for (const w of pg.wires) { const a = autoWire(pg, w.pts); if (a) { w.color = a.color === 'BK' && w.color ? w.color : a.color; w.awg = pg === c4 ? '10' : pg === c2 || pg === c3 ? '12' : '14'; } }
   // floor plan
-  const lv = { id: uid(), name: 'Main floor', rooms: [], places: [], image: null }; p.levels = [lv];
+  const lv = { id: uid(), name: 'Main floor', rooms: [], places: [], image: null, scale: 48 }; p.levels = [lv];
   const R = (name, x0, y0, x1, y1) => { const r = { id: uid(), name, pts: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] }; lv.rooms.push(r); return r; };
   const kitchen = R('Kitchen', 40, 40, 160, 140); R('Dining', 160, 40, 280, 140); R('Bath', 40, 140, 120, 230); R('Laundry', 120, 140, 200, 230); R('Living', 200, 140, 360, 230);
   const byTag = t => [...allItems()].find(i => i.tag === t);

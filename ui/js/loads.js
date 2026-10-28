@@ -19,6 +19,7 @@ function circuitInfo(brk) {
   const amps = pnum(brk.amps || d.amps);
   let load = 0;
   if (fn) for (const it of allItems()) if (it.fn === fn && it !== brk) load += deviceLoad(it);
+  if (fn) load += blockLoad(fn);
   // wire size: the smallest wire (largest AWG number) on the circuit's pages, else the default size
   let awg = 0;
   for (const p of P.pages) if (!isFloor(p) && fn && p.fn === fn) for (const w of p.wires) if (w.awg && +w.awg > awg) awg = +w.awg;
