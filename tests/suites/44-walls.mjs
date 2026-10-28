@@ -113,4 +113,26 @@ export const tests = {
     await t.drag(300, 100, 310, 110); t.eq(await t.eval(() => page().vps[1].rect[0]), 230, 'view moved');
     await t.key('Delete'); t.eq(await t.eval(() => page().vps.length), 1);
   },
+  'align to grid covers walls, openings, shapes, dimensions and blocks': async t => {
+    const op = { id: 'o1', t: 'opening', wall: 'w1', c: [90.2, 60.4], w: 20, kind: 'door', style: 'single', hinge: 'l', side: 1, tag: 'D1' };
+    await blank(t, [W('w1', [61.4, 59.2], [119.3, 60.8]), W('w2', [119.3, 60.8], [119.3, 140.6]), op,
+      { id: 'd1', t: 'dim', kind: 'lin', p1: [10.3, 10.2], p2: [50.4, 10.1], loc: [30.2, 20.3], style: 'Standard' },
+      { id: 'c1', t: 'circle', c: [100.9, 100.6], r: 5 }, { id: 'l1', t: 'line', a: [10.3, 90.2], b: [40.4, 90.1] }]);
+    await t.eval(() => { const lv = levelOf(page()); lv.shapes.push({ id: 'b1', t: 'insert', name: BLOCKLIB[0].name, p: [150.7, 100.3], rot: 0, k: 1, vals: {} }); lv.shapes.push({ id: 'd2', t: 'dim', kind: 'lin', p1: [10.3, 10.2], p2: [50.4, 10.1], loc: [30.2, 20.3], style: 'Standard', r1: { id: 'l1', g: 0 }, r2: { id: 'l1', g: 1 } }); sel = new Set(); render(); });
+    const s0 = await t.eval(() => { const lv = levelOf(page()); return openingAt(lvShapes(lv).find(x => x.id === 'o1'), wallById(lv, 'w1')); });
+    await t.eval(() => alignToGrid());
+    const s = Object.fromEntries((await shapes(t)).map(x => [x.id, x]));
+    t.eq([s.w1.a, s.w1.b, s.w2.a, s.w2.b], [[62, 60], [120, 60], [120, 60], [120, 140]], 'walls snap and the shared corner stays joined');
+    t.ok(near(s.o1.c[1], 60) && near(s.o1.c[0], 62 + s0, 0.1), 'door stays on its wall at the same distance along it');
+    t.eq([s.d1.p1, s.d1.p2, s.d1.loc], [[10, 10], [50, 10], [30, 20]], 'free dimension');
+    t.eq(s.d2.loc, [30.2, 20.3], 'dimension that follows geometry is left to the geometry');
+    t.eq([s.c1.c, s.l1.a, s.l1.b, s.b1.p], [[100, 100], [10, 90], [40, 90], [150, 100]]);
+  },
+  'a door picked on its own slides to the grid along its wall': async t => {
+    await blank(t, [W('w1', [60, 60], [180, 60]), { id: 'o1', t: 'opening', wall: 'w1', c: [100.7, 60], w: 20, kind: 'door', style: 'single', hinge: 'l', side: 1, tag: 'D1' }]);
+    await t.eval(() => { sel = new Set(['o1']); alignToGrid(); });
+    const s = Object.fromEntries((await shapes(t)).map(x => [x.id, x]));
+    t.ok(near(s.o1.c[0], 100) && near(s.o1.c[1], 60), 'door moved along the wall');
+    t.eq(s.w1.a, [60, 60], 'wall not touched');
+  },
 };

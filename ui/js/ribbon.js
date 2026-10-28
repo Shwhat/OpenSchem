@@ -214,6 +214,7 @@ const DEFAULT_RIBBON = [
     { name: 'Edit', items: ['eOffset', 'eTrim', 'eExtend', 'eFillet', 'eChamfer', 'eBreak', 'eBreakAt', 'eJoin', 'eExplode', 'delSel'] },
     { name: 'Arrays', items: ['eArrayRect', 'eArrayPolar', 'eArrayPath'] },
     { name: 'Order', items: ['eFront', 'eBack'] },
+    { name: 'Snap', items: ['toggleSnap', 'alignToGrid'] },
     { name: 'Undo', items: ['undo', 'redo'] },
   ] },
   { id: 'fannot', name: 'Annotate', contextual: true, groups: [
@@ -359,6 +360,8 @@ function customizeRibbon() {
 // ---------- preferences in the portable data folder ----------
 async function loadPrefs() {
   try { const t = await host.readData('prefs.json'); if (t) Object.assign(PREFS, JSON.parse(t)); } catch (e) {}
+  // a new program version starts from the default ribbon, so new buttons always show up
+  if (PREFS.appVersion !== APP_VERSION) { PREFS.ribbon = null; PREFS.appVersion = APP_VERSION; savePrefs(); }
 }
 function savePrefs() { host.writeData('prefs.json', JSON.stringify(PREFS)); }
 function toggleSnap() { PREFS.snap = !PREFS.snap; savePrefs(); renderToolbar(); renderStatus(); flash('Snap to grid ' + (PREFS.snap ? 'on' : 'off')); }

@@ -113,6 +113,7 @@ function alignToGrid() {
     commit(() => {
       for (const pl of lv.places) if (on(pl.id)) { pl.x = sn(pl.x); pl.y = sn(pl.y); autoRoom(lv, pl); }
       for (const r of lv.rooms) if (on(r.id)) r.pts = r.pts.map(p => [sn(p[0]), sn(p[1])]);
+      alignFloorShapes(lv, on, sn);
     });
     flash(all ? 'Everything on the page is aligned to the grid' : 'Selection aligned to the grid'); return;
   }
@@ -134,5 +135,36 @@ function alignToGrid() {
     for (const gx of pg.gfx || []) if (on(gx.id)) gx.pts = gx.pts.map(p => [snapG(p[0]), snapG(p[1])]);
   });
   flash(all ? 'Everything on the page is aligned to the grid' : 'Selection aligned to the grid');
+}
+// floor plan shapes: points snap one by one (so walls that meet at a corner stay joined), centers and insertion
+// points snap as a whole. Doors and windows stay on their wall and keep their place along it; one picked on its own
+// slides along the wall to the nearest grid line. Associative dimensions follow their geometry; hatches are left alone.
+function alignFloorShapes(lv, on, sn) {
+  const shapes = lvShapes(lv), sp = p => [sn(p[0]), sn(p[1])];
+  const spread = pts => pts.some(p => p[0] !== pts[0][0] || p[1] !== pts[0][1]);
+  const keep = new Map();
+  for (const o of shapes) if (o.t === 'opening') { const w = wallById(lv, o.wall); if (w && on(w.id)) keep.set(o.id, openingAt(o, w)); }
+  for (const s of shapes) {
+    if (!on(s.id) || s.t === 'opening' || s.t === 'hatch') continue;
+    if (s.t === 'line' || s.t === 'wall') { const a = sp(s.a), b = sp(s.b); if (spread([a, b])) { s.a = a; s.b = b; } }
+    else if (s.t === 'pline' || s.t === 'spline' || s.t === 'leader') { const q = s.pts.map(sp); if (spread(q)) s.pts = q; }
+    else if (s.t === 'arc' || s.t === 'circle' || s.t === 'ellipse') s.c = sp(s.c);
+    else if (s.t === 'text' || s.t === 'insert') s.p = sp(s.p);
+    else if (s.t === 'dim' && !(s.r1 || s.r2 || s.ref || s.l1 || s.l2)) for (const k of ['p1', 'p2', 'loc', 'c']) if (s[k]) s[k] = sp(s[k]);
+  }
+  for (const o of shapes) {
+    if (o.t !== 'opening') continue;
+    const w = wallById(lv, o.wall); if (!w) continue; const ax = wallAxis(w);
+    let at = null;
+    if (keep.has(o.id)) at = keep.get(o.id);
+    else if (on(o.id)) {
+      at = openingAt(o, w);
+      if (Math.abs(ax.u[1]) < 1e-6) at = (sn(o.c[0]) - w.a[0]) / ax.u[0];
+      else if (Math.abs(ax.u[0]) < 1e-6) at = (sn(o.c[1]) - w.a[1]) / ax.u[1];
+      else at = sn(at);
+    }
+    if (at === null) continue;
+    o.c = rp(axPt(w, ax, Math.max(o.w / 2, Math.min(ax.len - o.w / 2, at)), 0));
+  }
 }
 const snapG = v => r2(Math.round(v / gs()) * gs());

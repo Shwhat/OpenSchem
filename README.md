@@ -17,7 +17,7 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 - Display layers (symbols, tags, descriptions, connection labels, cross-references, connections, wire numbers, junctions, cables, text) with show, print and color settings, plus user layers that can be hidden, left out of print or locked
 - IEC-style symbol library (coils, contacts, protection, motors, PLC I/O, terminals, interruption points) plus residential symbols (breakers, switches, dimmers, outlets, lights, fans, detectors, panels)
 - Device tagging with =Function +Location -Device, automatic device and contact numbering, contact mirrors and cross-references
-- Align to grid (Shift+G) for the selection or the whole page
+- Align to grid (Shift+G) for the selection or the whole page; on floor plans it covers devices, rooms, walls, doors and windows (they stay on their wall), shapes, free dimensions and blocks
 - Automatic connections between facing connection points when symbols are placed or moved (can be turned off)
 - Connection ends and segments can be dragged after placing
 - Orthogonal wiring with rubber-banding, junction dots and automatic wire numbering per potential

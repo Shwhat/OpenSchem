@@ -1,6 +1,6 @@
 {
   "name": "openschem",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "private": true,
   "description": "Portable electrical schematic editor",
   "license": "GPL-3.0-only",

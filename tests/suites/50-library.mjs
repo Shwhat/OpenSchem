@@ -37,6 +37,20 @@ export const tests = {
     await t.open();
     t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'View', 'Project', 'X']);
   },
+  'a new program version resets the saved ribbon so new buttons show up': async t => {
+    await t.open();
+    await t.eval(() => customizeRibbon());
+    await t.page.click('[data-czb="t:add"]'); await t.page.click('[data-czb="g:add"]');
+    await t.page.fill('#czq', 'renumber'); await t.page.click('[data-czadd="renumberDlg"]');
+    await t.confirm();
+    await t.open();
+    t.ok((await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent))).includes('X'), 'same version keeps the saved ribbon');
+    await t.eval(() => { PREFS.appVersion = '1.0.0'; savePrefs(); });
+    await t.open();
+    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'View', 'Project']);
+    t.eq(await t.eval(() => [PREFS.ribbon, PREFS.appVersion === APP_VERSION]), [null, true]);
+    t.ok(await t.eval(() => DEFAULT_RIBBON.find(x => x.id === 'fmodify').groups.some(g => g.items.includes('alignToGrid'))), 'Align to grid is on the Modify tab');
+  },
   'macros: save a selection and insert it with new tags': async t => {
     await t.open('#home'); await t.goPage('CKT 1/1');
     await t.eval(() => { const pg = page(); sel = new Set([...pg.items.filter(i => ['SWT1', 'LGT1'].includes(i.tag)).map(i => i.id), ...pg.wires.filter(w => w.pts.every(q => q[0] === 80 && q[1] >= 104 && q[1] <= 128)).map(w => w.id)]); render(); saveMacro(); });
