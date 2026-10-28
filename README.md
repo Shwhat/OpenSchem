@@ -89,15 +89,30 @@ Help > Open demo project opens one project that uses every feature (pump station
 
 ## Running with Docker
 
-```
-docker compose up -d --build
-```
-
-Then open `http://<server>:8080` and create an account. To build images for both architectures and push them to a registry:
+Images for amd64 and arm64 are published to the GitHub container registry on every push to this branch.
 
 ```
-docker buildx build --platform linux/amd64,linux/arm64 -t <registry>/openschem:1.14.0 --push .
+docker run -d --name openschem -p 8080:8080 -v openschem-data:/data --restart unless-stopped ghcr.io/shwhat/openschem:latest
 ```
+
+Or with Docker Compose, save this as `docker-compose.yml` and run `docker compose up -d`:
+
+```yaml
+services:
+  openschem:
+    image: ghcr.io/shwhat/openschem:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - openschem-data:/data
+volumes:
+  openschem-data:
+```
+
+Then open `http://<server>:8080` and create an account. Update with `docker compose pull && docker compose up -d`. Each release is also tagged with its version number (for example `ghcr.io/shwhat/openschem:1.14.0`).
+
+To build the image yourself from a clone of this branch instead: `docker compose up -d --build`.
 
 Settings (environment variables):
 
