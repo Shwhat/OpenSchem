@@ -487,3 +487,20 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 .ccol label{display:flex;gap:4px;align-items:center}.ccol label input{width:auto;flex:none}
 .warnnote{color:#a15c00}
 #content .ccell{cursor:pointer}#content .ccell:hover{fill:rgba(31,111,255,.07)}
+
+/* server: account menu and project list */
+#acct{border-left:1px solid #46536a;margin-left:4px}
+.pb-top{display:flex;gap:8px;margin-bottom:8px}
+.pb-top input{flex:1}
+.pb-wrap{max-height:56vh;overflow:auto;border:1px solid var(--line)}
+table.pb{width:100%;border-collapse:collapse;font-size:12px}
+table.pb th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line)}
+table.pb td{padding:5px 8px;border-bottom:1px solid var(--line2);vertical-align:top}
+table.pb a{color:inherit;font-weight:600;text-decoration:none}
+table.pb a:hover{text-decoration:underline}
+.pb-sub{color:var(--muted);font-size:11px}
+.pb-act{text-align:right;white-space:nowrap}
+.pb-act .btn{margin-left:4px}
+.pb-empty{color:var(--muted);text-align:center;padding:18px!important}
+tr.pb-share td{background:var(--panel)}
+.pb-sharebtns{text-align:right;margin-top:6px}

@@ -1,0 +1,19 @@
+services:
+  openschem:
+    build: .
+    image: openschem:latest
+    container_name: openschem
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - openschem-data:/data
+    environment:
+      # "off" stops new accounts once everyone who needs one has signed up
+      OPENSCHEM_SIGNUP: "on"
+      # auto: the session cookie is marked secure when the request arrives over HTTPS
+      # (directly or through a reverse proxy that sets X-Forwarded-Proto)
+      OPENSCHEM_SECURE_COOKIE: "auto"
+
+volumes:
+  openschem-data:

@@ -1,6 +1,6 @@
 // ---------- blocks: reusable groups of shapes with attributes ----------
 // A block definition { name, cat, desc, shapes, attrs } is drawn in real millimetres around its base point (0, 0).
-// The library lives in the data folder (blocks.json) and starts with furniture, fixtures, appliances and mechanical
+// The library lives in blocks.json (shared by all users on the server) and starts with furniture, fixtures, appliances and mechanical
 // equipment; every block used in a project is copied into P.blocks so the project opens anywhere. An insert
 // { t: 'insert', name, p, rot, k, mir, vals } places a block on a level. Attributes: PART goes on the bill of
 // materials, LOAD (VA) with CIRCUIT adds to that circuit's load calculation, other tags are notes.

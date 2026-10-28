@@ -2,9 +2,22 @@
 
 A portable electrical schematic editor with structured device tagging (=Function +Location -Device), built for both industrial controls work and documenting residential wiring.
 
-OpenSchem runs as a single Windows executable with no installation. Projects are stored as `.osp` files (JSON).
+This branch runs OpenSchem as a web server in a Docker container (amd64 and arm64), used from any modern browser. Several people can have accounts on one server, keep their projects there and share them with each other. Projects are stored as `.osp` files (JSON) and can be imported and downloaded. The Windows desktop version lives on the `main` branch.
 
 ## Features
+
+**Server and accounts**
+- Accounts with a user name and password; anyone who can reach the server can create one (turn this off with `OPENSCHEM_SIGNUP=off`)
+- Projects are kept on the server. File > Open lists your projects and the ones shared with you, with a filter, owner, your access and who saved last
+- Share a project with other users as view only or editable (File > Share project, or Share in the project list). Only the owner can share or delete it
+- One editor at a time: while someone edits a project, others open it read-only and are told who is editing; it becomes editable for them once that person is done. A save that would overwrite someone else's newer save asks whether to replace their changes or save a copy
+- Read-only projects can still be changed on screen and saved as your own copy
+- Import a project from your computer (in the project list or by dropping an `.osp` file on the window), and File > Download project to get an `.osp` file
+- The address bar holds the open project, so a page reload or a bookmark opens it again
+- Preferences are per user; the symbol and macro library, parts database and block library are shared by everyone on the server
+- Unsaved work is kept on the server every 30 seconds and offered back the next time you sign in
+- Change password (signs out your other devices) and Sign out from the account menu at the right of the menu bar
+- Exports (PDF, CSV, Excel, DXF, SVG, PNG) download through the browser
 
 **Schematics**
 - Paper sizes per page or per project: A2, A3, A4, Letter, Tabloid and a 3 × 5 in note card, each with its own column grid and title block
@@ -74,40 +87,75 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 
 Help > Open demo project opens one project that uses every feature (pump station control panel, home wiring, floor plans, panel layout, note card page and more). It is built by `ui/js/demo.js` from the two building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
 
+## Running with Docker
+
+```
+docker compose up -d --build
+```
+
+Then open `http://<server>:8080` and create an account. To build images for both architectures and push them to a registry:
+
+```
+docker buildx build --platform linux/amd64,linux/arm64 -t <registry>/openschem:1.14.0 --push .
+```
+
+Settings (environment variables):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OPENSCHEM_SIGNUP` | `on` | `off` stops new accounts; existing users can still sign in |
+| `OPENSCHEM_SECURE_COOKIE` | `auto` | `auto` marks the session cookie secure when the request comes over HTTPS (directly or with `X-Forwarded-Proto: https` from a reverse proxy); `always` or `never` force it |
+| `OPENSCHEM_ADDR` | `:8080` | Address and port inside the container |
+| `OPENSCHEM_DATA` | `/data` | Data folder inside the container |
+
+The container runs as user 65532. A named volume (as in `docker-compose.yml`) works as is. To use a folder on the host instead, make it writable by that user (`chown 65532:65532 <folder>`) or run the container as your own user with `user: "1000:1000"` in the compose file.
+
+For use outside your home network, put the server behind a reverse proxy with HTTPS.
+
 ## Data storage
 
-OpenSchem stores settings, the user symbol and macro library, the parts database (parts.json), the block library (blocks.json), saved workspaces and autosave data in an `OpenSchem Data` folder next to the executable. If that location is not writable, it uses `%LOCALAPPDATA%\OpenSchem`.
+Everything is in the data folder (`/data` in the container); back it up by copying the folder.
 
-## Requirements
-
-- Windows 10 (21H2 or later) or Windows 11
-- Microsoft Edge WebView2 Runtime (included with current Windows versions)
+```
+users.json             accounts (passwords stored as PBKDF2-SHA256 hashes)
+sessions.json          sign-in sessions (hashed tokens), kept for 30 days of inactivity
+projects.json          project list: owner, sharing, revision
+projects/<id>.osp      project contents
+users/<id>/            per-user preferences (prefs.json) and unsaved work (autosave.json)
+shared/                symbol and macro library, parts database, block library
+```
 
 ## Project layout
 
 ```
-main_windows.go      Windows host: window, file dialogs, data folder, close prompt
-win32_windows.go     Windows API helpers
+main.go              Web server: routes, sign-in, projects, data files
+store.go             Data folder: accounts, sessions, projects, sharing, edit lock
+auth.go              Password hashing and sign-in rate limits
+server_test.go       Server tests (go test)
+web/                 Sign-in page and logo
+Dockerfile           Multi-architecture image (amd64, arm64)
+docker-compose.yml   Example deployment
 ui/index.html        Page skeleton
 ui/style.css         All styles, including dark theme
-ui/manifest.txt      Script load order (used by the exe, the tests and tools/assemble.py)
-ui/js/               Application code, one file per area (navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dock.js: panels and workspaces)
+ui/manifest.txt      Script load order (used by the server, the tests and tools/assemble.py)
+ui/js/               Application code, one file per area (host.js: server connection, project list, sharing and account; navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dock.js: panels and workspaces)
 ui/vendor/           Third-party libraries (PDF export)
 tests/               Automated tests (tests/fixtures holds DXF files made by make_dxf.py)
 tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser
 ```
 
-## Building
+## Building without Docker
 
 ```
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H windowsgui -s -w" -o OpenSchem.exe .
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o openschem .
+OPENSCHEM_DATA=./data ./openschem
 ```
 
-The interface can also be run in any browser for development: `python3 tools/assemble.py` writes `build/openschem.html`.
+Go 1.24 or later. The server has no dependencies outside the Go standard library. The interface can also be opened without a server for development: `python3 tools/assemble.py` writes `build/openschem.html` (files then go through downloads and settings through browser storage).
 
 ## Testing
 
-The tests open the interface in headless Chromium and exercise it end to end (placing and wiring devices, reports, floor plans, the symbol editor, macros, PDF export, file format upgrades).
+The tests open the interface in headless Chromium and exercise it end to end (placing and wiring devices, reports, floor plans, the symbol editor, macros, PDF export, file format upgrades, and the server).
 
 ```
 npm install
@@ -115,7 +163,9 @@ npx playwright install chromium
 npm test
 ```
 
-Run a single area with `npm test -- floor` (matches test file names).
+Run a single area with `npm test -- floor` (matches test file names). The `91-server` suite builds the server, starts it with an empty data folder and tests accounts, sharing, the edit lock and conflicts through the browser, so it needs Go installed.
+
+The server itself has its own tests: `go test ./...`
 
 ## Project file format
 
@@ -123,7 +173,6 @@ Projects are JSON. Each file records its format version (`ver`) and the app vers
 
 ## Third-party components
 
-- [go-webview2](https://github.com/jchv/go-webview2) (MIT)
 - [jsPDF](https://github.com/parallax/jsPDF) (MIT), license in `ui/vendor/jspdf.LICENSE`
 - [svg2pdf.js](https://github.com/yWorks/svg2pdf.js) (MIT), license in `ui/vendor/svg2pdf.LICENSE`
 

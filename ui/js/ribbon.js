@@ -359,7 +359,7 @@ function customizeRibbon() {
   };
 }
 
-// ---------- preferences in the portable data folder ----------
+// ---------- preferences (prefs.json, kept per user on the server) ----------
 async function loadPrefs() {
   try { const t = await host.readData('prefs.json'); if (t) Object.assign(PREFS, JSON.parse(t)); } catch (e) {}
   // a new program version starts from the default ribbon, so new buttons always show up

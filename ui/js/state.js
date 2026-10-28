@@ -25,7 +25,7 @@ function render0(o = {}) {
 }
 function renderCanvas() { useSheet(page()); $('#content').innerHTML = pageSVG(page()); applyView(); }
 function updateTitle() {
-  const n = (filePath ? filePath.split(/[\\/]/).pop() : 'Untitled.osp') + (dirty ? ' *' : '');
+  const n = host.fileLabel(filePath) + (dirty ? ' *' : '');
   $('#docname').textContent = `${P.name}  |  ${n}`;
   host.title(`${dirty ? '* ' : ''}${P.name} - OpenSchem`);
   host.setDirty(dirty);

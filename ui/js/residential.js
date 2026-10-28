@@ -227,7 +227,7 @@ function settingsDlg() {
     ['industrial', 'Show industrial symbols', s.industrial, 'check'],
     ['circuitColors', 'Circuit colors on floor plans', s.circuitColors, 'check'],
     ['switchLegs', 'Switch legs on floor plans', s.switchLegs, 'check'],
-    ['theme', 'Theme', PREFS.theme, 'select', [['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow Windows']]],
+    ['theme', 'Theme', PREFS.theme, 'select', [['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow system']]],
     ['sheet', 'Drawing sheet', PREFS.sheet, 'select', [['white', 'White (paper)'], ['dark', 'Dark']]],
     ['snap', 'Snap to grid (all pages)', PREFS.snap, 'check'],
     ['autoConnect', 'Connect facing connection points automatically', PREFS.autoConnect, 'check'],

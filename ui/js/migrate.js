@@ -2,7 +2,7 @@
 // FORMAT_VERSION is stored in every saved .osp file as "ver". When the stored data layout changes,
 // bump FORMAT_VERSION and add a step to MIGRATIONS that upgrades a file from the previous version.
 // Files are upgraded one step at a time on open, so any older file can be read.
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.14.0';
 const FORMAT_VERSION = 4;
 
 const MIGRATIONS = {

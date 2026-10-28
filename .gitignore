@@ -5,3 +5,5 @@ node_modules/
 OpenSchem Data/
 *.osp.bak
 *.tmp
+data/
+openschem

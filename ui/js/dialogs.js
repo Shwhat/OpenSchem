@@ -6,7 +6,7 @@ function dialog(title, fields, onOk, okLabel = 'OK', extraHTML = '') {
   for (const [k, label, v, type, opt] of fields) {
     if (type === 'check') s += `<div class="prow"><label>${label}</label><input type="checkbox" name="${k}" ${v ? 'checked' : ''} style="width:auto"></div>`;
     else if (type === 'select') s += `<div class="prow"><label>${label}</label><select name="${k}">${opt.map(([ov, ol]) => `<option value="${esc(ov)}" ${ov === v ? 'selected' : ''}>${esc(ol)}</option>`).join('')}</select></div>`;
-    else s += `<div class="prow"><label>${label}</label><input name="${k}" value="${esc(v)}" ${type === 'number' ? 'type="number"' : ''}></div>`;
+    else s += `<div class="prow"><label>${label}</label><input name="${k}" value="${esc(v)}" ${type === 'number' ? 'type="number"' : type === 'password' ? 'type="password" autocomplete="off"' : ''}></div>`;
   }
   $('#dlgbody').innerHTML = s + extraHTML;
   $('#dlgbtns').innerHTML = onOk ? `<button type="button" class="btn" onclick="document.getElementById('dlg').close('cancel')">Cancel</button><button class="btn primary" value="ok">${okLabel}</button>` : '<button class="btn primary" value="cancel">Close</button>';
@@ -129,5 +129,5 @@ function shortcuts() {
   dialog('Keyboard shortcuts', [], null, 'OK', `<div class="kbd">${k.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join('')}</div>`);
 }
 function about() {
-  dialog('About OpenSchem', [], null, 'OK', '<p><b>OpenSchem ' + APP_VERSION + '</b><br>Portable electrical schematic editor with structured device tagging (=Function +Location -Device), automatic device and wire numbering, contact mirrors and cross-references.</p><p class="note">Projects are saved as .osp files (JSON). Settings, your symbol library and autosave are kept in the OpenSchem Data folder next to the program.</p>');
+  dialog('About OpenSchem', [], null, 'OK', '<p><b>OpenSchem ' + APP_VERSION + '</b><br>Electrical schematic editor with structured device tagging (=Function +Location -Device), automatic device and wire numbering, contact mirrors and cross-references.</p><p class="note">' + (host.has ? `Signed in as ${esc(host.user.name)}. Projects and your settings are kept on this server. The symbol, macro, parts and block libraries are shared by everyone on the server. Projects can be downloaded as .osp files (JSON).` : 'Projects are saved as .osp files (JSON).') + '</p>');
 }
