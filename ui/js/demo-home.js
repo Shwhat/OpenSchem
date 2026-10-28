@@ -80,7 +80,7 @@ function demoHome() {
   PL('OUT4', 160, 226); PL('PNL1', 128, 222);
   const smk = { id: uid(), sym: 'rsmk', x: 0, y: 0, rot: 0, fn: '', loc: 'Living', tag: 'SMK1', role: 'main', cl: SYM.rsmk.conns.map(c => c[2]), desc: 'Hallway smoke/CO' };
   p.pool.push(smk); lv.places.push({ id: uid(), item: smk.id, x: 280, y: 185, rot: 0 });
-  p.pages.push(newFloorPage(lv.id, '1', 'Main floor', 'level'));
+  const fpg = newFloorPage(lv.id, '1', 'Main floor', 'level'); fpg.legend = {}; p.pages.push(fpg);
   p.pages.push(newFloorPage(lv.id, '2', 'Kitchen', 'room', { room: kitchen.id }));
   return p;
 }

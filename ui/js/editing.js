@@ -48,6 +48,7 @@ function addPage() {
   });
 }
 function pageProps() {
+  { const cr = customOf(page()); if (cr) { CUSSEL = null; renderProps(); showPanel('props'); return; } }
   if (notOnReport()) return;
   const pg = page();
   if (isFloor(pg)) {
@@ -72,6 +73,7 @@ function pageProps() {
 }
 function setPageSize(pg, size) { if (!size || size === (P.size || 'A3L')) delete pg.size; else pg.size = size; }
 function delPage() {
+  { const cr = customOf(page()); if (cr) { deleteCustom(cr); return; } }
   if (notOnReport()) return;
   if (P.pages.length < 2) { alert('A project needs at least one page.'); return; }
   const pg = page();
@@ -84,6 +86,7 @@ function delPage() {
   });
 }
 function dupPage() {
+  { const cr = customOf(page()); if (cr) { duplicateCustom(cr); return; } }
   if (notOnReport()) return;
   const pg = page();
   if (isFloor(pg)) {

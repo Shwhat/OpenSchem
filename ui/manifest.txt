@@ -51,4 +51,5 @@ js/annotate.js
 js/blocks.js
 js/dxf.js
 js/dock.js
+js/custom-reports.js
 js/files.js

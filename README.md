@@ -24,13 +24,13 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 - Symbol variants A to H (rotation and mirroring)
 - Cables with conductor assignment
 - Macros for reusable circuit blocks
-- Custom symbol editor with a portable user library
+- Custom symbol editor with a portable user library that works like a page: snap on or off with a choice of grid, align to grid, window and crossing selection, grips to reshape lines, rectangles and circles after placing, exact coordinates, move, rotate, mirror, duplicate, arrow-key nudge, undo and redo, wheel zoom and pan
 
 **Floor plans**
 - Floor-plan pages per level, with whole-level, single-room and custom-area views
 - Rooms drawn as boxes, shapes, round or oval rooms with automatic wall snapping, resized by dragging corners or walls, and image import for tracing
-- Devices shared between schematic and floor plan, with automatic room assignment
-- Circuit colors and automatically generated switch legs
+- Devices shared between schematic and floor plan, with automatic room assignment; Place on schematic opens the device's circuit page, or a page for its room
+- Circuit colors and automatically generated switch legs, and a circuit legend you add from the Floor plan tab and move or delete like any other object
 - Real units: feet and inches (default) or metric per project, with a drawing scale per level (1/4" = 1', 1:50, ...). Length fields accept `12'6"`, `12' 6 1/2"`, `150"` and `3.5 m`
 - Precision drafting: object snaps (endpoint, midpoint, center, intersection, perpendicular, nearest, quadrant) with markers, ortho and polar tracking (F3, F8, F10), typed lengths and coordinates while drawing (`10'`, `@12',8'`, `10'<45`, `#x,y`), window (left to right) and crossing (right to left) selection
 - Draw tools on floor plans: line, polyline (line and tangent arc segments, start and end widths), arc (3 points or center, start, end), circle (radius, diameter, 2 points, 3 points), ellipse, regular polygon (inscribed, circumscribed or by edge), rectangle with rounded or cut corners, spline and text, all with snaps and typed lengths
@@ -40,12 +40,12 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 - Walls with presets (2x4 interior 4.5", 2x6 exterior 6.5", mobile home 2x3 interior 3.5" and 2x4 exterior 4.5") or a custom thickness, the reference line on the center or either face, clean mitered corners and tees, and a stored height for elevations
 - Doors (single, double, pocket, bifold, sliding, garage), windows and cased openings placed in walls; they follow their wall, carry tags (D1, W1) and fill a door and window schedule report
 - Rooms made by clicking inside walls, and view sheets that put several views of floor plans (whole level, a room or an area) on one page, each at its own scale with a title
-- Dimensions (linear, aligned, angular, radius, diameter) that follow the geometry they measure, dimension styles (text size, units, precision, architectural ticks or arrowheads), and leaders
+- Dimensions (linear, aligned, angular, radius, diameter) that follow the geometry they measure, and driving dimensions: type a new size in the properties and the walls, lines and room corners it measures move (walls at right angles move along and stay joined, doors and windows ride with them, radius and diameter resize the circle); dimension styles (text size, units, precision, architectural ticks or arrowheads), and leaders
 - Hatching by clicking inside an area (solid, diagonal, crosshatch, dots, brick, concrete, wood, insulation), with islands left open
 - Blocks with attributes: a starter library of furniture, plumbing fixtures, appliances and mechanical equipment in the data folder, your own blocks, and project copies of every block used. PART goes on the bill of materials; LOAD with CIRCUIT adds to the circuit's load calculation
 - DXF import (ASCII, R12 to 2018) onto a floor plan level, DXF export (R2000) of a level, and SVG or PNG export of any page
 - Optional command line with command names and short aliases (RM, RS, ZE, UNDO, OSNAP, ...)
-- Dockable panels (Pages, Devices, Symbols, To-do, Properties): float, dock left, right or bottom, stack as tabs, resize, and save arrangements as named workspaces (Schematic, Floor plan, Home wiring, Reports built in)
+- Dockable panels (Pages, Devices, Symbols, To-do, Properties): float, dock left, right or bottom, stack as tabs (tabs wrap onto more rows instead of squeezing), resize, and save arrangements as named workspaces (Schematic, Floor plan, Home wiring, Reports built in). Floating panels snap to each other, the docked panels and the window edges, and join another panel when dropped on its tab bar
 
 **Panel layout**
 - Panel layout pages drawn to scale, with the enclosure, DIN rails, wire ducts and device footprints sized from the parts database
@@ -58,12 +58,15 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 **Reports**
 - Cover sheet and table of contents
 - Panel schedule with load, percent of rating and voltage drop, bill of materials with manufacturer, prices and total cost, terminal diagrams, connection list, cable overview and cable diagrams, revision overview
+- Project properties turn each generated report on or off (cover sheet and table of contents included) and set the order of the page tree sections and of the reports; the same order is used for the page tree, PDF export, printing and sheet numbers
+- Custom reports: an editable copy of any report (bill of materials, panel schedule, terminal diagrams, connection list, cables, door and window schedule, revisions, table of contents, cover sheet). Pick rows by ticking them and with filters, hide or rename columns, edit any cell, add rows and notes. Live reports follow the project and mark edited cells whose project value changed; locked reports stay frozen until you refresh them
 - CSV and Excel (.xlsx) export, Excel import that updates existing devices by ID, and vector PDF export with bookmarks and clickable cross-references; PDF export and printing let you choose the pages
 
 **Project tools**
 - Revision tracking with title block marking
 - Project check (missing main functions, duplicate connection points, open interruption points)
-- To-do list with items linked to devices and pages
+- To-do list with items linked to devices and pages, and a Pages filter that shows only pages with an open to-do
+- Keyboard-first dialogs: the first field is ready for typing with its text selected, and Enter confirms
 - Engineering and homeowner display modes, light and dark themes
 - Customizable tabbed ribbon
 

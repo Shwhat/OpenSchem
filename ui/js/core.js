@@ -182,7 +182,7 @@ function newProject() {
 function newPage(fn, loc, num, desc) { return { id: uid(), fn, loc, num: String(num), desc: desc || '', items: [], wires: [], cables: [], gfx: [] }; }
 function today() { return new Date().toISOString().slice(0, 10); }
 const page = () => P.pages.find(p => p.id === curId) || REPORTS.find(p => p.id === curId) || P.pages[0];
-const allPages = () => REPORTS.filter(r => r.front).concat(P.pages, REPORTS.filter(r => !r.front));
+const allPages = () => orderedPages(REPORTS);
 const pageIdx = pg => P.pages.indexOf(pg);
 function sortPages() {
   const li = id => (P.levels || []).findIndex(l => l.id === id);

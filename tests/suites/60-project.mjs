@@ -56,7 +56,7 @@ export const tests = {
     t.eq([json.ver, json.appVersion], await t.eval(() => [FORMAT_VERSION, APP_VERSION]));
     const old = { app: 'OpenSchem', ver: 1, name: 'Old', pages: [{ id: 'a', fn: '', loc: '', num: '1', items: [{ id: 'i', sym: 'coil', x: 100, y: 100, tag: 'K1', role: 'main', cl: ['A1', 'A2'] }] }] };
     await t.eval(o => loadProject(o, 'old.osp'), old);
-    t.eq(await t.eval(() => [P.ver, P.pages[0].wires.length, P.pages[0].cables.length, Array.isArray(P.todos)]), [3, 0, 0, true]);
+    t.eq(await t.eval(() => [P.ver, P.pages[0].wires.length, P.pages[0].cables.length, Array.isArray(P.todos)]), [4, 0, 0, true]);
     let warned = '';
     t.page.removeAllListeners('dialog');
     t.page.on('dialog', d => { warned = d.message(); d.dismiss(); });

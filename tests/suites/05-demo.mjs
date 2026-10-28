@@ -40,6 +40,8 @@ export const tests = {
         annot: ['leader', 'hatch', 'insert'].filter(k => !(lv.shapes || []).some(x => x.t === k)), blockLinked: (lv.shapes || []).some(x => x.t === 'insert' && x.vals && x.vals.PART) && (lv.shapes || []).some(x => x.t === 'insert' && x.vals && x.vals.CIRCUIT),
         extras: (lv.shapes || []).some(x => x.t === 'ellipse' && x.a0 != null) && (lv.shapes || []).some(x => x.t === 'text' && x.align && x.text.includes('\n')) && ['hidden', 'center'].every(k => (lv.shapes || []).some(x => x.dash === k)),
         sheet: P.pages.some(p => p.view === 'sheet' && p.vps.length >= 2 && p.vps.some(v => v.scale > 0)),
+        legend: P.pages.some(p => isFloor(p) && p.legend),
+        customs: (P.customs || []).length >= 2 && P.customs.some(c => c.filters.length && c.notes) && REPORTS.filter(r => r.custom).every(r => r.rows.length > 0),
         layoutPlaced: P.pages.some(p => p.kind === 'layout' && p.lay.some(o => o.t === 'dev') && p.lay.some(o => o.t === 'rail') && p.lay.some(o => o.t === 'duct')),
       };
     });
@@ -53,7 +55,7 @@ export const tests = {
     t.eq(f.shapes, [], 'floor plan shapes missing');
     t.ok(f.walls, 'walls'); t.eq(f.doorStyles, ['bifold', 'double', 'garage', 'pocket', 'single', 'sliding']); t.eq(f.openKinds, ['door', 'opening', 'window']);
     t.eq(f.dims, ['ali', 'lin']); t.ok(f.assocDims, 'dimensions tied to walls'); t.eq(f.annot, [], 'leader, hatch and blocks'); t.ok(f.blockLinked, 'block attributes on the BOM and loads'); t.ok(f.sheet, 'view sheet'); t.ok(f.extras, 'elliptical arc, multi-line text, hidden and center lines'); t.ok(f.plineKinds, 'rounded, wide and arc polylines');
-    t.eq(f.reports, [], 'reports missing'); t.ok(f.layoutPlaced, 'panel layout with devices, rails and ducts');
+    t.eq(f.reports, [], 'reports missing'); t.ok(f.layoutPlaced, 'panel layout with devices, rails and ducts'); t.ok(f.legend, 'circuit legend placed on a floor plan'); t.ok(f.customs, 'custom reports with filters, notes and rows');
   },
   'demo project pages render, and the voltage drop shows on the panel schedule': async t => {
     await t.open('#demo');

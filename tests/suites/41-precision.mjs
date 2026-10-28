@@ -27,7 +27,7 @@ export const tests = {
   'old files get units and a scale on upgrade': async t => {
     await t.open('#home');
     const r = await t.eval(() => { const j = JSON.parse(JSON.stringify(P)); j.ver = 2; delete j.units; for (const l of j.levels || []) delete l.scale; loadProject(j, ''); return [P.ver, P.units, (P.levels || []).every(l => l.scale === 48)]; });
-    t.eq(r, [3, 'imperial', true]);
+    t.eq(r, [4, 'imperial', true]);
   },
   'object snaps find endpoints, midpoints and centers': async t => {
     await t.open('#home'); await goFloor(t);

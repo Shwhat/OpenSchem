@@ -138,6 +138,11 @@ function buildDemo() {
     { id: uid(), text: 'Add the second pump to the panel layout', done: false, created: today(), link: 'page:' + lay.id },
     { id: uid(), text: 'Order spare fuses', done: true, created: today(), link: '' },
   ];
+  // ---- custom reports: a parts list for one trade and the breakers for one job ----
+  p.customs = [
+    { id: uid(), base: 'bom', title: 'Electrician parts list', mode: 'live', start: 'all', filters: [{ col: 4, op: 'not', value: 'terminal' }], inc: [], exc: [], edits: {}, heads: { 6: 'Where' }, hide: [5], extra: [], notes: 'Bring these to site on day one.' },
+    { id: uid(), base: 'panel', title: 'Breakers for the kitchen job', mode: 'live', start: 'all', filters: [{ col: 6, op: 'has', value: 'kitchen' }], inc: [], exc: [], edits: {}, heads: {}, hide: [], extra: [], notes: '' },
+  ];
   sortPages();
   return p;
 }

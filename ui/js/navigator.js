@@ -1,7 +1,7 @@
 // ---------- page navigator (tree or thumbnails) and the open page header ----------
 // Branches are collapsed unless they hold the open page, so the tree shows one page open at a time.
 // Expanding or collapsing a branch by hand is remembered until another page is opened inside it.
-const NAV = { open: {}, filter: '', lastCur: null };
+const NAV = { open: {}, filter: '', todo: false, lastCur: null };
 const REPORT_KINDS = { cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
 
 function navTree() {
@@ -30,14 +30,20 @@ function navTree() {
   }
   const lay = { key: 'lay', label: 'Panel layouts', kids: P.pages.filter(isLayout).map(p => ({ page: p })) };
   const rep = { key: 'rep', label: 'Reports', kids: [] };
-  const kinds = new Map();
-  for (const r of REPORTS.filter(r => !r.front)) { if (!kinds.has(r.report)) kinds.set(r.report, []); kinds.get(r.report).push(r); }
-  for (const [k, list] of kinds) {
+  const gen = REPORTS.filter(r => !r.front && !r.custom);
+  for (const k of reportOrder()) {
+    const list = gen.filter(r => r.report === k); if (!list.length) continue;
     if (list.length === 1) rep.kids.push({ page: list[0] });
     else rep.kids.push({ key: 'rep/' + k, label: REPORT_KINDS[k] || k, kids: list.map(r => ({ page: r })) });
   }
-  const front = { key: 'front', label: 'Front pages', kids: REPORTS.filter(r => r.front).map(r => ({ page: r })) };
-  return (front.kids.length ? [front] : []).concat([sch], lay.kids.length ? [lay] : [], [fp, rep]);
+  const cus = { key: 'cus', label: 'Custom reports', kids: [] };
+  for (const cr of customs()) {
+    const list = REPORTS.filter(r => r.custom === cr.id); if (!list.length) continue;
+    if (list.length === 1) cus.kids.push({ page: list[0] }); else cus.kids.push({ key: 'cus/' + cr.id, label: cr.title, kids: list.map(r => ({ page: r })) });
+  }
+  const one = (k, label) => { const list = REPORTS.filter(r => r.report === k && r.front); return !list.length ? [] : list.length === 1 ? [{ page: list[0] }] : [{ key: k, label, kids: list.map(r => ({ page: r })) }]; };
+  const by = { cover: one('cover', 'Cover sheet'), toc: one('toc', 'Table of contents'), sch: [sch], lay: lay.kids.length ? [lay] : [], fp: [fp], custom: cus.kids.length ? [cus] : [], rep: rep.kids.length ? [rep] : [] };
+  return sectionOrder().flatMap(k => by[k] || []);
 }
 const navHas = (n, pg) => n.page ? n.page === pg : n.kids.some(k => navHas(k, pg));
 const navLeafText = p => isLayout(p) ? (p.desc || '') + (p.loc ? '  ' + (home() ? niceRoom(p.loc) : '+' + p.loc) : '') : p.report ? p.desc + (p.sheets > 1 ? ` (${p.sheet}/${p.sheets})` : '') : (p.desc || '');
@@ -49,14 +55,33 @@ const NAVICON = {
   front: '<path d="M2.5 1.5h9v11h-9z" fill="#eef3fb" stroke="#2b4f91"/><path d="M4.5 5h5" stroke="#2b4f91" stroke-width="1.4"/><path d="M4.5 8h5M4.5 10h3" stroke="#2b4f91" stroke-width=".8"/>',
   layout: '<path d="M1.5 1.5h11v11h-11z" fill="#fff" stroke="#556"/><path d="M3 4h8M3 9h8" stroke="#888" stroke-width="1.2"/><rect x="3.5" y="5" width="2" height="3" fill="#7a8899"/><rect x="7" y="5" width="3" height="3" fill="#7a8899"/>',
 };
-const navIconKind = p => p.report ? (p.front ? 'front' : 'report') : isFloor(p) ? 'floor' : p.kind === 'layout' ? 'layout' : 'sch';
+const navIconKind = p => p.report ? (p.front || (p.custom && p.report === 'cover') ? 'front' : 'report') : isFloor(p) ? 'floor' : p.kind === 'layout' ? 'layout' : 'sch';
 const navIcon = p => `<svg class="nicon" viewBox="0 0 14 14">${NAVICON[navIconKind(p)]}</svg>`;
+// pages that have an open to-do: linked to the page itself, to something drawn on it, or to a device placed on a
+// floor plan the page shows
+function todoPageIds() {
+  const ids = new Set();
+  for (const t of (P.todos || [])) {
+    if (t.done || !t.link) continue;
+    if (t.link.startsWith('page:')) { ids.add(t.link.slice(5)); continue; }
+    const f = findItem(t.link); if (f && f.pg) ids.add(f.pg.id);
+    const pl = typeof placeOf === 'function' && placeOf(t.link);
+    if (pl) for (const p of P.pages) {
+      if (!isFloor(p) || levelOf(p) !== pl.lv) continue;
+      if (p.view === 'room') { const r = pl.lv.rooms.find(x => x.id === p.room); if (!r || !inPoly([pl.pl.x, pl.pl.y], roomPoly(r))) continue; }
+      ids.add(p.id);
+    }
+  }
+  return ids;
+}
+const navFiltering = () => !!(NAV.filter || NAV.todo);
 function navMatch(p) {
+  if (NAV.todo && !(NAV.todoIds || todoPageIds()).has(p.id)) return false;
   const q = NAV.filter.toLowerCase(); if (!q) return true;
   return (pageName(p) + ' ' + navLeafText(p)).toLowerCase().includes(q);
 }
 function navOpen(n, pg, depth) {
-  if (NAV.filter) return true;
+  if (navFiltering()) return true;
   if (n.key in NAV.open) return NAV.open[n.key];
   return depth === 0 || navHas(n, pg);
 }
@@ -64,6 +89,7 @@ function navCount(n) { return n.page ? (navMatch(n.page) ? 1 : 0) : n.kids.reduc
 
 function renderPages() {
   const el = $('#tab-pages'); const pg = page();
+  NAV.todoIds = todoPageIds(); const nTodo = NAV.todoIds.size;
   const tree = navTree();
   // a newly opened page: drop manual collapse on the branches above it so it is visible
   if (NAV.lastCur !== curId) {
@@ -72,18 +98,20 @@ function renderPages() {
     tree.forEach(n => walk(n, []));
   }
   const thumbs = PREFS.navView === 'thumbs';
-  let s = '<div class="navbtns"><button class="btn small" data-act="addPage">New page</button><button class="btn small" data-act="dupPage">Duplicate</button><button class="btn small" data-act="pageProps">Properties</button><button class="btn small" data-act="delPage">Delete</button></div>';
+  let s = `<div class="navbtns"><span class="splitbtn"><button class="btn small" data-act="${newPageAct()}" title="New ${esc(NEW_PAGE_KINDS.find(k => k[1] === newPageAct())[0].toLowerCase())}">New page</button><button class="btn small splitdd" data-newpagemenu="1" title="Choose the kind of page">▾</button></span>`;
+  s += '<button class="btn small" data-act="dupPage">Duplicate</button><button class="btn small" data-act="pageProps">Properties</button><button class="btn small" data-act="delPage">Delete</button></div>';
   s += `<div class="navbar"><input class="search" id="navsearch" placeholder="Filter pages" value="${esc(NAV.filter)}">
     <div class="seg"><button class="${thumbs ? '' : 'on'}" data-navview="tree" title="Page tree">Tree</button><button class="${thumbs ? 'on' : ''}" data-navview="thumbs" title="Page thumbnails">Thumbnails</button></div></div>`;
-  if (thumbs) s += `<div class="navbar2"><label><input type="checkbox" id="navbig" ${PREFS.thumbSize === 'large' ? 'checked' : ''}> Large</label></div>`;
-  else s += '<div class="navbar2"><button class="lnk" data-navall="1">Expand all</button><button class="lnk" data-navall="0">Collapse all</button></div>';
+  const tdBtn = `<button class="btn small navtodo${NAV.todo ? ' primary' : ''}" data-navtodo="1" title="Show only pages with an open to-do">Open to-dos${nTodo ? ` <span class="tcount">${nTodo}</span>` : ''}</button>`;
+  if (thumbs) s += `<div class="navbar2"><label><input type="checkbox" id="navbig" ${PREFS.thumbSize === 'large' ? 'checked' : ''}> Large</label>${tdBtn}</div>`;
+  else s += `<div class="navbar2"><button class="lnk" data-navall="1">Expand all</button><button class="lnk" data-navall="0">Collapse all</button>${tdBtn}</div>`;
   s += `<div class="navroot">${esc(P.name)}</div>`;
   if (thumbs) s += thumbsHTML(tree, pg);
   else {
     const leaf = (p, depth) => navMatch(p) ? `<div class="navitem${p === pg ? ' active' : ''}" data-page="${p.id}" style="padding-left:${10 + depth * 14 + 12}px">${navIcon(p)}<span class="num">${esc(navLeafNum(p))}</span><span>${esc(navLeafText(p))}</span></div>` : '';
     const node = (n, depth) => {
       if (n.page) return leaf(n.page, depth);
-      if (NAV.filter && !navCount(n)) return '';
+      if (navFiltering() && !navCount(n)) return '';
       const open = navOpen(n, pg, depth);
       let h = `<div class="navnode${depth === 0 ? ' top' : ''}${navHas(n, pg) ? ' has' : ''}" data-navt="${esc(n.key)}" style="padding-left:${10 + depth * 14}px"><span class="caret">${open ? '▾' : '▸'}</span><span class="nl">${esc(n.label)}</span><span class="cnt">${navCount(n)}</span></div>`;
       if (open) h += n.kids.map(k => node(k, depth + 1)).join('');
@@ -91,6 +119,7 @@ function renderPages() {
       return h;
     };
     s += tree.map(n => node(n, 0)).join('');
+    if (NAV.todo && !nTodo) s += '<div class="note" style="padding:8px 10px">No pages have an open to-do.</div>';
   }
   el.innerHTML = s;
   const inp = $('#navsearch');
@@ -112,7 +141,7 @@ function thumbsHTML(tree, pg) {
   let h = '';
   const leaves = n => n.page ? [n.page] : n.kids.flatMap(leaves);
   const groups = [];
-  for (const top of tree) groups.push([top.label, leaves(top)]);
+  for (const top of tree) groups.push([top.label || (top.page ? top.page.title : ''), leaves(top)]);
   for (const [label, pages] of groups) {
     const ps = pages.filter(navMatch); if (!ps.length) continue;
     h += `<div class="navgroup">${esc(label)}</div><div class="thumbs${PREFS.thumbSize === 'large' ? ' large' : ''}">`;
@@ -170,6 +199,7 @@ function hideNavPreview() { const pv = $('#navprev'); if (pv) pv.classList.remov
 $('#tab-pages').addEventListener('click', e => {
   const t = e.target.closest('[data-navt]');
   if (t) { const k = t.dataset.navt; const tree = navTree(); const find = ns => { for (const n of ns) { if (n.page) continue; if (n.key === k) return n; const f = find(n.kids); if (f) return f; } }; const n = find(tree); const depth = k.split('/').length - 1; NAV.open[k] = !(n ? navOpen(n, page(), depth) : true); renderPages(); return; }
+  if (e.target.closest('[data-navtodo]')) { NAV.todo = !NAV.todo; renderPages(); return; }
   const v = e.target.closest('[data-navview]'); if (v) { PREFS.navView = v.dataset.navview; savePrefs(); hideNavPreview(); renderPages(); return; }
   const a = e.target.closest('[data-navall]');
   if (a) {
@@ -189,6 +219,15 @@ function renderPageTabs() {
 }
 
 // ---------- right-click menu on the navigator ----------
+// New page makes the kind of page you are looking at; the arrow next to it picks another kind
+const NEW_PAGE_KINDS = [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Custom report', 'newCustomReport']];
+function newPageAct(pg = page()) { return pg && pg.custom ? 'newCustomReport' : pg && !pg.report ? (isFloor(pg) ? 'addFloorPage' : isLayout(pg) ? 'newLayoutPage' : 'addPage') : 'addPage'; }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-newpagemenu]'); if (!b) return;
+  e.stopPropagation(); const r = b.getBoundingClientRect(), cur = newPageAct(), dd = $('#dropdown');
+  dd.innerHTML = NEW_PAGE_KINDS.map(([l, a]) => `<div class="dd" data-act="${a}"><span>${a === cur ? '<b>' + l + '</b>' : l}</span></div>`).join('');
+  dd.style.left = r.left + 'px'; dd.style.top = r.bottom + 'px'; dd.classList.remove('hidden');
+}, true);
 let navCtxPage = null;
 $('#tab-pages').addEventListener('contextmenu', e => {
   const it = e.target.closest('[data-page]'); const br = e.target.closest('[data-navt]');
@@ -198,10 +237,11 @@ $('#tab-pages').addEventListener('contextmenu', e => {
   if (it) {
     const pg = allPages().find(p => p.id === it.dataset.page); if (!pg) return;
     if (pg.id !== curId) goPage(pg.id);
-    items = pg.report ? [['Open', 'navCtxOpen'], '-', ['Export PDF...', 'exportPDF'], ['Print...', 'printAll']]
-      : [['Open', 'navCtxOpen'], ['Properties...', 'pageProps'], '-', ['New page...', isFloor(pg) ? 'addFloorPage' : 'addPage'], ['Duplicate', 'dupPage'], ['Delete', 'delPage']];
+    items = pg.custom ? [['Open', 'navCtxOpen'], '-', ['New custom report...', 'newCustomReport'], ['Duplicate', 'dupPage'], ['Delete', 'delPage'], '-', ['Export PDF...', 'exportPDF']]
+      : pg.report ? [['Open', 'navCtxOpen'], ['Make custom copy', 'makeCustomCopy'], '-', ['Export PDF...', 'exportPDF'], ['Print...', 'printAll']]
+      : [['Open', 'navCtxOpen'], ['Properties...', 'pageProps'], '-', ['New page...', newPageAct(pg)], ['Duplicate', 'dupPage'], ['Delete', 'delPage']];
   } else {
-    items = [['New page...', br.dataset.navt.startsWith('fp') ? 'addFloorPage' : 'addPage'], '-', ['Expand all', 'navExpandAll'], ['Collapse all', 'navCollapseAll']];
+    items = [['New page...', br.dataset.navt.startsWith('fp') ? 'addFloorPage' : br.dataset.navt.startsWith('lay') ? 'newLayoutPage' : br.dataset.navt.startsWith('cus') || br.dataset.navt.startsWith('rep') ? 'newCustomReport' : 'addPage'], '-', ['Expand all', 'navExpandAll'], ['Collapse all', 'navCollapseAll']];
   }
   const dd = $('#dropdown');
   dd.innerHTML = items.map(i => i === '-' ? '<div class="ddsep"></div>' : `<div class="dd" data-act="${i[1]}"><span>${i[0]}</span></div>`).join('');

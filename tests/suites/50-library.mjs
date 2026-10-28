@@ -28,6 +28,57 @@ export const tests = {
     await t.eval(j => loadProject(JSON.parse(j), ''), json);
     t.ok(await t.eval(k => !!SYM[k], key), 'symbol registered from project');
   },
+  'symbol editor works like a page: grips, snap, align, window select, move, undo, keys': async t => {
+    await t.open();
+    await t.eval(() => newSymbol());
+    // editor point -> screen point
+    const at = (x, y) => t.eval(([x, y]) => { const cv = $('#secv'); const pt = cv.createSVGPoint(); pt.x = x; pt.y = y; const q = pt.matrixTransform(cv.getScreenCTM()); return [q.x, q.y]; }, [x, y]);
+    const drag = async (a, b, opt = {}) => { const p = await at(...a), q = await at(...b); if (opt.shift) await t.page.keyboard.down('Shift'); await t.page.mouse.move(...p); await t.page.mouse.down(); await t.page.mouse.move(q[0], q[1], { steps: 6 }); await t.page.mouse.up(); if (opt.shift) await t.page.keyboard.up('Shift'); };
+    const shapes = () => t.eval(() => clone(SE.def.shapes));
+    // the starting symbol: rect -4..4, lines 0,-8..-4 and 0,4..8
+    // click the rectangle edge to select it, then drag its bottom right grip to (6, 5.5)
+    const e = await at(4, 0); await t.page.mouse.click(...e);
+    t.eq(await t.eval(() => SE.sel), ['s0']);
+    await drag([4, 4], [6.1, 5.4]);
+    t.eq((await shapes())[0], { t: 'rect', x: -4, y: -4, w: 10, h: 9.5 }, 'grip reshapes on the 0.5 mm grid');
+    // exact values typed in the Selected box
+    await t.page.fill('[data-se="g.w"]', '8'); await t.page.press('[data-se="g.w"]', 'Tab');
+    t.eq((await shapes())[0].w, 8);
+    // undo and redo with the keyboard (focus on the canvas)
+    await t.page.focus('#secv'); await t.key('Control+z');
+    t.eq((await shapes())[0].w, 10, 'undo');
+    await t.key('Control+y'); t.eq((await shapes())[0].w, 8, 'redo');
+    // snap off: grips land where you drop them; G toggles it back
+    await t.key('g'); t.eq(await t.eval(() => SE.snap), false);
+    const ln = await at(0, -6); await t.page.mouse.click(...ln);
+    await drag([0, -8], [1.23, -8.37]);
+    { const l = (await shapes())[1]; t.ok(Math.abs(l.x1 - 1.23) < 0.08 && Math.abs(l.y1 + 8.37) < 0.08 && (l.x1 * 2) % 1 !== 0, `free point ${l.x1},${l.y1}`); }
+    // Shift+G aligns the selection to the grid (snap off does not matter for align)
+    await t.key('Shift+G'); t.eq([(await shapes())[1].x1, (await shapes())[1].y1], [1, -8.5]);
+    await t.key('g'); t.eq(await t.eval(() => SE.snap), true);
+    // grid size 2 mm
+    await t.page.selectOption('[data-se="v.grid"]', '2'); t.eq(await t.eval(() => SE.grid), 2);
+    // window select (left to right, fully inside) picks the bottom line and its connection point
+    await drag([-2, 3], [2, 10]);
+    t.eq((await t.eval(() => SE.sel)).sort(), ['c1', 's2']);
+    // moving a selection with a connection point moves in 4 mm steps
+    await drag([0, 6], [3.1, 6.2]);
+    t.eq([(await shapes())[2].x1, await t.eval(() => SE.def.conns[1])], [4, [4, 8, '2']]);
+    // arrow keys nudge, Delete removes, Ctrl+D duplicates, R rotates about the selection, Escape clears
+    await t.page.focus('#secv'); await t.key('ArrowLeft');
+    t.eq(await t.eval(() => SE.def.conns[1]), [0, 8, '2']);
+    await t.key('Control+d'); t.eq(await t.eval(() => [SE.def.shapes.length, SE.def.conns.length, SE.sel.length]), [4, 3, 2]);
+    await t.key('Delete'); t.eq(await t.eval(() => [SE.def.shapes.length, SE.def.conns.length]), [3, 2]);
+    await t.key('Control+a'); t.eq(await t.eval(() => SE.sel.length), 5);
+    await t.key('r'); t.eq(await t.eval(() => SE.def.conns.map(c => [c[0], c[1]])), [[8, 0], [-8, 0]], 'rotated about the insertion point');
+    await t.key('Escape'); t.eq(await t.eval(() => [SE.sel.length, $('#dlg').open]), [0, true], 'Escape clears the selection first');
+    // crossing window (right to left) picks anything it touches
+    await drag([-2, 7], [-3, 3]);
+    t.ok((await t.eval(() => SE.sel)).includes('s0'), 'crossing touches the rectangle');
+    // saving still works
+    await t.confirm();
+    t.ok(await t.eval(() => LIB.symbols.length === 1 && LIB.symbols[0].conns.length === 2));
+  },
   'customize ribbon and keep it after restart': async t => {
     await t.open();
     await t.eval(() => customizeRibbon());

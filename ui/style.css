@@ -34,9 +34,10 @@ input,select,textarea,button{font:inherit;color:inherit}
 .navitem{display:flex;gap:8px;align-items:baseline;padding:3px 10px 3px 18px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .navitem:hover{background:#e8edf4}
 .navitem.active{background:var(--accent-soft);color:#0f3f86}
-.navitem .num{min-width:26px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.navitem .num{min-width:26px;flex:none;font-variant-numeric:tabular-nums;color:var(--muted)}
 .navitem.active .num{color:inherit}
 .navbtns{display:flex;gap:4px;padding:4px 8px 8px;flex-wrap:wrap}
+.splitbtn{display:inline-flex}.splitbtn .btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}.splitbtn .splitdd{border-top-left-radius:0;border-bottom-left-radius:0;border-left:0;padding-left:5px;padding-right:5px}
 .btn{padding:4px 9px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);cursor:pointer}
 .btn:hover{border-color:#9aa6b6}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -403,8 +404,11 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 #dock-bottom{border-top:1px solid var(--line);width:auto}
 .dcol{display:flex;flex-direction:column;min-width:0;min-height:0}
 .dgroup{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
-.dtabs{display:flex;border-bottom:1px solid var(--line);background:var(--panel);flex:none;overflow:hidden}
-.dtabs .tab{flex:1 1 auto;padding:6px 8px;display:flex;align-items:center;justify-content:center;gap:5px;cursor:grab;min-width:0;overflow:hidden}
+.dtabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--panel);flex:none}
+.dtabs .tab{flex:1 0 auto;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:5px;cursor:grab;white-space:nowrap;border-bottom:2px solid transparent;border-right:1px solid var(--line)}
+.dtabs .tab:last-child{border-right:0}
+.dtabs .tab:hover{background:var(--line2);color:var(--text)}
+.dtabs .tab.active{background:var(--panel2);color:var(--text);border-bottom-color:var(--accent)}
 .tabx{margin-left:4px;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;padding:0 3px;border-radius:3px}
 .tabx:hover{background:var(--line);color:var(--text)}
 .dgbody{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
@@ -423,6 +427,8 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 .dfloat{position:fixed;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 22px rgba(0,0,0,.28);border-radius:5px;display:flex;flex-direction:column;min-width:180px;min-height:120px}
 .dfloat>.dgroup{flex:1}
 .dfloat .dtabs{cursor:move;background:var(--panel2)}
+.dfloat .dtabs .tab{flex:0 0 auto}
+.dgrip{flex:1 0 28px;min-height:26px;cursor:move;background:repeating-linear-gradient(90deg,transparent 0 3px,var(--line2) 3px 4px) center/calc(100% - 16px) 8px no-repeat}
 .drs{position:absolute;z-index:5}
 .drs.n{left:6px;right:6px;top:-3px;height:6px;cursor:ns-resize}.drs.s{left:6px;right:6px;bottom:-3px;height:6px;cursor:ns-resize}
 .drs.e{top:6px;bottom:6px;right:-3px;width:6px;cursor:ew-resize}.drs.w{top:6px;bottom:6px;left:-3px;width:6px;cursor:ew-resize}
@@ -469,3 +475,15 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 .blkcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);cursor:pointer;font-size:11px;text-align:center}
 .blkcard:hover{border-color:var(--accent);background:var(--accent-soft)}
 :root[data-theme=dark] .blkcard svg{background:#e9ebee;border-radius:3px}
+/* report settings and custom reports */
+.ordbox h4{margin:10px 0 4px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.ordrow{display:flex;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid var(--line2)}
+.ordrow .ordl{flex:1}.ordrow .ordsp{width:13px;display:inline-block}.ordrow input{width:auto}
+.ordrow .btn{padding:1px 6px}
+.cfilter{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin:3px 0}
+.cfilter select,.cfilter input{min-width:0}
+.crows{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:4px;padding:2px 4px;background:var(--panel2)}
+.crow{display:flex;gap:5px;align-items:flex-start;padding:2px 0;font-size:11.5px;cursor:pointer}.crow input{width:auto;margin-top:2px}
+.ccol label{display:flex;gap:4px;align-items:center}.ccol label input{width:auto;flex:none}
+.warnnote{color:#a15c00}
+#content .ccell{cursor:pointer}#content .ccell:hover{fill:rgba(31,111,255,.07)}

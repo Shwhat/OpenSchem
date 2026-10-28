@@ -295,6 +295,7 @@ function annotPropsHTML(pg, lv, list) {
       <div class="pgrp"><h4>Annotation</h4>${row('shp.dstyle', 'Style', '', 'select', opt(dimStyles().map(s => [s.name, s.name]), f.style || curDimStyle().name))}
       ${one && f.t === 'dim' ? row('shp.dtext', 'Text (<> is the measurement)', f.text || '', 'text', 'placeholder="<>"') : ''}${one && f.t === 'leader' ? row('shp.ltext', 'Text', f.text || '', 'textarea') : ''}
       <div class="prow"><label>Color</label><input type="color" data-k="shp.color" value="${esc(f.color || '#1d1d1d')}"></div></div>
+      ${one && f.t === 'dim' && dimDrivable(f) ? `<div class="pgrp"><h4>Size</h4>${row('shp.dval', f.kind === 'rad' ? 'Radius' : f.kind === 'dia' ? 'Diameter' : 'Length', dimValueText(f, lv))}${f.kind === 'lin' || f.kind === 'ali' ? row('shp.ddrive', 'Change it by moving', '', 'select', opt([['p2', 'The second point'], ['p1', 'The first point']], f.drive || 'p2')) : ''}<div class="note">Type a new size to move the geometry it measures. Walls at right angles move along and stay joined.</div></div>` : ''}
       ${one && f.t === 'dim' && (f.r1 || f.r2 || f.ref || f.l1) ? '<div class="note">This dimension follows the geometry it was drawn on.</div>' : ''}
       <div class="btnrow"><button class="btn" data-act="dimStyleDlg">Styles...</button><button class="btn" data-act="toggleDimArrows">Ticks / arrows</button><button class="btn" data-act="delSel">Delete</button></div>`;
   }
@@ -309,6 +310,8 @@ function annotPropsHTML(pg, lv, list) {
 function applyAnnotProp(pg, lv, s, key, v) {
   if (key === 'dstyle' && (s.t === 'dim' || s.t === 'leader')) { s.style = v; return true; }
   if (key === 'dtext' && s.t === 'dim') { if (v) s.text = v; else delete s.text; return true; }
+  if (key === 'ddrive' && s.t === 'dim') { if (v === 'p1') s.drive = 'p1'; else delete s.drive; return true; }
+  if (key === 'dval' && s.t === 'dim') { const mm = parseLength(v); if (mm == null || mm <= 0) { flash('Type a length, for example 12\'6" or 3800 mm'); return true; } driveDim(lv, s, toPlanMm(lv, mm)); return true; }
   if (key === 'ltext' && s.t === 'leader') { s.text = v; return true; }
   if (s.t === 'hatch') {
     if (key === 'hpat') { s.pattern = v; return true; }
@@ -316,6 +319,81 @@ function applyAnnotProp(pg, lv, s, key, v) {
     if (key === 'hangle') { s.angle = parseFloat(v) || 0; return true; }
   }
   return false;
+}
+
+// ---------- driving dimensions ----------
+// Typing a new size on a dimension moves what it measures. The moving end is the dimension's second point (or the
+// first, if chosen). Everything sitting on that point moves with it: wall, line and polyline ends and room corners.
+// A wall or line at right angles to the move is carried along whole (so corners stay square and joined), which
+// pulls its other end along too; one in line with the move just stretches. Doors and windows ride on walls that
+// move whole. Radius and diameter dimensions resize the circle or arc they measure.
+const dimDrivable = d => d.kind === 'lin' || d.kind === 'ali' || ((d.kind === 'rad' || d.kind === 'dia') && !!d.ref);
+function dimMeasure(d, lv) {
+  const P2 = dimPts(d, lv);
+  if (d.kind === 'rad') return P2.r; if (d.kind === 'dia') return P2.r * 2;
+  if (d.kind === 'lin') return d.dir === 'v' ? Math.abs(P2.p2[1] - P2.p1[1]) : Math.abs(P2.p2[0] - P2.p1[0]);
+  return ptDist(P2.p1, P2.p2);
+}
+function dimValueText(d, lv) { const st = dimStyle(d.style); const u = st.units === 'project' ? unitsOf() : st.units; return formatLength(toRealMm(lv, dimMeasure(d, lv)), u, u === 'metric' ? { dec: st.dec } : { den: +st.prec || 16 }); }
+const ptKey = p => Math.round(p[0] * 50) + ',' + Math.round(p[1] * 50);
+function driveDim(lv, d, want) {
+  if (d.kind === 'rad' || d.kind === 'dia') {
+    const c = lvShapes(lv).find(x => x.id === d.ref); if (!c) return;
+    c.r = r2(d.kind === 'dia' ? want / 2 : want); flash('Resized to ' + dimValueText(d, lv)); return;
+  }
+  const P2 = dimPts(d, lv), cur = dimMeasure(d, lv); if (Math.abs(want - cur) < 1e-4) return;
+  const back = d.drive === 'p1';
+  const from = back ? P2.p1 : P2.p2, to = back ? P2.p2 : P2.p1, ref = back ? d.r1 : d.r2;
+  let dir;
+  if (d.kind === 'lin') { const ax = d.dir === 'v' ? 1 : 0; const sg = Math.sign(from[ax] - to[ax]) || 1; dir = ax ? [0, sg] : [sg, 0]; }
+  else { const L = ptDist(to, from) || 1; dir = [(from[0] - to[0]) / L, (from[1] - to[1]) / L]; }
+  const v = [dir[0] * (want - cur), dir[1] * (want - cur)];
+  // where the moving end sits: the referenced grip, else what lies on that point, else the wall it touches
+  const shapes = lvShapes(lv); const seeds = [];
+  const src = ref && ref.id && shapes.find(x => x.id === ref.id);
+  if (src && (src.t === 'wall' || src.t === 'line') && ref.g === 2) seeds.push(src.a, src.b);
+  else seeds.push(from);
+  const segs = dimSegments(lv);
+  const hits = k => segs.some(sg => ptKey(sg.p) === k || ptKey(sg.q) === k);
+  if (!seeds.some(p => hits(ptKey(p)))) {
+    // a point on a wall face: carry that wall
+    const w = shapes.filter(x => x.t === 'wall').map(x => ({ x, dd: distPtSeg(from, x.a, x.b).d })).filter(o => o.dd <= o.x.th / 2 + 0.05 + (o.x.just === 'c' ? 0 : o.x.th / 2)).sort((a, b) => a.dd - b.dd)[0];
+    if (w) { const ax = unit([w.x.b[0] - w.x.a[0], w.x.b[1] - w.x.a[1]]); if (Math.abs(ax[0] * dir[0] + ax[1] * dir[1]) < 0.2) seeds.push(w.x.a, w.x.b); else seeds.push(ptDist(from, w.x.a) < ptDist(from, w.x.b) ? w.x.a : w.x.b); }
+  }
+  const S = new Set(seeds.map(ptKey));
+  // carry along anything at right angles to the move
+  for (let changed = true, n = 0; changed && n < 200; n++) {
+    changed = false;
+    for (const sg of segs) {
+      const kp = ptKey(sg.p), kq = ptKey(sg.q); if (S.has(kp) === S.has(kq)) continue;
+      const u = unit([sg.q[0] - sg.p[0], sg.q[1] - sg.p[1]]); if (Math.abs(u[0] * dir[0] + u[1] * dir[1]) < 0.1) { S.add(S.has(kp) ? kq : kp); changed = true; }
+    }
+  }
+  if (S.has(ptKey(to))) { flash('Both ends of this dimension are connected, so its size cannot be changed this way'); return; }
+  const mv = p => S.has(ptKey(p)) ? rp([p[0] + v[0], p[1] + v[1]]) : p;
+  const wholeWalls = new Set(shapes.filter(x => x.t === 'wall' && S.has(ptKey(x.a)) && S.has(ptKey(x.b))).map(x => x.id));
+  let moved = 0;
+  for (const x of shapes) {
+    if (x.t === 'wall' || x.t === 'line') { const a = mv(x.a), b = mv(x.b); if (a !== x.a || b !== x.b) moved++; x.a = a; x.b = b; }
+    else if (x.t === 'pline' || x.t === 'spline') { const q = x.pts.map(mv); if (q.some((p, i) => p !== x.pts[i])) moved++; x.pts = q; }
+    else if (x.t === 'opening' && wholeWalls.has(x.wall)) x.c = rp([x.c[0] + v[0], x.c[1] + v[1]]);
+    else if (x.t === 'dim' && x !== d) { for (const k of ['p1', 'p2', 'loc']) if (x[k] && !(k === 'p1' && x.r1) && !(k === 'p2' && x.r2) && S.has(ptKey(x[k]))) x[k] = mv(x[k]); }
+  }
+  for (const r of lv.rooms) { if (isRound(r)) continue; const q = r.pts.map(mv); if (q.some((p, i) => p !== r.pts[i])) moved++; r.pts = q; }
+  // the dimension's own free end follows too
+  const own = back ? 'p1' : 'p2'; if (!(back ? d.r1 : d.r2) && d[own]) d[own] = rp([d[own][0] + v[0], d[own][1] + v[1]]);
+  for (const pl of lv.places) autoRoom(lv, pl);
+  flash(moved ? 'Changed to ' + dimValueText(d, lv) : 'Nothing attached to that end; only the dimension changed');
+}
+// every straight piece whose ends can move: walls, lines, polyline and room edges
+function dimSegments(lv) {
+  const out = [];
+  for (const x of lvShapes(lv)) {
+    if (x.t === 'wall' || x.t === 'line') out.push({ p: x.a, q: x.b });
+    else if (x.t === 'pline') for (let i = 0; i < x.pts.length - (x.closed ? 0 : 1); i++) out.push({ p: x.pts[i], q: x.pts[(i + 1) % x.pts.length] });
+  }
+  for (const r of lv.rooms) if (!isRound(r)) for (let i = 0; i < r.pts.length; i++) out.push({ p: r.pts[i], q: r.pts[(i + 1) % r.pts.length] });
+  return out;
 }
 
 registerCommand('DIMLINEAR', ['DLI', 'DIM'], 'Horizontal or vertical dimension', () => { if (needFloor()) setMode('d:dimlin'); });

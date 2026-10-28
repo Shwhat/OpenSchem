@@ -27,10 +27,11 @@ function paginate(cols, rows) {
   const avail = RP.bottom - RP.top - (RP.lh + RP.pad * 2);
   const sheets = []; let cur = [], used = 0;
   for (const r of rows) {
-    const cells = r.cells.map((c, i) => wrapText(c, cols[i].w - 2.4, RP.fs));
+    const fullW = cols.reduce((a, c) => a + c.w, 0);
+    const cells = r.full ? [wrapText(r.cells[0], fullW - 2.4, RP.fs)] : r.cells.map((c, i) => wrapText(c, cols[i].w - 2.4, RP.fs));
     const h = Math.max(...cells.map(c => c.length)) * RP.lh + RP.pad * 2;
     if (used + h > avail && cur.length) { sheets.push(cur); cur = []; used = 0; }
-    cur.push({ cells, h, cls: r.cls, goto: r.goto, link: r.link }); used += h;
+    cur.push({ cells, h, cls: r.cls, goto: r.goto, link: r.link, key: r.key, marks: r.marks, full: r.full }); used += h;
   }
   sheets.push(cur);
   return sheets;
@@ -39,7 +40,7 @@ function paginate(cols, rows) {
 function bomRows() {
   const groups = new Map();
   const add = (key, data, tag) => {
-    if (!groups.has(key)) groups.set(key, Object.assign({ qty: 0, tags: [] }, data));
+    if (!groups.has(key)) groups.set(key, Object.assign({ qty: 0, tags: [], key }, data));
     const g = groups.get(key); g.qty++; if (tag && !g.tags.includes(tag)) g.tags.push(tag);
   };
   for (const d of IX.dev.values()) {
@@ -66,7 +67,7 @@ function bomRows() {
     add(part ? 'p:' + part : 'cab:' + type, { part, desc: 'Cable, ' + type, tech: '', missing: !part, first: { id: c.id } }, (home() ? 'Cable ' + c.tag.replace(/^W/, '') : '-' + c.tag) + (c.len ? ' (' + c.len + ')' : ''));
   }
   const list = [...groups.values()].sort((a, b) => (a.missing - b.missing) || natCmp(a.part, b.part) || natCmp(a.tags[0], b.tags[0]));
-  return list.map((g, i) => { const pd = partOf(g.part) || {}; const price = pd.price ? pnum(pd.price) : null; return { pos: i + 1, qty: g.qty, part: g.part, mfr: pd.mfr || '', desc: g.desc, tech: g.tech || pd.tech || '', tags: g.tags, missing: g.missing, price, total: price == null ? null : price * g.qty, goto: g.first.id }; });
+  return list.map((g, i) => { const pd = partOf(g.part) || {}; const price = pd.price ? pnum(pd.price) : null; return { key: g.key, pos: i + 1, qty: g.qty, part: g.part, mfr: pd.mfr || '', desc: g.desc, tech: g.tech || pd.tech || '', tags: g.tags, missing: g.missing, price, total: price == null ? null : price * g.qty, goto: g.first.id }; });
 }
 
 // targets reached from one side of a terminal (follows wires on the page, not through devices)
@@ -141,7 +142,7 @@ function buildReports() {
     sh.forEach((rws, i) => reps.push({ id: `rep:term:${d.key}:${i + 1}`, report: 'term', fn: d.fn, loc: d.loc, num: `${d.tag}.${i + 1}`, desc: `Terminal diagram ${ident}`, title: `Terminal diagram ${ident}`, cols: TERM_COLS, rows: rws, sheet: i + 1, sheets: sh.length, items: [], wires: [], strip: d }));
   }
   buildExtraReports(reps);
-  return buildFrontPages(reps).concat(reps);
+  return assembleReports(reps);
 }
 
 function reportSVG(rp) {
@@ -150,6 +151,7 @@ function reportSVG(rp) {
   const x0 = SH.x0;
   s += `<text class="t" x="${x0 + 3}" y="${SH.hdr + 10}" font-size="5" font-weight="bold">${esc(rp.title)}</text>`;
   if (rp.sheets > 1) s += `<text class="t" x="${SH.x1 - 3}" y="${SH.hdr + 10}" font-size="3" text-anchor="end">Sheet ${rp.sheet} of ${rp.sheets}</text>`;
+  if (rp.custom && rp.locked && !PRINTING) s += `<text class="t tc" x="${SH.x1 - 3}" y="${SH.hdr + 15.5}" font-size="2.6" text-anchor="end">Locked</text>`;
   if (rp.report === 'term') {
     const d = rp.strip; const n = d.items.length;
     s += `<text class="t" x="${x0 + 3}" y="${SH.hdr + 15.5}" font-size="2.8" fill="#555">${n} terminal(s). Internal target = connection point 1 side, external target = connection point 2 side.</text>`;
@@ -165,19 +167,21 @@ function reportSVG(rp) {
   for (const r of rp.rows) {
     x = x0;
     const lk = r.link || (r.goto ? linkOfId(r.goto) : '');
-    s += `<g data-goto="${r.goto || ''}" class="reprow"><rect x="${x0}" y="${y}" width="${SH.x1 - x0}" height="${r.h}" class="hit"${lk ? ` data-link="${esc(lk)}"` : ''}/>`;
+    s += `<g ${rp.custom ? '' : `data-goto="${r.goto || ''}" `}class="reprow"><rect x="${x0}" y="${y}" width="${SH.x1 - x0}" height="${r.h}" class="hit"${lk ? ` data-link="${esc(lk)}"` : ''}/>`;
+    if (r.full) { r.cells[0].forEach((l, k) => { s += txt(x0 + 1.2, y + RP.pad + RP.lh * (k + 1) - 1.1, l, { size: RP.fs }); }); s += '</g>'; y += r.h; continue; }
     r.cells.forEach((lines, i) => {
       const c = rp.cols[i];
       lines.forEach((l, k) => { s += txt(c.a === 'middle' ? x + c.w / 2 : c.a === 'end' ? x + c.w - 1.2 : x + 1.2, y + RP.pad + RP.lh * (k + 1) - 1.1, l, { size: RP.fs, anchor: c.a || 'start', bold: r.cls === 'grp', cls: r.cls === 'missing' && i === 2 ? 'tw' : r.cls === 'over' && i >= 8 ? 'tw' : '' }); });
       x += c.w;
     });
+    s += customCellsSVG(rp, r, y, x0);
     s += '</g>';
     y += r.h;
     s += `<line class="frame2" x1="${x0}" y1="${y}" x2="${SH.x1}" y2="${y}"/>`;
   }
-  x = x0;
-  for (const c of rp.cols.slice(0, -1)) { x += c.w; s += `<line class="frame2" x1="${x}" y1="${RP.top}" x2="${x}" y2="${y}"/>`; }
-  if (!rp.rows.length) s += txt(x0 + 3, y + 6, rp.report === 'bom' ? 'No devices in the project yet.' : 'No terminals.', { size: 3, cls: 'tc' });
+  x = x0; const yEnd = y - rp.rows.filter(r => r.full).reduce((a, r) => a + r.h, 0);
+  for (const c of rp.cols.slice(0, -1)) { x += c.w; s += `<line class="frame2" x1="${x}" y1="${RP.top}" x2="${x}" y2="${yEnd}"/>`; }
+  if (!rp.rows.length) s += txt(x0 + 3, y + 6, rp.custom ? 'No rows picked yet. Pick rows in Properties.' : rp.report === 'bom' ? 'No devices in the project yet.' : 'No terminals.', { size: 3, cls: 'tc' });
   return s;
 }
 
@@ -263,34 +267,20 @@ function buildExtraReports(reps) {
       P.revs.map(r => ({ cells: [r.rev + (r.closed ? '' : ' (open)'), r.date || '', r.desc || '', r.by || '', all.filter(p => (p.revs || []).includes(r.rev)).map(pageName).join(', ')] })), REV_COLS());
   }
 }
-function buildFrontPages(reps) {
-  const front = [];
-  if (P.cover !== false) front.push({ id: 'rep:cover:1', report: 'cover', front: true, fn: '', loc: '', num: 'COVER.1', desc: 'Cover sheet', title: 'Cover sheet', cols: [], rows: [], sheet: 1, sheets: 1, items: [], wires: [] });
-  if (P.toc !== false) {
-    const later = P.pages.concat(reps);
-    const rowFor = p => ({ cells: [pageName(p), p.desc || '', p.report || isFloor(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? 'Report' : isFloor(p) ? 'Floor plan' : isLayout(p) ? 'Panel layout' : 'Schematic'], goto: 'page:' + p.id, link: p.id });
-    let n = 1, sheets;
-    for (let pass = 0; pass < 4; pass++) {
-      const tocRows = []; for (let i = 0; i < n; i++) tocRows.push({ cells: [`Contents ${i + 1}`, 'Table of contents', '', '', '', 'Report'] });
-      const coverRow = P.cover !== false ? [{ cells: ['Cover sheet', P.name || '', '', '', '', 'Report'], goto: 'page:rep:cover:1', link: 'rep:cover:1' }] : [];
-      sheets = paginate(TOC_COLS(), coverRow.concat(tocRows, later.map(rowFor)));
-      if (sheets.length === n) break; n = sheets.length;
-    }
-    sheets.forEach((rws, i) => front.push({ id: `rep:toc:${i + 1}`, report: 'toc', front: true, fn: '', loc: '', num: `TOC.${i + 1}`, desc: 'Table of contents', title: 'Table of contents', cols: TOC_COLS(), rows: rws, sheet: i + 1, sheets: sheets.length, items: [], wires: [] }));
-  }
-  return front;
-}
 function coverSVG(pg) {
   const all = allPages();
   let s = frameSVG(pg, all.indexOf(pg), all.length);
-  const cx = (SH.x0 + SH.x1) / 2;
-  s += `<text class="t" x="${cx}" y="70" font-size="12" font-weight="bold" text-anchor="middle">${esc(P.name || '')}</text>`;
-  if (P.desc) String(P.desc).split('\n').forEach((l, i) => { s += `<text class="t" x="${cx}" y="${88 + i * 7}" font-size="5" text-anchor="middle">${esc(l)}</text>`; });
-  const rows = [['Company', P.company], ['Drawn by', P.author], ['Created', P.created], ['Last modified', P.modified || P.created], ['Pages', String(all.length)], ['Current revision', ((P.revs || []).slice(-1)[0] || {}).rev || '-']];
-  rows.forEach(([k, v], i) => {
+  const cx = (SH.x0 + SH.x1) / 2, cu = pg.custom;
+  const hit = (key, y, h, w = 180) => cu && !PRINTING ? `<rect class="ccell${CUSSEL && CUSSEL.cr === cu && CUSSEL.key === key ? ' on' : ''}" data-ccell="${esc(cu)}|${esc(key)}|1" x="${cx - w / 2}" y="${y}" width="${w}" height="${h}" fill="${CUSSEL && CUSSEL.cr === cu && CUSSEL.key === key ? 'rgba(31,111,255,.14)' : 'transparent'}"/>` : '';
+  const title = cu ? pg.coverTitle : P.name || '', desc = cu ? pg.coverDesc : P.desc;
+  if (title != null) s += hit('f:title', 58, 16, 260) + `<text class="t" x="${cx}" y="70" font-size="12" font-weight="bold" text-anchor="middle" pointer-events="none">${esc(title || '')}</text>`;
+  if (desc != null) { const ls = String(desc || '').split('\n'); s += hit('f:desc', 82, Math.max(1, ls.length) * 7 + 2, 260); ls.forEach((l, i) => { s += `<text class="t" x="${cx}" y="${88 + i * 7}" font-size="5" text-anchor="middle" pointer-events="none">${esc(l)}</text>`; }); }
+  const rows = cu ? pg.coverFields : [['Company', P.company], ['Drawn by', P.author], ['Created', P.created], ['Last modified', P.modified || P.created], ['Pages', String(all.length)], ['Current revision', ((P.revs || []).slice(-1)[0] || {}).rev || '-']];
+  rows.forEach(([k, v, key], i) => {
     const y = 140 + i * 11;
-    s += `<text class="t tc" x="${cx - 6}" y="${y}" font-size="4" text-anchor="end">${esc(k)}</text><text class="t" x="${cx + 6}" y="${y}" font-size="4.4" font-weight="bold">${esc(v || '')}</text>`;
+    s += hit(key, y - 6, 9) + `<text class="t tc" x="${cx - 6}" y="${y}" font-size="4" text-anchor="end" pointer-events="none">${esc(k)}</text><text class="t" x="${cx + 6}" y="${y}" font-size="4.4" font-weight="bold" pointer-events="none">${esc(v || '')}</text>`;
   });
+  if (cu && pg.notes) String(pg.notes).split('\n').forEach((l, i) => { s += `<text class="t" x="${cx}" y="${140 + rows.length * 11 + 8 + i * 6}" font-size="3.6" text-anchor="middle">${esc(l)}</text>`; });
   s += `<line class="frame2" x1="${cx - 90}" y1="${126}" x2="${cx + 90}" y2="${126}"/>`;
   return s;
 }

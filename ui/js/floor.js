@@ -145,22 +145,39 @@ function floorSVG(pg, o = {}) {
   }
   s += floorContentSVG(pg, lv, t, o);
   s += '</g></g>';
-  // circuit legend
-  if (S().circuitColors && lyOn('legend', o)) {
-    const ckAll = allCircuits(); const ck = [...new Set(lv.places.map(pl => (itemById(pl.item) || {}).fn).filter(f => f && ckAll.includes(f)))].sort(natCmp);
-    if (ck.length) {
-      const w = 64, lh = 4.6, x = DA.x1 - w - 4, y = DA.y0 + 4;
-      s += `<rect class="legendbox" x="${x}" y="${y}" width="${w}" height="${ck.length * lh + 7}" fill="#fff" stroke="#999" stroke-width="0.25"/>`;
-      s += txt(x + 2.5, y + 4.2, home() ? 'Circuits' : 'Circuits (=)', { size: 2.6, bold: true });
-      ck.forEach((fn, i) => {
-        const yy = y + 7 + i * lh;
-        const cp = P.pages.find(p => p.kind !== 'floor' && p.fn === fn);
-        s += `<rect x="${x + 2.5}" y="${yy}" width="5" height="3" fill="${circuitColor(fn)}"/>`;
-        s += txt(x + 9.5, yy + 2.5, dispCkt(fn) + (cp && cp.desc ? '  ' + cp.desc : ''), { size: 2.4 });
-      });
-    }
-  }
+  s += legendSVG(pg, lv, o);
   return s;
+}
+
+// ---------- circuit legend ----------
+// A box listing the circuits used on the level, placed by the user (Floor plan > Circuit legend) at pg.legend
+// { x, y } in sheet millimetres. It can be moved and deleted like anything else; pages without it show none.
+const LEGEND_W = 64, LEGEND_LH = 4.6;
+const legendId = pg => 'legend:' + pg.id;
+function legendCircuits(lv) { const ckAll = allCircuits(); return [...new Set(lv.places.map(pl => (itemById(pl.item) || {}).fn).filter(f => f && ckAll.includes(f)))].sort(natCmp); }
+function legendPos(pg) { const L = pg.legend; return [L && isFinite(L.x) ? L.x : DA.x1 - LEGEND_W - 4, L && isFinite(L.y) ? L.y : DA.y0 + 4]; }
+function legendSVG(pg, lv, o = {}) {
+  if (!pg.legend || !lyOn('legend', o)) return '';
+  const ck = legendCircuits(lv); const [x, y] = legendPos(pg); const h = Math.max(1, ck.length) * LEGEND_LH + 7;
+  const isSel = !o.print && !o.thumb && sel.has(legendId(pg));
+  let s = `<g class="legend" ${o.print || o.thumb ? '' : `data-id="${legendId(pg)}" `}>`;
+  s += `<rect class="legendbox" x="${x}" y="${y}" width="${LEGEND_W}" height="${h}" fill="#fff" stroke="#999" stroke-width="0.25"/>`;
+  s += txt(x + 2.5, y + 4.2, home() ? 'Circuits' : 'Circuits (=)', { size: 2.6, bold: true });
+  if (!ck.length) s += txt(x + 2.5, y + 9, 'No circuits on this level yet', { size: 2.2 });
+  ck.forEach((fn, i) => {
+    const yy = y + 7 + i * LEGEND_LH;
+    const cp = P.pages.find(p => p.kind !== 'floor' && p.fn === fn);
+    s += `<rect x="${x + 2.5}" y="${yy}" width="5" height="3" fill="${S().circuitColors ? circuitColor(fn) : 'none'}" stroke="${S().circuitColors ? 'none' : '#999'}" stroke-width="0.2"/>`;
+    s += txt(x + 9.5, yy + 2.5, dispCkt(fn) + (cp && cp.desc ? '  ' + cp.desc : ''), { size: 2.4 });
+  });
+  if (isSel) s += `<rect x="${x - 0.8}" y="${y - 0.8}" width="${LEGEND_W + 1.6}" height="${h + 1.6}" fill="none" stroke="#1f6fff" stroke-width="0.35" stroke-dasharray="1.2,0.8" pointer-events="none"/>`;
+  return s + '</g>';
+}
+function insertLegend() {
+  const pg = page(); if (!isFloor(pg) || isSheet(pg) || !levelOf(pg)) { flash('Open a floor plan page to add a circuit legend'); return; }
+  if (pg.legend) { sel = new Set([legendId(pg)]); render(); flash('This page already has a circuit legend'); return; }
+  useSheet(pg); commit(() => { pg.legend = { x: r2(DA.x1 - LEGEND_W - 4), y: r2(DA.y0 + 4) }; sel = new Set([legendId(pg)]); });
+  flash('Circuit legend added. Drag it where you want it.');
 }
 
 // the drawing of a level: image, rooms, walls, shapes, switch legs and devices (t: view transform)
@@ -286,7 +303,7 @@ function fpDown(e, pg, mx, my) {
   if (id) {
     if (e.shiftKey || e.ctrlKey) { sel.has(id) ? sel.delete(id) : sel.add(id); render(); return; }
     if (!sel.has(id)) { sel = new Set([id]); render(); }
-    fdrag = { start: p, pre: snapshot(), orig: clone({ rooms: lv.rooms, places: lv.places, image: lv.image, shapes: lvShapes(lv) }), lv, moved: false, d: [0, 0], devGrip };
+    fdrag = { start: p, pre: snapshot(), orig: clone({ rooms: lv.rooms, places: lv.places, image: lv.image, shapes: lvShapes(lv) }), lv, moved: false, d: [0, 0], devGrip, legend0: pg.legend ? legendPos(pg) : null };
   } else {
     if (!e.shiftKey) { sel.clear(); render(); }
     fbox = { start: sp, cur: sp, select: true };
@@ -326,6 +343,7 @@ function fpMove(pg, mx, my) {
     for (const r of lv.rooms) if (sel.has(r.id)) r.pts = r.pts.map(q => [r2(q[0] + d[0]), r2(q[1] + d[1])]);
     if (lv.image && sel.has('img:' + lv.id)) { lv.image.x += d[0]; lv.image.y += d[1]; }
     const T = tMove(d); for (const sh of lv.shapes) if (sel.has(sh.id)) transformShape(sh, T);
+    if (fdrag.legend0 && sel.has(legendId(pg))) { const k = fpXform(pg).s, L0 = fdrag.legend0; pg.legend = { x: r2(L0[0] + d[0] * k), y: r2(L0[1] + d[1] * k) }; }
     renderCanvas(); return;
   }
   if (fbox) {
@@ -465,6 +483,7 @@ function fpDelete() {
     lv.rooms = lv.rooms.filter(r => !sel.has(r.id));
     const goneS = withHosted(lv, sel); lv.shapes = lvShapes(lv).filter(s => !goneS.has(s.id));
     if (lv.image && sel.has('img:' + lv.id)) { delete P.assets[lv.image.asset]; lv.image = null; }
+    if (sel.has(legendId(pg))) delete pg.legend;
     sel.clear();
   });
 }
@@ -634,10 +653,24 @@ function fpPropChange(scope, key, v) {
 function placeOnSchematic() {
   const f = findFp([...sel][0]); if (!f || f.kind !== 'place') return;
   const it = itemById(f.pl.item); if (!it) return;
-  const target = P.pages.find(p => !p.kind && it.fn && p.fn === it.fn) || P.pages.find(p => p.id === lastSchemId && !p.kind) || P.pages.find(p => !p.kind);
+  const target = schematicPageFor(it);
   if (!target) { flash('Add a schematic page first'); return; }
   goPage(target.id); placeRot = 0; setMode('place', it.sym, it.id);
   flash('Click on the schematic to place ' + dispTag(it.tag));
+}
+// the schematic page a floor plan device belongs on: its circuit's page (the one for its room first), then a page for
+// its room, then the page that already holds most of the room's other devices, then the last schematic page used
+function schematicPageFor(it) {
+  const sch = P.pages.filter(p => !p.kind && !p.report);
+  if (it.fn) { const own = sch.filter(p => p.fn === it.fn); const hit = own.find(p => it.loc && p.loc === it.loc) || own[0]; if (hit) return hit; }
+  if (it.loc) {
+    const byLoc = sch.find(p => p.loc === it.loc); if (byLoc) return byLoc;
+    const count = new Map();
+    for (const p of sch) for (const o of p.items) if (o.id !== it.id && o.loc === it.loc && SYM[o.sym] && SYM[o.sym].prefix) count.set(p, (count.get(p) || 0) + 1);
+    let best = null; for (const [p, n] of count) if (!best || n > count.get(best)) best = p;
+    if (best) return best;
+  }
+  return sch.find(p => p.id === lastSchemId) || sch[0] || null;
 }
 function placeOnFloor() {
   const f = findItem([...sel][0]); if (!f || !f.it) return;

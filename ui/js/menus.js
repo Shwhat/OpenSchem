@@ -58,10 +58,10 @@ const ACTIONS = {
   goConn: () => { const r = REPORTS.find(r => r.report === 'conn'); if (r) goPage(r.id); else flash('No connections yet'); },
   goCables: () => { const r = REPORTS.find(r => r.report === 'cables'); if (r) goPage(r.id); else flash('No cables yet. Use Draw cable.'); }, symbolLibrary, newSymbol,
   symCopy: () => copySymbol(ctxSym), symEdit: () => editSymbol(ctxSym), symDelete: () => deleteSymbol(ctxSym),
-  exportBOM, exportTerminals, exportPanel, settingsDlg, newResidential, addFloorPage, importImage, fitImage, removeImage, placeOnSchematic, placeOnFloor,
+  exportBOM, exportTerminals, exportPanel, settingsDlg, newResidential, addFloorPage, importImage, fitImage, removeImage, placeOnSchematic, placeOnFloor, insertLegend, newCustomReport: () => newCustomReport(), makeCustomCopy,
   roomMode: () => setMode('room'), roomPolyMode: () => setMode('roompoly'), roomOvalMode: () => setMode('roomoval'), roomCircMode: () => setMode('roomcirc'), setArea: () => setMode('area'),
   goPanel: () => { const r = REPORTS.find(r => r.report === 'panel'); if (r) goPage(r.id); else flash('No breakers in the project yet'); },
-  goBOM: () => goPage(REPORTS.find(r => r.report === 'bom').id),
+  goBOM: () => { const r = REPORTS.find(r => r.report === 'bom' && !r.custom); if (r) goPage(r.id); else flash('The bill of materials is turned off in Project properties'); },
   goTerms: () => { const r = REPORTS.find(r => r.report === 'term'); if (r) goPage(r.id); else flash('No terminals in the project'); },
   renumContact: () => { const f = findItem([...sel][0]); if (f && f.it) commit(() => assignContactNumbers(f.it)); },
 };

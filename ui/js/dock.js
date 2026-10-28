@@ -2,6 +2,7 @@
 // Panels (Pages, Devices, Symbols, To-do, Properties) live in three dock areas (left, right, bottom) or float over the
 // canvas. An area is a row of columns; a column is a stack of groups; a group holds panels as tabs. Drag a tab to move
 // a panel: onto another group to tab it or split beside it, to a window edge to dock, or onto the canvas to float it.
+// Floating windows stick to each other and to the docked panels, and join another panel when dropped on its tab bar.
 // Layouts are saved as named workspaces in the program preferences (data folder).
 const PANELS = {
   pages: { title: 'Pages', el: '#tab-pages', home: 'left' },
@@ -96,6 +97,7 @@ function dockGroupEl(g, floatWin) {
   const ge = dEl('dgroup'); ge._g = g;
   const tabs = dEl('dtabs');
   tabs.innerHTML = g.tabs.map(id => `<button type="button" class="tab${id === g.active ? ' active' : ''}" data-tab="${id}" data-dtab="${id}">${panelLabel(id)}${id === g.active ? `<span class="tabx" data-dclose="${id}" title="Close panel">×</span>` : ''}</button>`).join('');
+  if (floatWin) { const gr = dEl('dgrip'); gr.title = 'Drag to move. Drop on another tab bar to join it. Alt: no snapping.'; tabs.appendChild(gr); }
   const body = dEl('dgbody');
   for (const id of g.tabs) { const el = $(PANELS[id].el); el.classList.toggle('hidden', id !== g.active); body.appendChild(el); }
   ge.append(tabs, body); return ge;
@@ -164,13 +166,17 @@ document.addEventListener('mousedown', e => {
 window.addEventListener('mousemove', e => {
   if (dockWin) {
     const w = dockWin, dx = e.clientX - w.sx, dy = e.clientY - w.sy, f = w.f;
-    if (w.mode === 'move') { f.x = Math.max(-f.w + 60, Math.min(innerWidth - 60, w.o.x + dx)); f.y = Math.max(0, Math.min(innerHeight - 30, w.o.y + dy)); }
-    else {
+    if (w.mode === 'move') {
+      f.x = Math.max(-f.w + 60, Math.min(innerWidth - 60, w.o.x + dx)); f.y = Math.max(0, Math.min(innerHeight - 30, w.o.y + dy));
+      w.merge = e.shiftKey ? null : dockMergeTarget(e.clientX, e.clientY, f);
+      if (w.merge) dockShowHint(w.merge); else { $('#dockhint').classList.add('hidden'); if (!e.altKey) dockMagnetMove(f); }
+    } else {
       const d = w.dir;
       if (d.includes('e')) f.w = Math.max(180, w.o.w + dx);
       if (d.includes('s')) f.h = Math.max(120, w.o.h + dy);
       if (d.includes('w')) { f.w = Math.max(180, w.o.w - dx); f.x = w.o.x + w.o.w - f.w; }
       if (d.includes('n')) { f.h = Math.max(120, w.o.h - dy); f.y = Math.max(0, w.o.y + w.o.h - f.h); }
+      if (!e.altKey) dockMagnetResize(f, d);
     }
     w.fe.style.cssText = `left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px;z-index:${f.z}`; return;
   }
@@ -182,7 +188,11 @@ window.addEventListener('mousemove', e => {
   d.t = dockTarget(e.clientX, e.clientY); dockShowHint(d.t);
 });
 window.addEventListener('mouseup', e => {
-  if (dockWin) { dockWin = null; PREFS.dock = clone(DOCK); savePrefs(); return; }
+  if (dockWin) {
+    const w = dockWin; dockWin = null; $('#dockhint').classList.add('hidden');
+    if (w.mode === 'move' && w.merge) { dockMergeFloat(w.f, w.merge.group); return; }
+    PREFS.dock = clone(DOCK); savePrefs(); return;
+  }
   if (dockSplit) { dockSplitEnd(); return; }
   if (!dockDrag) return;
   const d = dockDrag; dockDrag = null;
@@ -220,6 +230,61 @@ function dockTarget(x, y) {
 function dockShowHint(t) {
   const h = $('#dockhint'); if (!t || !t.rect) { h.classList.add('hidden'); return; }
   h.classList.remove('hidden'); h.style.left = t.rect.left + 'px'; h.style.top = t.rect.top + 'px'; h.style.width = t.rect.width + 'px'; h.style.height = t.rect.height + 'px';
+}
+
+// ---------- magnetic floating panels ----------
+// A floating panel being moved or resized sticks to the edges of other floating panels, the docked panels and the
+// work area when it comes within DOCK_MAGNET pixels. Hold Alt to place it freely. Dropping it with the pointer on
+// another panel's tab bar puts its tabs into that panel (hold Shift to stop that).
+const DOCK_MAGNET = 10;
+const rectOf = el => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+function dockMagnetRects(f) {
+  const out = DOCK.floats.filter(o => o !== f).map(o => ({ l: o.x, t: o.y, r: o.x + o.w, b: o.y + o.h }));
+  for (const a of DOCK_AREAS) { const el = $('#dock-' + a); if (el && !el.classList.contains('hidden')) out.push(rectOf(el)); }
+  const m = $('#main'); if (m) out.push(Object.assign(rectOf(m), { inside: true }));
+  return out;
+}
+// best shift (smallest distance within the magnet) that brings one of the moving edges onto one of the targets
+function magnetPick(edges, targets) {
+  let best = null;
+  for (const e of edges) for (const t of targets) { const d = t - e; if (Math.abs(d) <= DOCK_MAGNET && (best === null || Math.abs(d) < Math.abs(best))) best = d; }
+  return best;
+}
+const overlaps = (a0, a1, b0, b1) => a0 < b1 + DOCK_MAGNET && b0 < a1 + DOCK_MAGNET;
+function dockMagnetTargets(f, axis) {
+  const R = dockMagnetRects(f), out = [];
+  for (const o of R) {
+    if (axis === 'x') { if (!overlaps(f.y, f.y + f.h, o.t, o.b)) continue; out.push(o.l, o.r); }
+    else { if (!overlaps(f.x, f.x + f.w, o.l, o.r)) continue; out.push(o.t, o.b); }
+  }
+  return out;
+}
+function dockMagnetMove(f) {
+  const dx = magnetPick([f.x, f.x + f.w], dockMagnetTargets(f, 'x')); if (dx !== null) f.x += dx;
+  const dy = magnetPick([f.y, f.y + f.h], dockMagnetTargets(f, 'y')); if (dy !== null) f.y = Math.max(0, f.y + dy);
+  f.x = Math.round(f.x); f.y = Math.round(f.y);
+}
+function dockMagnetResize(f, d) {
+  if (d.includes('e')) { const k = magnetPick([f.x + f.w], dockMagnetTargets(f, 'x')); if (k !== null && f.w + k >= 180) f.w += k; }
+  if (d.includes('w')) { const k = magnetPick([f.x], dockMagnetTargets(f, 'x')); if (k !== null && f.w - k >= 180) { f.x += k; f.w -= k; } }
+  if (d.includes('s')) { const k = magnetPick([f.y + f.h], dockMagnetTargets(f, 'y')); if (k !== null && f.h + k >= 120) f.h += k; }
+  if (d.includes('n')) { const k = magnetPick([f.y], dockMagnetTargets(f, 'y')); if (k !== null && f.h - k >= 120 && f.y + k >= 0) { f.y += k; f.h -= k; } }
+}
+// a floating window dragged by its bar onto another panel's tab bar joins that panel
+function dockMergeTarget(x, y, f) {
+  for (const el of document.elementsFromPoint(x, y)) {
+    if (!el.classList || !el.classList.contains('dtabs')) continue;
+    const ge = el.closest('.dgroup'), fe = el.closest('.dfloat');
+    if (!ge || !ge._g || ge._g === f || (fe && fe.dataset.fid === f.id)) continue;
+    const r = ge.getBoundingClientRect(); return { t: 'tab', group: ge._g, rect: { left: r.left, top: r.top, width: r.width, height: r.height } };
+  }
+  return null;
+}
+function dockMergeFloat(f, group) {
+  DOCK.floats = DOCK.floats.filter(o => o !== f);
+  for (const id of f.tabs) if (!group.tabs.includes(id)) group.tabs.push(id);
+  group.active = f.active || f.tabs[0]; if (group.z !== undefined) group.z = ++dockZ;
+  dockCommit();
 }
 
 // ---------- splitters ----------

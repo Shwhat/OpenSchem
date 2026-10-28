@@ -175,6 +175,7 @@ const CMDS = {
   addTodoForSelection: ['Add to-do', 'todo', 'addTodoForSelection'], showTodo: ['To-do list', 'todolist', 'showTodo'],
   revisionsDlg: ['Revisions', 'rev', 'revisionsDlg'], exportPDF: ['PDF', 'pdf', 'exportPDF'],
   toggleTheme: ['Dark theme', 'theme', 'toggleTheme', () => document.documentElement.dataset.theme === 'dark'], toggleSheet: ['Dark sheet', 'sheetd', 'toggleSheet', () => PREFS.sheet === 'dark'],
+  insertLegend: ['Circuit legend', 'label', 'insertLegend'],
   roomMode: ['Room', 'room', 'roomMode', () => mode === 'room'], roomPolyMode: ['Room shape', 'roompoly', 'roomPolyMode', () => mode === 'roompoly'], roomOvalMode: ['Oval room', 'roomoval', 'roomOvalMode', () => mode === 'roomoval'], roomCircMode: ['Round room', 'roomcirc', 'roomCircMode', () => mode === 'roomcirc'], importImage: ['Image', 'image', 'importImage'],
 };
 const DEFAULT_RIBBON = [
@@ -204,6 +205,7 @@ const DEFAULT_RIBBON = [
     { name: 'Outlets', items: ['sym:rout', 'sym:routgf', 'sym:routsw', 'sym:rout240'] },
     { name: 'Lights and switches', items: ['sym:rlgt', 'sym:rfan', 'sym:rswt', 'sym:rsw3', 'sym:rsw4', 'sym:rdim'] },
     { name: 'Other', items: ['sym:rsmk', 'sym:rjbx', 'sym:rapp', 'sym:rpnl'] },
+    { name: 'Legend', items: ['insertLegend'] },
     { name: 'Modify', items: ['rotateSel', 'delSel', 'toggleSnap', 'alignToGrid'] },
     { name: 'Sheets', items: ['newViewSheet', 'addView'] },
     { name: 'Exchange', items: ['importDXF', 'exportDXF', 'exportSVG', 'exportPNG'] },

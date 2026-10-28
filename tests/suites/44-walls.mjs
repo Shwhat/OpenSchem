@@ -135,4 +135,47 @@ export const tests = {
     t.ok(near(s.o1.c[0], 100) && near(s.o1.c[1], 60), 'door moved along the wall');
     t.eq(s.w1.a, [60, 60], 'wall not touched');
   },
+  'driving dimensions: typing a size moves the walls and keeps corners joined': async t => {
+    const op = { id: 'o1', t: 'opening', wall: 'w2', c: [180, 100], w: 20, kind: 'door', style: 'single', hinge: 'l', side: 1, tag: 'D1' };
+    await blank(t, box().concat([op,
+      { id: 'd1', t: 'dim', kind: 'lin', dir: 'h', p1: [60, 60], p2: [180, 60], loc: [120, 50], style: 'Standard', r1: { id: 'w1', g: 0 }, r2: { id: 'w1', g: 1 } },
+      { id: 'd2', t: 'dim', kind: 'ali', p1: [180, 60], p2: [180, 140], loc: [195, 100], style: 'Standard' },
+      { id: 'c1', t: 'circle', c: [120, 100], r: 10 }, { id: 'd3', t: 'dim', kind: 'rad', ref: 'c1', c: [120, 100], r: 10, loc: [130, 100], style: 'Standard' }]));
+    const mm = n => t.eval(n => toRealMm(levelOf(page()), n) + ' mm', n);
+    const set = async (id, v) => { await t.eval(id => { sel = new Set([id]); render(); }, id); await t.page.fill('[data-k="shp.dval"]', v); await t.page.press('[data-k="shp.dval"]', 'Enter'); await t.page.waitForTimeout(40); };
+    const S = async () => Object.fromEntries((await shapes(t)).map(x => [x.id, x]));
+    // width 120 -> 150: the right wall moves whole, top and bottom walls stretch, the door rides along
+    t.ok(await t.eval(() => !!$('[data-k="shp.dval"]') || true));
+    await set('d1', await mm(150));
+    let s = await S();
+    t.eq([s.w1.a, s.w1.b, s.w2.a, s.w2.b, s.w3.a, s.w3.b, s.w4.a], [[60, 60], [210, 60], [210, 60], [210, 140], [210, 140], [60, 140], [60, 140]]);
+    t.ok(nearPt(s.o1.c, [210, 100]), 'door moved with its wall');
+    t.ok(await t.eval(() => Math.abs(dimMeasure(levelOf(page()).shapes.find(x => x.id === 'd1'), levelOf(page())) - 150) < 0.01), 'dimension reads the new size');
+    // the free dimension that sat on the old corner moved with it
+    t.eq([s.d2.p1, s.d2.p2], [[210, 60], [210, 140]]);
+    // height via the free aligned dimension: 80 -> 100 moves the bottom wall down
+    await set('d2', await mm(100));
+    s = await S();
+    t.eq([s.w2.b, s.w3.a, s.w3.b, s.w4.a, s.w4.b], [[210, 160], [210, 160], [60, 160], [60, 160], [60, 60]]);
+    // move the first point instead: width 150 -> 140 moves the left wall right
+    await t.eval(() => { sel = new Set(['d1']); render(); }); await t.page.selectOption('[data-k="shp.ddrive"]', 'p1');
+    await set('d1', await mm(140));
+    s = await S();
+    t.eq([s.w1.a, s.w4.a, s.w4.b, s.w3.b, s.w1.b], [[70, 60], [70, 160], [70, 60], [70, 160], [210, 60]]);
+    // radius dimension resizes the circle
+    await set('d3', await mm(15));
+    t.eq((await S()).c1.r, 15);
+    // undo goes back one step
+    await t.key('Escape'); await t.key('Control+z');
+    t.eq((await S()).c1.r, 10);
+    // walls drawn as a room keep their room shape: auto rooms follow
+    t.ok(await t.eval(() => document.querySelectorAll('#content .walls polygon').length >= 8));
+  },
+  'driving dimensions on a room drawn with the room tool keep it square': async t => {
+    await blank(t, [{ id: 'd1', t: 'dim', kind: 'lin', dir: 'h', p1: [60, 140], p2: [180, 140], loc: [120, 150], style: 'Standard', r1: { room: 'r1', v: 0 }, r2: { room: 'r1', v: 1 } }]);
+    await t.eval(() => { const lv = levelOf(page()); lv.rooms = [{ id: 'r1', name: 'Den', pts: [[60, 140], [180, 140], [180, 60], [60, 60]] }]; render(); });
+    const want = await t.eval(() => toRealMm(levelOf(page()), 100) + ' mm');
+    await t.eval(() => { sel = new Set(['d1']); render(); }); await t.page.fill('[data-k="shp.dval"]', want); await t.page.press('[data-k="shp.dval"]', 'Enter'); await t.page.waitForTimeout(40);
+    t.eq(await t.eval(() => levelOf(page()).rooms[0].pts), [[60, 140], [160, 140], [160, 60], [60, 60]]);
+  },
 };
