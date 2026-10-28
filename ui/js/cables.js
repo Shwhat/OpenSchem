@@ -23,17 +23,17 @@ function defaultCableType(pg, c) {
   const n = cols.filter(k => k !== 'GN' && k !== 'BARE').length, g = cols.length - n;
   return `${awg}/${n}${g ? ' w/G' : ''}`;
 }
-function cableSVG(c, pg, isSel) {
+function cableSVG(c, pg, isSel, locked) {
   const cr = cableCrossings(pg, c); const horiz = c.y1 === c.y2;
   const col = isSel ? '#1f6fff' : (sheetDark() ? '#c8cdd4' : '#444');
-  let s = `<g data-id="${c.id}" class="cable"><path class="wirehit" d="M${c.x1},${c.y1}L${c.x2},${c.y2}"/>`;
-  s += `<path d="M${c.x1},${c.y1}L${c.x2},${c.y2}" stroke="${col}" stroke-width="0.3" stroke-dasharray="2,0.8,0.4,0.8" fill="none"/>`;
+  let s = locked ? '<g class="cable">' : `<g data-id="${c.id}" class="cable${isSel ? ' csel' : ''}"><path class="wirehit" d="M${c.x1},${c.y1}L${c.x2},${c.y2}"/>`;
+  s += `<path d="M${c.x1},${c.y1}L${c.x2},${c.y2}" stroke="${col}" stroke-width="0.3" stroke-dasharray="2,0.8,0.4,0.8" fill="none" class="ly-cable"/>`;
   const tick = (x, y) => horiz ? `M${x - 0.8},${y + 1.4}L${x + 0.8},${y - 1.4}` : `M${x - 1.4},${y - 0.8}L${x + 1.4},${y + 0.8}`;
-  s += `<path d="${tick(c.x1, c.y1)}${tick(c.x2, c.y2)}" stroke="${col}" stroke-width="0.3" fill="none"/>`;
-  for (const x of cr) s += `<circle cx="${x.x}" cy="${x.y}" r="0.55" fill="${col}"/>`;
+  s += `<path d="${tick(c.x1, c.y1)}${tick(c.x2, c.y2)}" stroke="${col}" stroke-width="0.3" fill="none" class="ly-cable"/>`;
+  for (const x of cr) s += `<circle cx="${x.x}" cy="${x.y}" r="0.55" fill="${col}" class="ly-cable"/>`;
   const label = [home() ? (c.tag ? 'Cable ' + c.tag.replace(/^W/, '') : 'Cable') : identOnPage(c, pg), c.ctype, c.len].filter(Boolean).join('  ');
-  s += horiz ? txt(Math.min(c.x1, c.x2), c.y1 - 1.6, label, { size: FSS, cls: isSel ? 'tx' : '' })
-             : txt(c.x1 - 1.6, Math.min(c.y1, c.y2), label, { size: FSS, anchor: 'end', rot: -90, cls: isSel ? 'tx' : '' });
+  s += horiz ? txt(Math.min(c.x1, c.x2), c.y1 - 1.6, label, { size: FSS, cls: isSel ? 'tx' : 'ly-cable' })
+             : txt(c.x1 - 1.6, Math.min(c.y1, c.y2), label, { size: FSS, anchor: 'end', rot: -90, cls: isSel ? 'tx' : 'ly-cable' });
   return s + '</g>';
 }
 function findCable(id) { for (const pg of P.pages) { const c = (pg.cables || []).find(x => x.id === id); if (c) return { c, pg }; } return null; }

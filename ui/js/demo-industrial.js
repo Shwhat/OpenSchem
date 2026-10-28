@@ -1,5 +1,5 @@
-// ---------- demo project ----------
-function buildDemo() {
+// ---------- demo building block: pump station control panel (also a test fixture) ----------
+function demoIndustrial() {
   const p = newProject(); p.name = 'Pump station demo'; p.company = 'OpenSchem'; p.author = 'Engineering';
   const pg1 = newPage('M01', 'CP1', '1', 'Main power'); const pg2 = newPage('M01', 'CP1', '2', 'Pump control');
   p.pages = [pg1, pg2]; P = p;

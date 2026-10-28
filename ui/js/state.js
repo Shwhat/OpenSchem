@@ -14,8 +14,8 @@ function flash(m) { $('#st-msg').textContent = m; clearTimeout(flashT); flashT =
 // ---------- main render ----------
 let symKey = '', lastSchemId = null;
 function render(o = {}) {
-  buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
-  renderCanvas();
+  buildIndex(); if (syncDeviceBoxes()) buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
+  applyLayerStyles(); renderCanvas();
   renderPages(); renderPageTabs(); renderToolbar();
   const sk = `${isFloor(page())}|${S().industrial}|${S().fpSymbols}`; if (sk !== symKey) { symKey = sk; renderSymbols(); }
   if (!$('#tab-devices').classList.contains('hidden')) renderDevices();
@@ -23,7 +23,7 @@ function render(o = {}) {
   renderTodo();
   renderStatus(); updateTitle();
 }
-function renderCanvas() { $('#content').innerHTML = pageSVG(page()); applyView(); }
+function renderCanvas() { useSheet(page()); $('#content').innerHTML = pageSVG(page()); applyView(); }
 function updateTitle() {
   const n = (filePath ? filePath.split(/[\\/]/).pop() : 'Untitled.osp') + (dirty ? ' *' : '');
   $('#docname').textContent = `${P.name}  |  ${n}`;

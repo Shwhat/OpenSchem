@@ -65,7 +65,7 @@ function bomRows() {
     add(part ? 'p:' + part : 'cab:' + type, { part, desc: 'Cable, ' + type, tech: '', missing: !part, first: { id: c.id } }, (home() ? 'Cable ' + c.tag.replace(/^W/, '') : '-' + c.tag) + (c.len ? ' (' + c.len + ')' : ''));
   }
   const list = [...groups.values()].sort((a, b) => (a.missing - b.missing) || natCmp(a.part, b.part) || natCmp(a.tags[0], b.tags[0]));
-  return list.map((g, i) => ({ pos: i + 1, qty: g.qty, part: g.part, desc: g.desc, tech: g.tech, tags: g.tags, missing: g.missing, goto: g.first.id }));
+  return list.map((g, i) => { const pd = partOf(g.part) || {}; const price = pd.price ? pnum(pd.price) : null; return { pos: i + 1, qty: g.qty, part: g.part, mfr: pd.mfr || '', desc: g.desc, tech: g.tech || pd.tech || '', tags: g.tags, missing: g.missing, price, total: price == null ? null : price * g.qty, goto: g.first.id }; });
 }
 
 // targets reached from one side of a terminal (follows wires on the page, not through devices)
@@ -105,24 +105,30 @@ function terminalRows(dev) {
   });
 }
 
-const BOM_COLS_ENG = [{ h: 'Pos', w: 14, a: 'middle' }, { h: 'Qty', w: 14, a: 'middle' }, { h: 'Part number', w: 66 }, { h: 'Description', w: 104 }, { h: 'Technical data', w: 62 }, { h: 'Device tags', w: 140 }];
+const BOM_COLS_ENG = [{ h: 'Pos', w: 12, a: 'middle' }, { h: 'Qty', w: 12, a: 'middle' }, { h: 'Part number', w: 50 }, { h: 'Manufacturer', w: 38 }, { h: 'Description', w: 90 }, { h: 'Technical data', w: 50 }, { h: 'Device tags', w: 100 }, { h: 'Unit price', w: 23, a: 'end' }, { h: 'Total', w: 25, a: 'end' }];
 const TERM_COLS_ENG = [{ h: 'Internal target', w: 92 }, { h: 'Wire', w: 26, a: 'middle' }, { h: 'Terminal', w: 24, a: 'middle' }, { h: 'Wire', w: 26, a: 'middle' }, { h: 'External target', w: 92 }, { h: 'Page / column', w: 40 }, { h: 'Function text', w: 60 }, { h: 'Part number', w: 40 }];
 
 const plainCols = (cols, names) => cols.map((c, i) => Object.assign({}, c, { h: names[i] }));
-const BOM_COLS_F = () => S().reportCols === 'plain' ? plainCols(BOM_COLS_ENG, ['#', 'Qty', 'Part number', 'Description', 'Details', 'Devices']) : BOM_COLS_ENG;
+const BOM_COLS_F = () => S().reportCols === 'plain' ? plainCols(BOM_COLS_ENG, ['#', 'Qty', 'Part number', 'Brand', 'Description', 'Details', 'Devices', 'Each', 'Total']) : BOM_COLS_ENG;
 const TERM_COLS_F = () => S().reportCols === 'plain' ? plainCols(TERM_COLS_ENG, ['Inside', 'Wire', 'Terminal', 'Wire', 'Outside', 'Page', 'Description', 'Part number']) : TERM_COLS_ENG;
 function buildReports() {
   const reps = [];
   for (const [pn, list] of panelRows()) {
     const cols = PS_COLS();
-    const sh = paginate(cols, list.map(r => ({ cells: [r.slot, r.circuit, r.brk, r.amps, r.poles, r.type, r.desc, r.rooms], goto: r.goto })));
+    const prow = list.map(r => ({ cells: [r.slot, r.circuit, r.brk, r.amps, r.poles, r.type, r.desc, r.rooms, r.load ? String(Math.round(r.load)) : '', r.load ? fmtPct(r.pct) : '', fmtPct(r.vd)], cls: r.pct > 80 || r.vd > 3 ? 'over' : '', goto: r.goto }));
+    const tot = list.reduce((a, r) => a + (r.load || 0), 0);
+    if (tot) prow.push({ cells: ['', '', '', '', '', '', `Panel total: ${Math.round(tot)} VA, ${Math.round(tot / 240 * 10) / 10} A at 240 V`, '', String(Math.round(tot)), '', ''], cls: 'grp' });
+    const sh = paginate(cols, prow);
     const nm = pn ? dispTag(pn) : '';
     sh.forEach((rws, i) => reps.push({ id: `rep:pnl:${pn}:${i + 1}`, report: 'panel', fn: '', loc: '', num: `${pn || 'PNL'}.${i + 1}`, desc: `Panel schedule ${nm}`.trim(), title: `Panel schedule ${nm}`.trim(), cols, rows: rws, sheet: i + 1, sheets: sh.length, items: [], wires: [] }));
   }
   // BOM
   const bom = bomRows();
   const BOM_COLS = BOM_COLS_F();
-  const bomSheets = paginate(BOM_COLS, bom.map(r => ({ cells: [String(r.pos), String(r.qty), r.part || 'no part number', r.desc, r.tech, r.tags.join(', ')], cls: r.missing ? 'missing' : '', goto: r.goto })));
+  const bomCost = bom.reduce((a, r) => a + (r.total || 0), 0); const priced = bom.filter(r => r.total != null).length;
+  const bomList = bom.map(r => ({ cells: [String(r.pos), String(r.qty), r.part || 'no part number', r.mfr, r.desc, r.tech, r.tags.join(', '), r.price == null ? '' : money(r.price), r.total == null ? '' : money(r.total)], cls: r.missing ? 'missing' : '', goto: r.goto }));
+  if (priced) bomList.push({ cells: ['', '', '', '', priced < bom.length ? `Total (${bom.length - priced} position(s) without a price)` : 'Total', '', '', '', money(bomCost)], cls: 'grp' });
+  const bomSheets = paginate(BOM_COLS, bomList);
   bomSheets.forEach((rows, i) => reps.push({ id: 'rep:bom:' + (i + 1), report: 'bom', fn: '', loc: '', num: 'BOM.' + (i + 1), desc: 'Bill of materials', title: 'Bill of materials', cols: BOM_COLS, rows, sheet: i + 1, sheets: bomSheets.length, items: [], wires: [] }));
   // terminal diagrams
   const strips = [...IX.dev.values()].filter(d => d.items.some(i => i.sym === 'term')).sort((a, b) => natCmp(a.fn, b.fn) || natCmp(a.loc, b.loc) || natCmp(a.tag, b.tag));
@@ -151,7 +157,7 @@ function reportSVG(rp) {
   const hh = RP.lh + RP.pad * 2;
   s += `<rect class="rhead" x="${x0}" y="${y}" width="${SH.x1 - x0}" height="${hh}" fill="#eef1f5" stroke="none"/>`;
   let x = x0;
-  for (const c of rp.cols) { s += txt(c.a === 'middle' ? x + c.w / 2 : x + 1.2, y + RP.pad + RP.lh - 1.1, c.h, { size: RP.fs, bold: true, anchor: c.a || 'start' }); x += c.w; }
+  for (const c of rp.cols) { s += txt(c.a === 'middle' ? x + c.w / 2 : c.a === 'end' ? x + c.w - 1.2 : x + 1.2, y + RP.pad + RP.lh - 1.1, c.h, { size: RP.fs, bold: true, anchor: c.a || 'start' }); x += c.w; }
   s += `<line class="frame" x1="${x0}" y1="${y}" x2="${SH.x1}" y2="${y}"/>`;
   y += hh;
   s += `<line class="frame" x1="${x0}" y1="${y}" x2="${SH.x1}" y2="${y}"/>`;
@@ -161,7 +167,7 @@ function reportSVG(rp) {
     s += `<g data-goto="${r.goto || ''}" class="reprow"><rect x="${x0}" y="${y}" width="${SH.x1 - x0}" height="${r.h}" class="hit"${lk ? ` data-link="${esc(lk)}"` : ''}/>`;
     r.cells.forEach((lines, i) => {
       const c = rp.cols[i];
-      lines.forEach((l, k) => { s += txt(c.a === 'middle' ? x + c.w / 2 : x + 1.2, y + RP.pad + RP.lh * (k + 1) - 1.1, l, { size: RP.fs, anchor: c.a || 'start', bold: r.cls === 'grp', cls: r.cls === 'missing' && i === 2 ? 'tw' : '' }); });
+      lines.forEach((l, k) => { s += txt(c.a === 'middle' ? x + c.w / 2 : c.a === 'end' ? x + c.w - 1.2 : x + 1.2, y + RP.pad + RP.lh * (k + 1) - 1.1, l, { size: RP.fs, anchor: c.a || 'start', bold: r.cls === 'grp', cls: r.cls === 'missing' && i === 2 ? 'tw' : r.cls === 'over' && i >= 8 ? 'tw' : '' }); });
       x += c.w;
     });
     s += '</g>';
@@ -178,8 +184,8 @@ function csvCell(v) { v = String(v ?? ''); return /[",;\n]/.test(v) ? '"' + v.re
 function toCSV(head, rows) { return '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n'); }
 async function exportBOM() {
   buildIndex(); NETS = computeNets(); WN = computeWireNumbers();
-  const rows = bomRows().map(r => [r.pos, r.qty, r.part, r.desc, r.tech, r.tags.join(' ')]);
-  const csv = toCSV(['Pos', 'Qty', 'Part number', 'Description', 'Technical data', 'Device tags'], rows);
+  const rows = bomRows().map(r => [r.pos, r.qty, r.part, r.mfr, r.desc, r.tech, r.tags.join(' '), r.price == null ? '' : r.price.toFixed(2), r.total == null ? '' : r.total.toFixed(2)]);
+  const csv = toCSV(['Pos', 'Qty', 'Part number', 'Manufacturer', 'Description', 'Technical data', 'Device tags', 'Unit price', 'Total'], rows);
   const p = await host.saveText(csv, (P.name || 'project').replace(/[\\/:*?"<>|]/g, '_') + ' BOM.csv');
   if (p) flash('Exported ' + p);
 }
@@ -260,7 +266,7 @@ function buildFrontPages(reps) {
   if (P.cover !== false) front.push({ id: 'rep:cover:1', report: 'cover', front: true, fn: '', loc: '', num: 'COVER.1', desc: 'Cover sheet', title: 'Cover sheet', cols: [], rows: [], sheet: 1, sheets: 1, items: [], wires: [] });
   if (P.toc !== false) {
     const later = P.pages.concat(reps);
-    const rowFor = p => ({ cells: [pageName(p), p.desc || '', p.report || isFloor(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? 'Report' : isFloor(p) ? 'Floor plan' : 'Schematic'], goto: 'page:' + p.id, link: p.id });
+    const rowFor = p => ({ cells: [pageName(p), p.desc || '', p.report || isFloor(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? 'Report' : isFloor(p) ? 'Floor plan' : isLayout(p) ? 'Panel layout' : 'Schematic'], goto: 'page:' + p.id, link: p.id });
     let n = 1, sheets;
     for (let pass = 0; pass < 4; pass++) {
       const tocRows = []; for (let i = 0; i < n; i++) tocRows.push({ cells: [`Contents ${i + 1}`, 'Table of contents', '', '', '', 'Report'] });

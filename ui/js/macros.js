@@ -31,17 +31,20 @@ function insertContent(src, dx, dy, pg, assignFL) {
     if (assignFL) { c.fn = pg.fn || ''; c.loc = pg.loc || ''; }
     pg.cables.push(c); ns.add(c.id);
   }
+  pg.gfx = pg.gfx || [];
+  for (const s0 of src.gfx || []) { const g = clone(s0); g.id = uid(); g.pts = g.pts.map(p => [r2(p[0] + dx), r2(p[1] + dy)]); pg.gfx.push(g); ns.add(g.id); }
   return ns;
 }
 
 // ---------- macros ----------
 function saveMacro() {
   const pg = page(); if (isFloor(pg) || pg.report) { flash('Open a schematic page and select what to save'); return; }
-  const items = pg.items.filter(i => sel.has(i.id)), wires = pg.wires.filter(w => sel.has(w.id)), cables = (pg.cables || []).filter(c => sel.has(c.id));
-  if (!items.length && !wires.length) { flash('Select the symbols and connections to save as a macro first'); return; }
+  const items = pg.items.filter(i => sel.has(i.id)), wires = pg.wires.filter(w => sel.has(w.id)), cables = (pg.cables || []).filter(c => sel.has(c.id)), gfx = (pg.gfx || []).filter(g => sel.has(g.id) && g.t !== 'image');
+  if (!items.length && !wires.length && !gfx.length) { flash('Select the symbols and connections to save as a macro first'); return; }
   const xs = [], ys = [];
   for (const it of items) { const b = itemBox(it); xs.push(b[0]); ys.push(b[1]); }
   for (const w of wires) for (const p of w.pts) { xs.push(p[0]); ys.push(p[1]); }
+  for (const g of gfx) { const b = gfxBox(g); xs.push(b[0]); ys.push(b[1]); }
   const ox = Math.floor(Math.min(...xs) / 4) * 4, oy = Math.floor(Math.min(...ys) / 4) * 4;
   dialog('Save selection as macro', [['name', 'Macro name', ''], ['desc', 'Description', '']], v => {
     if (!v.name) { alert('Enter a name for the macro.'); return false; }
@@ -50,6 +53,7 @@ function saveMacro() {
       items: items.map(i => { const c = clone(i); c.x = r2(c.x - ox); c.y = r2(c.y - oy); return c; }),
       wires: wires.map(w => { const c = clone(w); c.pts = c.pts.map(p => [r2(p[0] - ox), r2(p[1] - oy)]); delete c.no; return c; }),
       cables: cables.map(c0 => { const c = clone(c0); c.x1 -= ox; c.x2 -= ox; c.y1 -= oy; c.y2 -= oy; return c; }),
+      gfx: gfx.map(g0 => { const g = clone(g0); g.pts = g.pts.map(p => [r2(p[0] - ox), r2(p[1] - oy)]); return g; }),
     };
     LIB.macros = LIB.macros || []; LIB.macros.push(m); saveLibrary();
     flash(`Saved macro "${v.name}"`);

@@ -5,7 +5,7 @@ function applyView() {
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${r.width / view.s} ${r.height / view.s}`);
   $('#st-zoom').textContent = `Zoom ${Math.round(view.s / fitScale() * 100)}%`;
 }
-function fitScale() { const r = svg.getBoundingClientRect(); return Math.min(r.width / (SH.w + 10), r.height / (SH.h + 10)) || 1; }
+function fitScale() { useSheet(page()); const r = svg.getBoundingClientRect(); return Math.min(r.width / (SH.w + 10), r.height / (SH.h + 10)) || 1; }
 function zoomFit() {
   const r = svg.getBoundingClientRect(); view.s = fitScale();
   view.x = SH.w / 2 - r.width / view.s / 2; view.y = SH.h / 2 - r.height / view.s / 2; applyView();
@@ -17,11 +17,22 @@ function zoomAt(f, px, py) {
   view.x = mx - px / view.s; view.y = my - py / view.s; applyView();
 }
 function toMM(e) { const r = svg.getBoundingClientRect(); return [view.x + (e.clientX - r.left) / view.s, view.y + (e.clientY - r.top) / view.s]; }
+// zoom window: drag a box (or click) to zoom to that area; Previous view steps back
+const VIEWHIST = [];
+let zwin = null, zwPrev = 'select';
+function zoomRect(x0, y0, x1, y1) {
+  const r = svg.getBoundingClientRect(); VIEWHIST.push({ ...view }); if (VIEWHIST.length > 30) VIEWHIST.shift();
+  const w = Math.max(Math.abs(x1 - x0), 4), h = Math.max(Math.abs(y1 - y0), 4);
+  view.s = Math.max(fitScale() * 0.3, Math.min(60, Math.min(r.width / w, r.height / h)));
+  view.x = (x0 + x1) / 2 - r.width / view.s / 2; view.y = (y0 + y1) / 2 - r.height / view.s / 2; applyView();
+}
+function zoomWindow() { if (mode === 'zoomwin') { setMode('select'); return; } zwPrev = 'select'; setMode('zoomwin'); flash('Drag a box around the area to zoom to'); }
+function zoomPrev() { const v = VIEWHIST.pop(); if (!v) { flash('No previous view'); return; } Object.assign(view, v); applyView(); }
 function centerOn(x, y) { const r = svg.getBoundingClientRect(); view.x = x - r.width / view.s / 2; view.y = y - r.height / view.s / 2; applyView(); }
 
 // ---------- modes ----------
 function setMode(m, sym, itemId) {
-  mode = m; placeSym = sym || null; wireDraft = null; placeItemId = itemId || null; fpoly = null; fbox = null;
+  mode = m; placeSym = sym || null; wireDraft = null; gdraft = null; placeItemId = itemId || null; fpoly = null; fbox = null;
   $('#overlay').innerHTML = '';
   svg.classList.toggle('cross', m !== 'select');
   renderToolbar(); renderStatus();
@@ -29,7 +40,7 @@ function setMode(m, sym, itemId) {
 }
 function renderStatus() {
   const pg = page();
-  const names = { select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag a box)', roompoly: 'Draw room shape (click corners, click the first corner to close)', area: 'Drag a box around the area to show', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
+  const names = { select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag a box)', roomoval: 'Draw oval room (drag a box)', roomcirc: 'Draw round room (drag from one side)', roompoly: 'Draw room shape (click corners, click the first corner to close)', area: 'Drag a box around the area to show', lplace: 'Place device footprint', lrail: 'DIN rail: drag along the plate', lduct: 'Wire duct: drag along the plate', 'g:line': 'Line: click start and end', 'g:poly': 'Polyline: click points, double click to finish', 'g:rect': 'Rectangle: click two corners', 'g:circle': 'Circle: click center, then a point on the edge', 'g:dim': 'Dimension: click start and end', zoomwin: 'Zoom window: drag a box around the area to zoom to', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
   $('#st-mode').textContent = names[mode] + (mode === 'place' || mode === 'fpplace' ? '  (R rotate, right click / Esc to end)' : mode === 'wire' ? '  (click points, double click / Esc to finish)' : '');
   $('#st-pos').textContent = `Page ${pageName(pg)}`;
   $('#st-snap').textContent = `Snap ${PREFS.snap ? 'on' : 'off'} · grid ${isFloor(pg) ? PREFS.gridFp : PREFS.gridSch} mm`;
@@ -58,34 +69,37 @@ svg.addEventListener('mousedown', e => {
   closeMenus();
   const [mx, my] = toMM(e); const sx = snap(mx), sy = snap(my);
   if (e.button === 1 || (e.button === 0 && spaceDown)) { pan = { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y }; svg.classList.add('pan'); e.preventDefault(); return; }
-  if (e.button === 2) { if (mode === 'wire' && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
+  if (e.button === 2) { if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
   if (e.button !== 0) return;
+  if (mode === 'zoomwin') { zwin = { start: [mx, my], cur: [mx, my] }; return; }
   const pg = page();
   if (pg.report) { if (mode !== 'select') setMode('select'); return; }
+  if (isLayout(pg)) { if (mode.startsWith('g:')) gfxDown(pg, sx, sy); else layDown(e, pg, mx, my); return; }
   if (isFloor(pg)) { fpDown(e, pg, mx, my); return; }
   lastSchemId = pg.id;
   if (mode === 'macro') { placeMacroAt(pg, mx, my); return; }
   if (mode === 'cable') { cdrag = { a: [snap(mx), snap(my)], b: [snap(mx), snap(my)] }; return; }
+  if (mode.startsWith('g:')) { gfxDown(pg, ...snapPt(mx, my)); return; }
   if (mode === 'place' && placeItemId) {
     const id = placeItemId;
     commit(() => {
       const it = itemById(id); if (!it) return;
       P.pool = P.pool.filter(x => x !== it);
       it.x = sx; it.y = sy; it.rot = placeRot; it.mir = placeMir || undefined; if (!it.fn) it.fn = pg.fn || '';
-      pg.items.push(it); sel = new Set([it.id]);
+      pg.items.push(it); sel = new Set([it.id]); autoConnect(pg, [it]);
     });
     setMode('select'); return;
   }
   if (mode === 'place') {
     commit(() => {
-      const it = makeItem(placeSym, sx, sy, placeRot, pg); if (placeMir) it.mir = true; pg.items.push(it); sel = new Set([it.id]);
+      const it = makeItem(placeSym, sx, sy, placeRot, pg); if (SYM[placeSym].sized && !SYM[placeSym].rotates) it.rot = 0; else if (placeMir) it.mir = true; pg.items.push(it); sel = new Set([it.id]); autoConnect(pg, [it]);
       if (it.role === 'main' && SYM[it.sym].prefix) lastMain[SYM[it.sym].prefix] = it.tag;
       if (it.sym === 'term') lastMain.X = it.tag;
     });
     drawGhost(mx, my); return;
   }
   if (mode === 'text') {
-    const t = prompt('Text:', ''); if (t) commit(() => { const it = { id: uid(), sym: 'text', x: sx, y: sy, text: t, size: 3.5 }; pg.items.push(it); sel = new Set([it.id]); });
+    const t = prompt('Text:', ''); if (t) commit(() => { const it = onActiveLayer({ id: uid(), sym: 'text', x: sx, y: sy, text: t, size: 3.5 }); pg.items.push(it); sel = new Set([it.id]); });
     setMode('select'); return;
   }
   if (mode === 'wire') {
@@ -98,13 +112,20 @@ svg.addEventListener('mousedown', e => {
     return;
   }
   // select mode
+  const wh = e.target.closest('[data-wend]');
+  if (wh) { const [wid, end] = wh.dataset.wend.split(':'); const w = pg.wires.find(x => x.id === wid); if (w) { wdrag = { kind: 'end', w, end: +end, pre: snapshot(), orig: clone(w.pts), moved: false }; return; } }
   const id = hitId(e);
+  // a click on an already selected connection drags the segment under the mouse sideways
+  if (id && sel.size === 1 && sel.has(id) && !e.shiftKey && !e.ctrlKey) {
+    const w = pg.wires.find(x => x.id === id);
+    if (w) { wdrag = { kind: 'seg', w, k: nearestSeg(w.pts, mx, my), pre: snapshot(), orig: clone(w.pts), moved: false }; return; }
+  }
   if (id) {
     if (e.shiftKey || e.ctrlKey) { sel.has(id) ? sel.delete(id) : sel.add(id); render(); return; }
     if (!sel.has(id)) { sel = new Set([id]); render(); }
     const f = findItem(id); if (f && f.it && f.it.role === 'main' && SYM[f.it.sym] && SYM[f.it.sym].prefix) lastMain[SYM[f.it.sym].prefix] = f.it.tag;
     if (f && f.it && f.it.sym === 'term') lastMain.X = f.it.tag;
-    drag = { start: [mx, my], pre: snapshot(), orig: clone({ items: pg.items, wires: pg.wires, cables: pg.cables || [] }), moved: false, d: [0, 0] };
+    drag = { start: [mx, my], pre: snapshot(), orig: clone({ items: pg.items, wires: pg.wires, cables: pg.cables || [], gfx: pg.gfx || [] }), moved: false, d: [0, 0] };
   } else {
     if (!e.shiftKey) { sel.clear(); render(); }
     box = { start: [mx, my], cur: [mx, my] };
@@ -114,8 +135,14 @@ svg.addEventListener('mousedown', e => {
 window.addEventListener('mousemove', e => {
   lastMouse = [e.clientX, e.clientY];
   if (pan) { view.x = pan.vx - (e.clientX - pan.cx) / view.s; view.y = pan.vy - (e.clientY - pan.cy) / view.s; applyView(); return; }
-  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox) return;
+  if (wdrag) { dragWire(...toMM(e)); return; }
+  if (zwin) {
+    zwin.cur = toMM(e); const [a, b] = zwin.start, [c, d] = zwin.cur;
+    $('#overlay').innerHTML = `<rect class="zoombox" x="${Math.min(a, c)}" y="${Math.min(b, d)}" width="${Math.abs(c - a)}" height="${Math.abs(d - b)}"/>`; return;
+  }
+  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox) return;
   const [mx, my] = toMM(e);
+  if (isLayout(page())) { if (mode.startsWith('g:')) gfxPreview(snap(mx), snap(my)); else layMove(page(), mx, my); return; }
   if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox) fpMove(page(), mx, my); return; }
   $('#st-pos').textContent = `X ${snap(mx)}  Y ${snap(my)}  |  Column ${colOf(mx)}  |  Page ${pageName(page())}`;
   if (mode === 'macro') { drawMacroGhost(mx, my); return; }
@@ -128,16 +155,7 @@ window.addEventListener('mousemove', e => {
     }
     $('#overlay').innerHTML = s; return;
   }
-  if (mode === 'macro') { drawMacroGhost(mx, my); return; }
-  if (mode === 'cable') {
-    let s = `<rect class="snap" x="${snap(mx) - 1}" y="${snap(my) - 1}" width="2" height="2"/>`;
-    if (cdrag) {
-      const a = cdrag.a, q = [snap(mx), snap(my)];
-      cdrag.b = Math.abs(q[0] - a[0]) >= Math.abs(q[1] - a[1]) ? [q[0], a[1]] : [a[0], q[1]];
-      s += `<path class="wprev" d="M${a.join(',')}L${cdrag.b.join(',')}"/>`;
-    }
-    $('#overlay').innerHTML = s; return;
-  }
+  if (mode.startsWith('g:')) { gfxPreview(...snapPt(mx, my)); return; }
   if (mode === 'place') drawGhost(mx, my);
   else if (mode === 'wire') drawWirePreview(...snapPt(mx, my));
   else if (drag) {
@@ -152,6 +170,14 @@ window.addEventListener('mousemove', e => {
 
 window.addEventListener('mouseup', e => {
   if (pan) { pan = null; svg.classList.remove('pan'); return; }
+  if (wdrag) { endWireDrag(); return; }
+  if (zwin) {
+    const [a, b] = zwin.start, [c, d] = zwin.cur; zwin = null; $('#overlay').innerHTML = '';
+    if (Math.abs(c - a) < 2 && Math.abs(d - b) < 2) { VIEWHIST.push({ ...view }); zoomAt(2, (a - view.x) * view.s, (b - view.y) * view.s); }
+    else zoomRect(a, b, c, d);
+    setMode(zwPrev); return;
+  }
+  if (isLayout(page()) && (ldrag || lbox)) { layUp(page()); return; }
   if (isFloor(page()) && (fdrag || fbox)) { fpUp(page()); return; }
   if (cdrag) {
     const { a, b } = cdrag; cdrag = null; $('#overlay').innerHTML = '';
@@ -159,19 +185,7 @@ window.addEventListener('mouseup', e => {
       const pg = page();
       commit(() => {
         const c = { id: uid(), x1: Math.min(a[0], b[0]), y1: Math.min(a[1], b[1]), x2: Math.max(a[0], b[0]), y2: Math.max(a[1], b[1]), tag: nextCableTag(), fn: pg.fn || '', loc: pg.loc || '', ctype: '', len: '', cond: {} };
-        c.ctype = defaultCableType(pg, c); pg.cables.push(c); sel = new Set([c.id]);
-      });
-      setMode('select');
-    }
-    return;
-  }
-  if (cdrag) {
-    const { a, b } = cdrag; cdrag = null; $('#overlay').innerHTML = '';
-    if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) >= 4) {
-      const pg = page();
-      commit(() => {
-        const c = { id: uid(), x1: Math.min(a[0], b[0]), y1: Math.min(a[1], b[1]), x2: Math.max(a[0], b[0]), y2: Math.max(a[1], b[1]), tag: nextCableTag(), fn: pg.fn || '', loc: pg.loc || '', ctype: '', len: '', cond: {} };
-        c.ctype = defaultCableType(pg, c); pg.cables.push(c); sel = new Set([c.id]);
+        c.ctype = defaultCableType(pg, c); onActiveLayer(c); pg.cables.push(c); sel = new Set([c.id]);
       });
       setMode('select');
     }
@@ -180,6 +194,7 @@ window.addEventListener('mouseup', e => {
   if (drag) {
     if (drag.moved) {
       const pg = page(); pg.wires.forEach(w => { w.pts = simplify(w.pts); }); pg.wires = pg.wires.filter(w => w.pts.length >= 2);
+      reAutoConnect(pg, pg.items.filter(i => sel.has(i.id)));
       pushUndo(drag.pre); markDirty(); render();
     }
     drag = null; return;
@@ -188,15 +203,17 @@ window.addEventListener('mouseup', e => {
     const [a, b] = box.start, [c, d] = box.cur; const x0 = Math.min(a, c), x1 = Math.max(a, c), y0 = Math.min(b, d), y1 = Math.max(b, d);
     if (x1 - x0 > 1 || y1 - y0 > 1) {
       const pg = page();
-      for (const it of pg.items) { const bb = itemBox(it); if (bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1) sel.add(it.id); }
-      for (const w of pg.wires) if (w.pts.every(p => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1)) sel.add(w.id);
-      for (const c of pg.cables || []) if (c.x1 >= x0 && c.x2 <= x1 && c.y1 >= y0 && c.y2 <= y1) sel.add(c.id);
+      for (const it of pg.items.filter(selectable)) { const bb = itemBox(it); if (bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1) sel.add(it.id); }
+      for (const w of pg.wires.filter(selectable)) if (w.pts.every(p => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1)) sel.add(w.id);
+      for (const g of (pg.gfx || []).filter(selectable)) { const bb = gfxBox(g); if (bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1) sel.add(g.id); }
+      for (const c of (pg.cables || []).filter(selectable)) if (c.x1 >= x0 && c.x2 <= x1 && c.y1 >= y0 && c.y2 <= y1) sel.add(c.id);
     }
     box = null; $('#overlay').innerHTML = ''; render();
   }
 });
 
 svg.addEventListener('dblclick', e => {
+  if (mode === 'g:poly') { if (gdraft) gfxFinish(page()); return; }
   if (mode === 'wire') { if (wireDraft) finishWire(); return; }
   if (mode === 'roompoly') { if (fpoly) { fpoly.pop(); finishPoly(page()); } return; }
   if (isFloor(page())) { const inp = $('#props input'); if (hitId(e) && inp) { inp.focus(); inp.select(); } return; }
@@ -214,23 +231,60 @@ svg.addEventListener('wheel', e => {
 window.addEventListener('resize', () => applyView());
 
 function applyMove(pg, orig, d) {
-  pg.items = clone(orig.items); pg.wires = clone(orig.wires); pg.cables = clone(orig.cables || []);
-  for (const c of pg.cables) if (sel.has(c.id)) { c.x1 += d[0]; c.x2 += d[0]; c.y1 += d[1]; c.y2 += d[1]; }
+  pg.items = clone(orig.items); pg.wires = clone(orig.wires); pg.cables = clone(orig.cables || []); pg.gfx = clone(orig.gfx || []);
+  const mv = moveSet(orig);
+  for (const g of pg.gfx) if (sel.has(g.id)) g.pts = g.pts.map(p => [r2(p[0] + d[0]), r2(p[1] + d[1])]);
+  for (const c of pg.cables) if (mv.has(c.id)) { c.x1 += d[0]; c.x2 += d[0]; c.y1 += d[1]; c.y2 += d[1]; }
   const moved = new Map();
-  for (const it of pg.items) if (sel.has(it.id)) {
+  for (const it of pg.items) if (mv.has(it.id)) {
     const before = connPts(it); it.x += d[0]; it.y += d[1];
     const after = connPts(it); before.forEach((c, i) => moved.set(c.x + ',' + c.y, [after[i].x, after[i].y]));
   }
-  rubberBand(pg, moved, d);
+  rubberBand(pg, moved, d, mv);
 }
-function rubberBand(pg, moved, d) {
+function rubberBand(pg, moved, d, mv = sel) {
   for (const w of pg.wires) {
-    if (sel.has(w.id)) { if (d) w.pts = w.pts.map(p => [p[0] + d[0], p[1] + d[1]]); continue; }
+    if (mv.has(w.id)) { if (d) w.pts = w.pts.map(p => [p[0] + d[0], p[1] + d[1]]); continue; }
     const n = w.pts.length; const a = moved.get(w.pts[0].join(',')), b = moved.get(w.pts[n - 1].join(','));
     if (a && b && d && a[0] - w.pts[0][0] === b[0] - w.pts[n - 1][0] && a[1] - w.pts[0][1] === b[1] - w.pts[n - 1][1]) { w.pts = w.pts.map(p => [p[0] + d[0], p[1] + d[1]]); continue; }
     if (a) w.pts = moveEnd(w.pts, 0, a);
     if (b) w.pts = moveEnd(w.pts, w.pts.length - 1, b);
   }
+}
+// ---------- dragging a connection's end or one of its segments ----------
+let wdrag = null;
+function nearestSeg(pts, x, y) {
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [a, b] = [pts[i], pts[i + 1]]; const vert = a[0] === b[0];
+    const d = vert ? (y >= Math.min(a[1], b[1]) && y <= Math.max(a[1], b[1]) ? Math.abs(x - a[0]) : Infinity) : (x >= Math.min(a[0], b[0]) && x <= Math.max(a[0], b[0]) ? Math.abs(y - a[1]) : Infinity);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function dragWire(mx, my) {
+  const d = wdrag; const w = d.w;
+  if (d.kind === 'end') {
+    const np = snapPt(mx, my); const i = d.end ? d.orig.length - 1 : 0;
+    if (np[0] === d.orig[i][0] && np[1] === d.orig[i][1] && !d.moved) return;
+    w.pts = d.orig.length === 2 && (np[0] === d.orig[1 - i][0] || np[1] === d.orig[1 - i][1]) ? (i ? [d.orig[0], np] : [np, d.orig[1]]) : moveEnd(d.orig, i, np);
+  } else {
+    // keep both ends where they are: an end segment gets a new corner so it can move sideways
+    let pts = clone(d.orig); let k = d.k;
+    if (k === 0) { pts.unshift(pts[0].slice()); k = 1; }
+    if (k === pts.length - 2) pts.push(pts[pts.length - 1].slice());
+    const a = pts[k], b = pts[k + 1];
+    if (a[0] === b[0]) { const x = snap(mx); a[0] = x; b[0] = x; } else { const y = snap(my); a[1] = y; b[1] = y; }
+    w.pts = pts;
+  }
+  d.moved = true; renderCanvas();
+}
+function endWireDrag() {
+  const d = wdrag; wdrag = null; if (!d.moved) { render(); return; }
+  const pg = page();
+  d.w.pts = simplify(d.w.pts); delete d.w.auto;
+  if (d.w.pts.length < 2 || (d.w.pts.length === 2 && d.w.pts[0][0] === d.w.pts[1][0] && d.w.pts[0][1] === d.w.pts[1][1])) pg.wires = pg.wires.filter(x => x !== d.w);
+  pushUndo(d.pre); markDirty(); render();
 }
 function moveEnd(pts, i, np) {
   pts = pts.map(p => p.slice()); const o = pts[i];
@@ -253,7 +307,10 @@ function drawGhost(mx, my) {
   if (!placeSym) return;
   if (page().report) return;
   const it = { id: 'ghost', sym: placeSym, x: snap(mx), y: snap(my), rot: placeRot, mir: placeMir, tag: '', cl: SYM[placeSym].conns.map(c => c[2]), fn: '', loc: '', ipName: '' };
-  $('#overlay').innerHTML = itemSVG(it, page(), false, true);
+  if (SYM[placeSym].init) { SYM[placeSym].init(it); if (!SYM[placeSym].rotates) { it.rot = 0; it.mir = false; } }
+  let s = itemSVG(it, page(), false, true);
+  if (PREFS.autoConnect && !isFloor(page()) && !isLayout(page())) for (const [a, b] of autoSegments(page(), [it], [it])) s += `<path class="acprev" d="M${a.join(',')}L${b.join(',')}"/>`;
+  $('#overlay').innerHTML = s;
 }
 function routeL(a, b) {
   if (a[0] === b[0] || a[1] === b[1]) return [b];
@@ -272,7 +329,7 @@ function drawWirePreview(sx, sy) {
 function finishWire() {
   if (!wireDraft) return;
   const pts = simplify(wireDraft.pts); wireDraft = null; $('#overlay').innerHTML = '';
-  if (pts.length >= 2) commit(() => { const w = Object.assign({ id: uid(), pts }, autoWire(page(), pts) || {}); page().wires.push(w); });
+  if (pts.length >= 2) commit(() => { const w = onActiveLayer(Object.assign({ id: uid(), pts }, autoWire(page(), pts) || {})); page().wires.push(w); });
 }
 
 // ---------- keyboard ----------
@@ -287,12 +344,13 @@ window.addEventListener('keydown', e => {
   else if (c && k === 's') { e.preventDefault(); e.shiftKey ? saveAs() : save(); }
   else if (c && k === 'o') { e.preventDefault(); openFile(); }
   else if (c && k === 'n') { e.preventDefault(); fileNew(); }
-  else if (c && k === 'p') { e.preventDefault(); printAll(); }
+  else if (c && k === 'p') { e.preventDefault(); ACTIONS.printAll(); }
   else if (c && k === 'c') { e.preventDefault(); copySel(); }
   else if (c && k === 'x') { e.preventDefault(); copySel(); delSel(); }
   else if (c && k === 'v') { e.preventDefault(); paste(); }
-  else if (c && k === 'a') { e.preventDefault(); const pg = page(); sel = new Set([...pg.items.map(i => i.id), ...pg.wires.map(w => w.id)]); render(); }
-  else if (k === 'escape') { if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); } closeMenus(); }
+  else if (c && k === 'a') { e.preventDefault(); ACTIONS.selAll(); }
+  else if (c && k === 'f') { e.preventDefault(); findDlg(); }
+  else if (k === 'escape') { if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode.startsWith('g:') && gdraft) { gdraft = null; $('#overlay').innerHTML = ''; } else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); } closeMenus(); }
   else if (k === 'delete' || k === 'backspace') delSel();
   else if (k === 'r') { if (mode === 'place' || mode === 'fpplace') { placeRot = (placeRot + 90) % 360; const r = svg.getBoundingClientRect(); drawGhost(...toMM({ clientX: lastMouse[0], clientY: lastMouse[1] })); } else rotateSel(); }
   else if (k === 'tab') {
@@ -304,11 +362,12 @@ window.addEventListener('keydown', e => {
     }
   }
   else if (k === 'm') { if (mode === 'place') { placeMir = !placeMir; drawGhost(...toMM({ clientX: lastMouse[0], clientY: lastMouse[1] })); } else mirrorSel(); }
-  else if (k === 'g') toggleSnap();
+  else if (k === 'g') { if (e.shiftKey) alignToGrid(); else toggleSnap(); }
   else if (k === 'c') ACTIONS.cableMode();
-  else if (k === 'w') { if (!isFloor(page())) setMode('wire'); }
-  else if (k === 't') { if (!isFloor(page())) setMode('text'); }
+  else if (k === 'w') { if (!isFloor(page()) && !isLayout(page())) setMode('wire'); }
+  else if (k === 't') { if (!isFloor(page()) && !isLayout(page())) setMode('text'); }
   else if (k === 'f') zoomFit();
+  else if (k === 'z') { if (e.shiftKey) zoomPrev(); else zoomWindow(); }
   else if (k === '+' || k === '=') zoomAt(1.25);
   else if (k === '-') zoomAt(0.8);
   else if (k === 'pagedown') { e.preventDefault(); stepPage(1); }

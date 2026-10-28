@@ -62,7 +62,7 @@ document.addEventListener('dblclick', e => {
   const t = todos().find(x => x.id === ed.dataset.tdedit); if (!t) return;
   const v = prompt('Edit to-do:', t.text); if (v != null && v.trim()) { commit(() => { t.text = v.trim(); }, { props: false }); renderTodo(); }
 });
-function todoFlag(x, y) { return PRINTING ? '' : `<g class="tdflag" pointer-events="none"><path d="M${x},${y}v-4.2" stroke="#d97706" stroke-width="0.35"/><path d="M${x},${y - 4.2}l2.6,0.9l-2.6,0.9z" fill="#f59e0b"/></g>`; }
+function todoFlag(x, y) { return PRINTING || !lyOn('todo') ? '' : `<g class="tdflag" pointer-events="none"><path d="M${x},${y}v-4.2" stroke="#d97706" stroke-width="0.35"/><path d="M${x},${y - 4.2}l2.6,0.9l-2.6,0.9z" fill="#f59e0b"/></g>`; }
 function todoPanelHTML(id) {
   const open = openTodosFor(id);
   return `<div class="pgrp"><h4>To-do</h4>${open.map(t => `<div class="td-mini"><input type="checkbox" data-tdchk="${t.id}"> ${esc(t.text)}</div>`).join('') || '<div class="note">No open to-dos.</div>'}

@@ -52,7 +52,13 @@ function usedUserDefs() {
   for (const k of used) { const d = LIB.symbols.find(s => s.key === k) || (P.userSyms || {})[k]; if (d) out[k] = d; }
   return out;
 }
-function projectJSON() { P.userSyms = usedUserDefs(); stampVersion(P); return JSON.stringify(P, null, 1); }
+function pruneAssets() {
+  const used = new Set(); for (const lv of P.levels || []) if (lv.image) used.add(lv.image.asset);
+  for (const pg of P.pages) for (const g of pg.gfx || []) if (g.asset) used.add(g.asset);
+  return Object.fromEntries(Object.entries(P.assets || {}).filter(([k]) => used.has(k)));
+}
+// assets no longer used (deleted images) are left out of the saved file but kept in memory for undo
+function projectJSON() { const as = pruneAssets(); P.userSyms = usedUserDefs(); P.parts = usedParts(); stampVersion(P); return JSON.stringify(P, (k, v) => k === 'assets' && v === P.assets ? as : v, 1); }
 function registerProjectSyms(p) {
   for (const [k, d] of Object.entries(p.userSyms || {})) if (!SYM[k]) registerUserSym(d);
 }

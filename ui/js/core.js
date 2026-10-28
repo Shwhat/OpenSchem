@@ -3,20 +3,37 @@
 
 // ---------- constants ----------
 const G = 4;                                   // grid in mm
-const SH = { w: 420, h: 297, x0: 15, x1: 415, y0: 5, y1: 292, hdr: 11, tb: 262, cols: 10 };
-const COLW = (SH.x1 - SH.x0) / SH.cols;
+const r2 = v => Math.round(v * 100) / 100;
+// paper sizes: width, height, left margin, other margins, column header, title block height, columns
+function makeSheet(name, w, h, left, m, hdrH, tbH, cols) {
+  const s = { name, w, h, x0: left, x1: r2(w - m), y0: m, y1: r2(h - m), hdr: m + hdrH, tb: r2(h - m - tbH), cols, tbH, k: tbH / 30, compact: tbH < 15 };
+  s.colw = (s.x1 - s.x0) / cols; return s;
+}
+const SHEETS = {
+  A3L: makeSheet('A3 landscape', 420, 297, 15, 5, 6, 30, 10),
+  A4L: makeSheet('A4 landscape', 297, 210, 15, 5, 6, 24, 8),
+  A4P: makeSheet('A4 portrait', 210, 297, 15, 5, 6, 24, 6),
+  A2L: makeSheet('A2 landscape', 594, 420, 15, 5, 6, 30, 12),
+  TABL: makeSheet('Tabloid 11 × 17 in landscape', 431.8, 279.4, 15, 5, 6, 30, 10),
+  LTRL: makeSheet('Letter 8.5 × 11 in landscape', 279.4, 215.9, 15, 5, 6, 24, 8),
+  LTRP: makeSheet('Letter 8.5 × 11 in portrait', 215.9, 279.4, 15, 5, 6, 24, 6),
+  CARD: makeSheet('Note card 3 × 5 in', 127, 76.2, 3, 3, 3, 8, 4),
+};
+let SH = SHEETS.A3L;
+const sheetOf = pg => (!pg || pg.report) ? SHEETS.A3L : SHEETS[pg.size || (P && P.size) || 'A3L'] || SHEETS.A3L;
+const useSheet = pg => { SH = sheetOf(pg); return SH; };
+const SHEET_OPTS = () => Object.entries(SHEETS).map(([k, s]) => [k, s.name]);
 const FS = 2.5, FSS = 2.2;                     // font sizes (mm)
 const $ = s => document.querySelector(s);
-const r2 = v => Math.round(v * 100) / 100;
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
 // program-wide preferences (saved in the OpenSchem Data folder)
-const PREFS = { snap: true, gridSch: 4, gridFp: 2, ribbon: null, symOpen: {}, theme: 'light', sheet: 'white' };
+const PREFS = { snap: true, autoConnect: true, gridSch: 4, gridFp: 2, ribbon: null, symOpen: {}, theme: 'light', sheet: 'white' };
 const gs = () => PREFS.gridSch || 4;
 const snap = v => PREFS.snap ? r2(Math.round(v / gs()) * gs()) : Math.round(v * 4) / 4;
 const clone = o => JSON.parse(JSON.stringify(o));
 const natCmp = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
-const colOf = x => Math.max(1, Math.min(SH.cols, Math.floor((x - SH.x0) / COLW) + 1));
+const colOf = (x, pg) => { const s = pg ? sheetOf(pg) : SH; return Math.max(1, Math.min(s.cols, Math.floor((x - s.x0) / s.colw) + 1)); };
 
 
 // ---------- symbol library ----------
@@ -104,9 +121,11 @@ function rotPt(x, y, rot) {
 // variants A-H: A-D rotations 0/90/180/270, E-H the same mirrored
 function xf(it, x, y) { return rotPt(it.mir ? -x : x, y, it.rot || 0); }
 const variantOf = it => 'ABCDEFGH'[((it.rot || 0) / 90) % 4 + (it.mir ? 4 : 0)];
+const symConns = it => { const d = SYM[it.sym]; return d.connsOf ? d.connsOf(it) : d.conns; };
+const symBox = it => { const d = SYM[it.sym]; return d.boxOf ? d.boxOf(it) : d.box; };
 function connPts(it) {
   const d = SYM[it.sym]; if (!d) return [];
-  return d.conns.map(([cx, cy], i) => { const [rx, ry] = xf(it, cx, cy); return { x: r2(it.x + rx), y: r2(it.y + ry), i }; });
+  return symConns(it).map(([cx, cy], i) => { const [rx, ry] = xf(it, cx, cy); return { x: r2(it.x + rx), y: r2(it.y + ry), i }; });
 }
 function itemBox(it) {
   if (it.sym === 'text') {
@@ -114,7 +133,7 @@ function itemBox(it) {
     const w = Math.max(...lines.map(l => l.length)) * s * 0.55;
     return [it.x, it.y - s, it.x + Math.max(w, 2), it.y + (lines.length - 1) * s * 1.25 + s * 0.3];
   }
-  const d = SYM[it.sym]; const [a, b, c, e] = d.box;
+  const [a, b, c, e] = symBox(it);
   const pts = [xf(it, a, b), xf(it, c, e)];
   return [Math.min(pts[0][0], pts[1][0]) + it.x, Math.min(pts[0][1], pts[1][1]) + it.y,
           Math.max(pts[0][0], pts[1][0]) + it.x, Math.max(pts[0][1], pts[1][1]) + it.y];
@@ -160,14 +179,15 @@ function newProject() {
            wireScheme: 'seq', wireStart: 1, potNames: true,
            pages: [newPage('', '', '1', 'Cover / main power')] };
 }
-function newPage(fn, loc, num, desc) { return { id: uid(), fn, loc, num: String(num), desc: desc || '', items: [], wires: [] }; }
+function newPage(fn, loc, num, desc) { return { id: uid(), fn, loc, num: String(num), desc: desc || '', items: [], wires: [], cables: [], gfx: [] }; }
 function today() { return new Date().toISOString().slice(0, 10); }
 const page = () => P.pages.find(p => p.id === curId) || REPORTS.find(p => p.id === curId) || P.pages[0];
 const allPages = () => REPORTS.filter(r => r.front).concat(P.pages, REPORTS.filter(r => !r.front));
 const pageIdx = pg => P.pages.indexOf(pg);
 function sortPages() {
   const li = id => (P.levels || []).findIndex(l => l.id === id);
-  P.pages.sort((a, b) => ((a.kind === 'floor') - (b.kind === 'floor')) ||
+  const kr = p => p.kind === 'floor' ? 2 : p.kind === 'layout' ? 1 : 0;
+  P.pages.sort((a, b) => (kr(a) - kr(b)) ||
     (a.kind === 'floor' ? (li(a.level) - li(b.level)) || natCmp(a.num, b.num) : natCmp(a.fn, b.fn) || natCmp(a.loc, b.loc) || natCmp(a.num, b.num)));
 }
 const fl = (fn, loc) => (fn ? '=' + fn : '') + (loc ? '+' + loc : '');
@@ -180,19 +200,21 @@ const fullIdent = it => fl(it.fn, it.loc) + '-' + it.tag;
 function identOnPage(it, pg) {
   return (it.fn && it.fn !== pg.fn ? '=' + it.fn : '') + (it.loc && it.loc !== pg.loc ? '+' + it.loc : '') + '-' + it.tag;
 }
+const pageObjs = pg => [...pg.items, ...pg.wires, ...(pg.cables || []), ...(pg.gfx || []), ...(pg.lay || [])];
+const objOf = f => f && (f.it || f.w || f.cab || f.g || f.lo);
 function findItem(id) {
-  for (const pg of P.pages) { const it = pg.items.find(i => i.id === id); if (it) return { it, pg }; const w = pg.wires.find(i => i.id === id); if (w) return { w, pg }; const cab = (pg.cables || []).find(i => i.id === id); if (cab) return { cab, pg }; }
+  for (const pg of P.pages) { const it = pg.items.find(i => i.id === id); if (it) return { it, pg }; const w = pg.wires.find(i => i.id === id); if (w) return { w, pg }; const cab = (pg.cables || []).find(i => i.id === id); if (cab) return { cab, pg }; const g = (pg.gfx || []).find(i => i.id === id); if (g) return { g, pg }; const lo = (pg.lay || []).find(i => i.id === id); if (lo) return { lo, pg }; }
   const pi = (P.pool || []).find(i => i.id === id); if (pi) return { it: pi, pg: null };
   return null;
 }
 
 // ---------- index (devices, positions, interruption points) ----------
-function orderKey(it) { const p = IX.pos.get(it.id); return [p.pi, colOf(it.x), it.y, it.x]; }
+function orderKey(it) { const p = IX.pos.get(it.id); return [p.pi, p.col, it.y, it.x]; }
 function cmpKey(a, b) { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; }
 function buildIndex() {
   const dev = new Map(), pos = new Map(), ips = new Map();
   P.pages.forEach((pg, pi) => pg.items.forEach(it => {
-    pos.set(it.id, { pg, pi, col: colOf(it.x) });
+    pos.set(it.id, { pg, pi, col: colOf(it.x, pg) });
     const d = SYM[it.sym]; if (!d) return;
     if (d.prefix && it.tag) {
       const k = devKey(it);
@@ -262,7 +284,7 @@ function computeWireNumbers() {
     const r = NETS.find('w:' + w.id);
     if (!nets.has(r)) nets.set(r, { wires: [], first: null });
     const n = nets.get(r); n.wires.push({ w, pg, pi });
-    const k = [pi, colOf(w.pts[0][0]), Math.min(...w.pts.map(p => p[1])), Math.min(...w.pts.map(p => p[0]))];
+    const k = [pi, colOf(w.pts[0][0], pg), Math.min(...w.pts.map(p => p[1])), Math.min(...w.pts.map(p => p[0]))];
     if (!n.first || cmpKey(k, n.first.k) < 0) n.first = { k, pg, w };
   }));
   const potOf = new Map();
@@ -322,7 +344,8 @@ function assignContactNumbers(it) {
 }
 function makeItem(sym, x, y, rot, pg) {
   const d = SYM[sym];
-  const it = { id: uid(), sym, x, y, rot: rot || 0, fn: pg.fn || '', loc: pg.loc || '', tag: '', role: d.role, cl: d.conns.map(c => c[2]), desc: '' };
+  const it = onActiveLayer({ id: uid(), sym, x, y, rot: rot || 0, fn: pg.fn || '', loc: pg.loc || '', tag: '', role: d.role, cl: d.conns.map(c => c[2]), desc: '' });
+  if (d.init) d.init(it);
   if (sym === 'ip') { it.ipName = P._lastIp || 'L1'; delete it.fn; delete it.loc; }
   else if (sym === 'pe') { delete it.fn; delete it.loc; }
   else if (sym === 'term') { it.tag = lastMain.X || 'X1'; it.tn = nextTerminal(it.fn, it.loc, it.tag); }

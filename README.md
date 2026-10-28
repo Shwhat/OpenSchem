@@ -7,9 +7,19 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 ## Features
 
 **Schematics**
-- Multi-page A3 sheets with column grid and title block
+- Paper sizes per page or per project: A2, A3, A4, Letter, Tabloid and a 3 × 5 in note card, each with its own column grid and title block
+- Page navigator as a tree (circuit or function, room or location, page) that keeps only the open page's branch expanded, with a page filter, hover previews and a thumbnail view
+- Zoom window (drag a box to zoom to it) and previous view
+- Graphics on pages: line, polyline, rectangle, circle, dimension line and image, with line style, width, color and fill
+- Black boxes with their own connection points on any edge, device boxes that make enclosed symbols part of one device, and PLC cards (inputs, outputs or both) with automatic channel addresses; black boxes and PLC cards rotate and mirror with variants A to H
+- Find and replace across tags, descriptions, part numbers and more, with bulk edit of the results
+- Terminal strip editor (renumber, function texts, part numbers for the whole strip)
+- Display layers (symbols, tags, descriptions, connection labels, cross-references, connections, wire numbers, junctions, cables, text) with show, print and color settings, plus user layers that can be hidden, left out of print or locked
 - IEC-style symbol library (coils, contacts, protection, motors, PLC I/O, terminals, interruption points) plus residential symbols (breakers, switches, dimmers, outlets, lights, fans, detectors, panels)
 - Device tagging with =Function +Location -Device, automatic device and contact numbering, contact mirrors and cross-references
+- Align to grid (Shift+G) for the selection or the whole page
+- Automatic connections between facing connection points when symbols are placed or moved (can be turned off)
+- Connection ends and segments can be dragged after placing
 - Orthogonal wiring with rubber-banding, junction dots and automatic wire numbering per potential
 - Symbol variants A to H (rotation and mirroring)
 - Cables with conductor assignment
@@ -18,14 +28,22 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 
 **Floor plans**
 - Floor-plan pages per level, with whole-level, single-room and custom-area views
-- Rooms drawn as boxes or shapes with automatic wall snapping, and image import for tracing
+- Rooms drawn as boxes, shapes, round or oval rooms with automatic wall snapping, resized by dragging corners or walls, and image import for tracing
 - Devices shared between schematic and floor plan, with automatic room assignment
 - Circuit colors and automatically generated switch legs
 
+**Panel layout**
+- Panel layout pages drawn to scale, with the enclosure, DIN rails, wire ducts and device footprints sized from the parts database
+
+**Parts and loads**
+- Parts database in the data folder (part number, manufacturer, description, category, technical data, price, watts, datasheet, size) with search, CSV import and export, and a picker in device properties
+- Load calculation per circuit with editable defaults, percent of breaker rating, 80% warning in the project check, and voltage drop from wire size and run length with a 3% warning
+- Printable breaker labels: panel directory in the two-column door layout, letter page or 4 × 6 in label
+
 **Reports**
 - Cover sheet and table of contents
-- Panel schedule, bill of materials, terminal diagrams, connection list, cable overview and cable diagrams, revision overview
-- CSV export and vector PDF export with bookmarks and clickable cross-references
+- Panel schedule with load, percent of rating and voltage drop, bill of materials with manufacturer, prices and total cost, terminal diagrams, connection list, cable overview and cable diagrams, revision overview
+- CSV and Excel (.xlsx) export, Excel import that updates existing devices by ID, and vector PDF export with bookmarks and clickable cross-references; PDF export and printing let you choose the pages
 
 **Project tools**
 - Revision tracking with title block marking
@@ -34,9 +52,13 @@ OpenSchem runs as a single Windows executable with no installation. Projects are
 - Engineering and homeowner display modes, light and dark themes
 - Customizable tabbed ribbon
 
+## Demo project
+
+Help > Open demo project opens one project that uses every feature (pump station control panel, home wiring, floor plans, panel layout, note card page and more). It is built by `ui/js/demo.js` from the two building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
+
 ## Data storage
 
-OpenSchem stores settings, the user symbol and macro library, and autosave data in an `OpenSchem Data` folder next to the executable. If that location is not writable, it uses `%LOCALAPPDATA%\OpenSchem`.
+OpenSchem stores settings, the user symbol and macro library, the parts database (parts.json) and autosave data in an `OpenSchem Data` folder next to the executable. If that location is not writable, it uses `%LOCALAPPDATA%\OpenSchem`.
 
 ## Requirements
 
@@ -51,7 +73,7 @@ win32_windows.go     Windows API helpers
 ui/index.html        Page skeleton
 ui/style.css         All styles, including dark theme
 ui/manifest.txt      Script load order (used by the exe, the tests and tools/assemble.py)
-ui/js/               Application code, one file per area
+ui/js/               Application code, one file per area (navigator.js: page tree and thumbnails, layers.js: layers)
 ui/vendor/           Third-party libraries (PDF export)
 tests/               Automated tests
 tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser

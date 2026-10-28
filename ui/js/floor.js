@@ -1,5 +1,5 @@
 // ---------- floor plans ----------
-const DA = { x0: SH.x0, y0: SH.hdr, x1: SH.x1, y1: SH.tb };
+const DA = { get x0() { return SH.x0; }, get y0() { return SH.hdr; }, get x1() { return SH.x1; }, get y1() { return SH.tb; } };
 let placeItemId = null, fdrag = null, fbox = null, fpoly = null;
 
 function newFloorPage(level, num, desc, view, extra) {
@@ -31,15 +31,24 @@ function inPoly(p, pts) {
   }
   return inside;
 }
+// round and oval rooms keep their bounding rectangle in pts and shape 'circle' or 'ellipse'
+const isRound = r => r && (r.shape === 'ellipse' || r.shape === 'circle');
+const rectPts = b => [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]];
+function roomPoly(r) {
+  if (!isRound(r)) return r.pts;
+  const [x0, y0, x1, y1] = bboxPts(r.pts); const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
+  return Array.from({ length: 48 }, (_, i) => [cx + rx * Math.cos(i * Math.PI / 24), cy + ry * Math.sin(i * Math.PI / 24)]);
+}
+function roomSnapPts(r) { if (!isRound(r)) return r.pts; const [x0, y0, x1, y1] = bboxPts(r.pts); return [[(x0 + x1) / 2, y0], [x1, (y0 + y1) / 2], [(x0 + x1) / 2, y1], [x0, (y0 + y1) / 2]]; }
 function polyArea(pts) { let a = 0; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1]); return Math.abs(a / 2); }
 // snap a point to corners and walls of other rooms so rooms share walls
 function roomSnap(pg, lv, p, skip) {
   const tol = 3 / fpXform(pg).s; const rooms = lv.rooms.filter(r => !skip || !skip.has(r.id));
   let best = null, bd = tol;
-  for (const r of rooms) for (const v of r.pts) { const d = Math.hypot(v[0] - p[0], v[1] - p[1]); if (d < bd) { bd = d; best = v; } }
+  for (const r of rooms) for (const v of roomSnapPts(r)) { const d = Math.hypot(v[0] - p[0], v[1] - p[1]); if (d < bd) { bd = d; best = v; } }
   if (best) return { p: [best[0], best[1]], hit: true };
   let x = p[0], y = p[1], hit = false;
-  for (const r of rooms) for (let i = 0; i < r.pts.length; i++) {
+  for (const r of rooms) if (!isRound(r)) for (let i = 0; i < r.pts.length; i++) {
     const a = r.pts[i], b = r.pts[(i + 1) % r.pts.length];
     if (a[0] === b[0] && Math.abs(p[0] - a[0]) < tol && p[1] >= Math.min(a[1], b[1]) - tol && p[1] <= Math.max(a[1], b[1]) + tol) { x = a[0]; hit = true; }
     if (a[1] === b[1] && Math.abs(p[1] - a[1]) < tol && p[0] >= Math.min(a[0], b[0]) - tol && p[0] <= Math.max(a[0], b[0]) + tol) { y = a[1]; hit = true; }
@@ -47,7 +56,7 @@ function roomSnap(pg, lv, p, skip) {
   return { p: [x, y], hit };
 }
 function snapMark(pg, p) { const s = toSheet(pg, p[0], p[1]); return `<circle class="cpt" cx="${s[0]}" cy="${s[1]}" r="1.6"/>`; }
-function roomAt(lv, p) { let best = null; for (const r of lv.rooms) if (inPoly(p, r.pts) && (!best || polyArea(r.pts) < polyArea(best.pts))) best = r; return best; }
+function roomAt(lv, p) { let best = null; for (const r of lv.rooms) if (inPoly(p, roomPoly(r)) && (!best || polyArea(roomPoly(r)) < polyArea(roomPoly(best)))) best = r; return best; }
 function placeOf(itemId) { for (const lv of P.levels || []) for (const pl of lv.places) if (pl.item === itemId) return { lv, pl }; return null; }
 function findFp(id) {
   for (const lv of P.levels || []) {
@@ -140,14 +149,15 @@ function floorSVG(pg, o = {}) {
   }
   for (const r of lv.rooms) {
     const isSel = !o.print && sel.has(r.id);
-    s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><polygon class="roomp" points="${r.pts.map(p => p.join(',')).join(' ')}"/></g>`;
+    if (isRound(r)) { const [x0, y0, x1, y1] = bboxPts(r.pts); s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><ellipse class="roomp" cx="${r2((x0 + x1) / 2)}" cy="${r2((y0 + y1) / 2)}" rx="${r2((x1 - x0) / 2)}" ry="${r2((y1 - y0) / 2)}"/></g>`; }
+    else s += `<g data-id="${r.id}" class="room${isSel ? ' rsel' : ''}"><polygon class="roomp" points="${r.pts.map(p => p.join(',')).join(' ')}"/></g>`;
   }
   for (const r of lv.rooms) {
-    const b = bboxPts(r.pts); const c = [(b[0] + b[2]) / 2, b[1] + Math.min(9, (b[3] - b[1]) / 2)];
+    const b = bboxPts(r.pts); const c = [(b[0] + b[2]) / 2, isRound(r) ? (b[1] + b[3]) / 2 + 1.4 : b[1] + Math.min(9, (b[3] - b[1]) / 2)];
     s += `<text class="roomname" x="${r2(c[0])}" y="${r2(c[1])}" font-size="4" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
   }
   const pmap = new Map(lv.places.map(pl => [pl.item, pl]));
-  if (S().switchLegs) {
+  if (S().switchLegs && lyOn('legs', o)) {
     for (const [a, b] of computeLegs()) {
       const p1 = pmap.get(a), p2 = pmap.get(b); if (!p1 || !p2) continue;
       const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, dx = p2.x - p1.x, dy = p2.y - p1.y;
@@ -157,9 +167,19 @@ function floorSVG(pg, o = {}) {
     }
   }
   for (const pl of lv.places) { const it = itemById(pl.item); if (it) s += fpPlaceSVG(pl, it, !o.print && sel.has(pl.id)); }
+  // resize handles on a single selected room: corners and wall midpoints
+  const rs = !o.print && sel.size === 1 && lv.rooms.find(r => sel.has(r.id));
+  if (rs) {
+    const hr = r2(1.3 / t.s), n = rs.pts.length;
+    rs.pts.forEach((a, i) => {
+      const b = rs.pts[(i + 1) % n]; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      s += `<rect class="rhandle redge" data-rh="e:${rs.id}:${i}" x="${r2(mx - hr)}" y="${r2(my - hr)}" width="${r2(hr * 2)}" height="${r2(hr * 2)}" style="cursor:${a[1] === b[1] ? 'ns-resize' : a[0] === b[0] ? 'ew-resize' : 'move'}"/>`;
+    });
+    rs.pts.forEach((a, i) => { s += `<circle class="rhandle" data-rh="v:${rs.id}:${i}" cx="${a[0]}" cy="${a[1]}" r="${hr}"/>`; });
+  }
   s += '</g></g>';
   // circuit legend
-  if (S().circuitColors) {
+  if (S().circuitColors && lyOn('legend', o)) {
     const ckAll = allCircuits(); const ck = [...new Set(lv.places.map(pl => (itemById(pl.item) || {}).fn).filter(f => f && ckAll.includes(f)))].sort(natCmp);
     if (ck.length) {
       const w = 64, lh = 4.6, x = DA.x1 - w - 4, y = DA.y0 + 4;
@@ -193,7 +213,7 @@ function fpDown(e, pg, mx, my) {
     if (keep) setMode('select'); else drawFpGhost(pg, mx, my);
     return;
   }
-  if (mode === 'room' || mode === 'area') { const st = mode === 'room' ? roomSnap(pg, lv, sp).p : sp; fbox = { start: st, cur: st }; return; }
+  if (mode === 'room' || mode === 'area' || mode === 'roomoval' || mode === 'roomcirc') { const st = mode !== 'area' ? roomSnap(pg, lv, sp).p : sp; fbox = { start: st, cur: st }; return; }
   if (mode === 'roompoly') {
     if (!fpoly) fpoly = [sp];
     else {
@@ -206,6 +226,11 @@ function fpDown(e, pg, mx, my) {
     }
     if (fpoly.length === 1) fpoly[0] = roomSnap(pg, lv, fpoly[0]).p;
     drawPolyPrev(pg, sp); return;
+  }
+  const rh = e.target.closest('[data-rh]');
+  if (rh) {
+    const [kind, rid, i] = rh.dataset.rh.split(':'); const rm = lv.rooms.find(r => r.id === rid);
+    if (rm) { fdrag = { start: p, pre: snapshot(), handle: { kind, rm, i: +i, orig: clone(rm.pts) }, lv, moved: false }; return; }
   }
   const id = hitId(e);
   if (id) {
@@ -228,6 +253,7 @@ function fpMove(pg, mx, my) {
     if (fpoly) drawPolyPrev(pg, rs.p, rs.hit); else $('#overlay').innerHTML = rs.hit ? snapMark(pg, rs.p) : '';
     return;
   }
+  if (fdrag && fdrag.handle) { resizeRoom(pg, fdrag, p); return; }
   if (fdrag) {
     const d = [fsnap(p[0] - fdrag.start[0]), fsnap(p[1] - fdrag.start[1])];
     if (d[0] === fdrag.d[0] && d[1] === fdrag.d[1]) return;
@@ -253,17 +279,20 @@ function fpMove(pg, mx, my) {
   if (fbox) {
     let mark = '';
     fbox.cur = [fsnap(p[0]), fsnap(p[1])];
-    if (mode === 'room') { const rs = roomSnap(pg, levelOf(pg), fbox.cur); fbox.cur = rs.p; if (rs.hit) mark = snapMark(pg, rs.p); }
+    if (mode === 'room' || mode === 'roomoval' || mode === 'roomcirc') { const rs = roomSnap(pg, levelOf(pg), fbox.cur); fbox.cur = rs.p; if (rs.hit) mark = snapMark(pg, rs.p); }
+    if (mode === 'roomcirc') fbox.cur = squareFrom(fbox.start, fbox.cur);
     const a = toSheet(pg, ...fbox.start), b = toSheet(pg, ...fbox.cur);
-    $('#overlay').innerHTML = `<rect class="selbox" x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(b[0] - a[0])}" height="${Math.abs(b[1] - a[1])}"/>` + mark;
+    const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]), w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
+    $('#overlay').innerHTML = (mode === 'roomoval' || mode === 'roomcirc' ? `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}" style="stroke-opacity:.35"/><ellipse class="selbox" cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>` : `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}"/>`) + mark;
     return;
   }
-  if (mode === 'room') { const rs = roomSnap(pg, levelOf(pg), [fsnap(p[0]), fsnap(p[1])]); $('#overlay').innerHTML = rs.hit ? snapMark(pg, rs.p) : ''; }
+  if (mode === 'room' || mode === 'roomoval' || mode === 'roomcirc') { const rs = roomSnap(pg, levelOf(pg), [fsnap(p[0]), fsnap(p[1])]); $('#overlay').innerHTML = rs.hit ? snapMark(pg, rs.p) : ''; }
 }
+const squareFrom = (a, b) => { const s = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); return [a[0] + Math.sign(b[0] - a[0] || 1) * s, a[1] + Math.sign(b[1] - a[1] || 1) * s]; };
 function fpUp(pg) {
   if (fdrag) {
     if (fdrag.moved) {
-      const lv = fdrag.lv; for (const pl of lv.places) if (sel.has(pl.id)) autoRoom(lv, pl);
+      const lv = fdrag.lv; for (const pl of lv.places) if (sel.has(pl.id) || fdrag.handle) autoRoom(lv, pl);
       pushUndo(fdrag.pre); markDirty(); render();
     }
     fdrag = null; return;
@@ -281,15 +310,43 @@ function fpUp(pg) {
   }
   if (r[2] - r[0] < 4 || r[3] - r[1] < 4) return;
   if (mode === 'area') { commit(() => { pg.area = r; }); setMode('select'); zoomFit(); return; }
-  if (mode === 'room') addRoom(pg, [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]]);
+  if (mode === 'room') addRoom(pg, rectPts(r));
+  if (mode === 'roomoval') addRoom(pg, rectPts(r), 'ellipse');
+  if (mode === 'roomcirc') addRoom(pg, rectPts(r), 'circle');
 }
-function addRoom(pg, pts) {
+// drag a corner (neighbouring walls stay square) or a wall (moves both of its corners)
+function resizeRoom(pg, fd, p) {
+  const { kind, rm, i, orig } = fd.handle; const lv = fd.lv; const n = orig.length;
+  const skip = new Set([rm.id]); const q = roomSnap(pg, lv, [fsnap(p[0]), fsnap(p[1])], skip).p;
+  const pts = clone(orig);
+  if (kind === 'v') {
+    const v = orig[i];
+    for (const j of [(i - 1 + n) % n, (i + 1) % n]) { if (orig[j][0] === v[0]) pts[j][0] = q[0]; else if (orig[j][1] === v[1]) pts[j][1] = q[1]; }
+    pts[i] = q;
+  } else {
+    const a = orig[i], b = orig[(i + 1) % n]; const j = (i + 1) % n;
+    if (a[1] === b[1]) { pts[i][1] = q[1]; pts[j][1] = q[1]; }
+    else if (a[0] === b[0]) { pts[i][0] = q[0]; pts[j][0] = q[0]; }
+    else { const dx = q[0] - (a[0] + b[0]) / 2, dy = q[1] - (a[1] + b[1]) / 2; pts[i] = [r2(a[0] + dx), r2(a[1] + dy)]; pts[j] = [r2(b[0] + dx), r2(b[1] + dy)]; }
+  }
+  if (rm.shape === 'circle') {
+    // round rooms stay round: the dragged wall or corner sets the size, the opposite side stays put
+    const ob = bboxPts(orig); let [x0, y0, x1, y1] = bboxPts(pts);
+    if (kind === 'v') { const an = orig[(i + 2) % 4]; const s = Math.max(Math.abs(q[0] - an[0]), Math.abs(q[1] - an[1])); const sx = Math.sign(q[0] - an[0]) || 1, sy = Math.sign(q[1] - an[1]) || 1; [x0, y0, x1, y1] = [Math.min(an[0], an[0] + sx * s), Math.min(an[1], an[1] + sy * s), Math.max(an[0], an[0] + sx * s), Math.max(an[1], an[1] + sy * s)]; }
+    else if (orig[i][1] === orig[(i + 1) % n][1]) { const s = y1 - y0, cx = (ob[0] + ob[2]) / 2; x0 = cx - s / 2; x1 = cx + s / 2; }
+    else { const s = x1 - x0, cy = (ob[1] + ob[3]) / 2; y0 = cy - s / 2; y1 = cy + s / 2; }
+    pts.splice(0, 4, ...rectPts([x0, y0, x1, y1]));
+  }
+  const bb = bboxPts(pts); if (bb[2] - bb[0] < 2 || bb[3] - bb[1] < 2) return;
+  rm.pts = pts.map(x => [r2(x[0]), r2(x[1])]); fd.moved = true; renderCanvas();
+}
+function addRoom(pg, pts, shape) {
   dialog('New room', [['name', 'Room name', '']], v => {
     if (!v.name) return false;
     const lv = levelOf(pg);
     commit(() => {
-      const rm = { id: uid(), name: v.name, pts }; lv.rooms.push(rm);
-      for (const pl of lv.places) if (inPoly([pl.x, pl.y], pts)) autoRoom(lv, pl);
+      const rm = { id: uid(), name: v.name, pts }; if (shape) rm.shape = shape; lv.rooms.push(rm);
+      for (const pl of lv.places) if (inPoly([pl.x, pl.y], roomPoly(rm))) autoRoom(lv, pl);
       sel = new Set([rm.id]);
     });
   });
@@ -416,15 +473,15 @@ function renderFloorProps(pg) {
         <div class="pgrp"><h4>Device</h4>${row('fpi.tag', L('tag'), it.tag)}${row('fpi.fn', L('fn'), it.fn, 'text', 'list="dl-ckt"')}<datalist id="dl-ckt">${allCircuits().map(c => `<option value="${esc(c)}">`).join('')}</datalist>
         ${row('fpi.loc', L('loc'), it.loc, 'text', 'list="dl-room"')}<datalist id="dl-room">${roomNames().map(c => `<option value="${esc(c)}">`).join('')}</datalist>
         <div class="note">The room fills in automatically from where the device sits on the floor plan.</div>
-        ${row('fpi.desc', L('desc'), it.desc || '', 'textarea')}${row('fpi.part', 'Part number', it.part || '')}</div>
+        ${row('fpi.desc', L('desc'), it.desc || '', 'textarea')}${row('fpi.part', 'Part number', it.part || '', 'text', 'list="dl-parts"')}${partDatalist()}${partInfoHTML(it.part)}${hasLoad(SYM[it.sym]) ? row('fpi.va', 'Load (VA)', it.va ?? '', 'text', `placeholder="${deviceLoad(Object.assign({}, it, { va: '' }))} (default)"`) : ''}</div>
         ${it.fn ? `<div class="pgrp"><h4>Circuit color</h4><div class="prow"><label>${esc(dispCkt(it.fn))}</label><input type="color" data-k="ckt.${esc(it.fn)}" value="${circuitColor(it.fn)}"></div></div>` : ''}
         ${todoPanelHTML(it.id)}
         <div class="btnrow">${onSchem ? `<button class="btn" data-goto="${it.id}">Show on schematic</button>` : `<button class="btn primary" data-act="placeOnSchematic">Place on schematic</button>`}<button class="btn" data-act="rotateSel">Rotate (R)</button><button class="btn" data-act="delSel">Remove from floor plan</button></div>`;
       return;
     }
     if (f && f.kind === 'room') {
-      const n = lv.places.filter(pl => inPoly([pl.x, pl.y], f.r.pts)).length;
-      el.innerHTML = `<div class="ident">${esc(f.r.name)}</div><div class="sub">Room, ${n} device(s)</div><div class="pgrp"><h4>Room</h4>${row('room.name', 'Name', f.r.name)}<div class="note">Renaming a room updates the room of every device in it.</div></div><div class="btnrow"><button class="btn" data-act="delSel">Delete room</button></div>`;
+      const n = lv.places.filter(pl => inPoly([pl.x, pl.y], roomPoly(f.r))).length;
+      el.innerHTML = `<div class="ident">${esc(f.r.name)}</div><div class="sub">Room, ${n} device(s)</div><div class="pgrp"><h4>Room</h4>${row('room.name', 'Name', f.r.name)}${f.r.pts.length === 4 ? row('room.shape', 'Shape', '', 'select', [['', 'Rectangle'], ['ellipse', 'Oval'], ['circle', 'Round']].map(([k, l]) => `<option value="${k}" ${(f.r.shape || '') === k ? 'selected' : ''}>${l}</option>`).join('')) : ''}<div class="note">Drag a corner or the square on a wall to resize the room. Renaming a room updates the room of every device in it.</div></div><div class="btnrow"><button class="btn" data-act="delSel">Delete room</button></div>`;
       return;
     }
   }
@@ -457,6 +514,7 @@ function fpPropChange(scope, key, v) {
   if (scope === 'ckt') { commit(() => { P.circuits[key] = Object.assign(P.circuits[key] || {}, { color: v }); }, { props: false }); return true; }
   if (scope === 'room') {
     const f = findFp([...sel][0]); if (!f || f.kind !== 'room') return true;
+    if (key === 'shape') { commit(() => { const b = bboxPts(f.r.pts); f.r.pts = rectPts(b); if (v === 'circle') { const s = Math.max(b[2] - b[0], b[3] - b[1]); f.r.pts = rectPts([b[0], b[1], b[0] + s, b[1] + s]); } if (v) f.r.shape = v; else delete f.r.shape; for (const pl of f.lv.places) autoRoom(f.lv, pl); }); return true; }
     commit(() => { const old = f.r.name; for (const it of allItems()) if (it.loc === old) it.loc = v; f.r.name = v; });
     return true;
   }
@@ -470,7 +528,7 @@ function fpPropChange(scope, key, v) {
 function placeOnSchematic() {
   const f = findFp([...sel][0]); if (!f || f.kind !== 'place') return;
   const it = itemById(f.pl.item); if (!it) return;
-  const target = P.pages.find(p => p.kind !== 'floor' && it.fn && p.fn === it.fn) || P.pages.find(p => p.id === lastSchemId && p.kind !== 'floor') || P.pages.find(p => p.kind !== 'floor');
+  const target = P.pages.find(p => !p.kind && it.fn && p.fn === it.fn) || P.pages.find(p => p.id === lastSchemId && !p.kind) || P.pages.find(p => !p.kind);
   if (!target) { flash('Add a schematic page first'); return; }
   goPage(target.id); placeRot = 0; setMode('place', it.sym, it.id);
   flash('Click on the schematic to place ' + dispTag(it.tag));

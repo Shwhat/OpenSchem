@@ -1,5 +1,5 @@
-// ---------- home demo project ----------
-function buildHomeDemo() {
+// ---------- demo building block: home wiring (also a test fixture) ----------
+function demoHome() {
   const p = newProject(); p.name = 'Home wiring demo'; p.author = 'Homeowner';
   p.settings = Object.assign({}, DEF_SETTINGS, { terms: 'home', tagStyle: 'home', industrial: false, reportCols: 'plain' });
   const pnl = newPage('PANEL', '', '1', 'Main panel');

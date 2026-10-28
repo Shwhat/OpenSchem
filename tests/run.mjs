@@ -17,7 +17,8 @@ const { chromium } = loadPlaywright();
 
 class Tester {
   constructor(page, root, url) { this.page = page; this.root = root; this.url = url; this.promptAnswer = 'X'; }
-  async open(hash = '') { await this.page.goto(this.url + hash); await this.page.waitForFunction(() => typeof P !== 'undefined' && P && P.pages); await this.page.waitForTimeout(150); }
+  // automatic connections are off by default in tests so wiring stays explicit; tests that need it turn it on
+  async open(hash = '') { await this.page.goto(this.url + hash); await this.page.waitForFunction(() => typeof P !== 'undefined' && P && P.pages); await this.page.waitForTimeout(150); await this.page.evaluate(() => { PREFS.autoConnect = false; }); }
   eval(fn, arg) { return this.page.evaluate(fn, arg); }
   eq(actual, expected, msg = '') {
     const a = JSON.stringify(actual), e = JSON.stringify(expected);

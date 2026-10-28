@@ -20,7 +20,7 @@ function dialog(title, fields, onOk, okLabel = 'OK', extraHTML = '') {
   const first = $('#dlgbody input:not([type=checkbox]), #dlgbody select'); if (first) first.focus();
 }
 function projectProps() {
-  dialog('Project properties', [['name', 'Project name', P.name], ['desc', 'Description', P.desc || ''], ['company', 'Company', P.company], ['author', 'Drawn by', P.author], ['cover', 'Cover sheet', P.cover !== false, 'check'], ['toc', 'Table of contents', P.toc !== false, 'check']], v => commit(() => Object.assign(P, v)));
+  dialog('Project properties', [['name', 'Project name', P.name], ['desc', 'Description', P.desc || ''], ['company', 'Company', P.company], ['author', 'Drawn by', P.author], ['cover', 'Cover sheet', P.cover !== false, 'check'], ['toc', 'Table of contents', P.toc !== false, 'check'], ['size', 'Default paper size', P.size || 'A3L', 'select', SHEET_OPTS()]], v => { commit(() => Object.assign(P, v)); zoomFit(); }, 'OK', '<div class="note">The default paper size applies to pages that do not have their own size. Reports always use A3.</div>');
 }
 function wireDlg() {
   dialog('Wire numbering', [
@@ -80,6 +80,13 @@ function checkProject() {
     const cps = new Map();
     for (const it of d.items) for (const c of (it.cl || [])) { if (!c) continue; if (cps.has(c)) add('e', `${id}: connection point ${c} used more than once`, it.id); cps.set(c, 1); }
   }
+  for (const it of allItems()) {
+    const d = SYM[it.sym]; if (!d || !d.brk || !it.fn) continue;
+    const ci = circuitInfo(it); const nm = dispTag(it.tag) + ' (' + dispCkt(it.fn) + ')';
+    if (ci.pct > 100) add('e', `${nm}: load ${Math.round(ci.load)} VA is ${fmtPct(ci.pct)} of the breaker rating`, it.id);
+    else if (ci.pct > 80) add('w', `${nm}: load ${Math.round(ci.load)} VA is ${fmtPct(ci.pct)} of the breaker rating (above 80% for continuous loads)`, it.id);
+    if (ci.vd > 3) add('w', `${nm}: voltage drop ${fmtPct(ci.vd)} over ${Math.round(ci.len)} ft of ${ci.awg} AWG (above 3%)`, it.id);
+  }
   for (const t of (P.todos || []).filter(t => !t.done)) add('i', `To-do: ${t.text}`, t.link || '');
   for (const [name, list] of IX.ips) if (list.length < 2) add('w', `Interruption point ${name} has no partner`, list[0].id);
   for (const pg of P.pages) for (const it of pg.items) {
@@ -100,7 +107,7 @@ function checkProject() {
   $('#dlgbody').onclick = e => { const g = e.target.closest('[data-goto]'); if (g) { $('#dlg').close(); gotoItem(g.dataset.goto); } };
 }
 function shortcuts() {
-  const k = [['W', 'Draw connection'], ['T', 'Insert text'], ['R', 'Rotate selection / symbol being placed'], ['Tab', 'Cycle variants A to H while placing'], ['M', 'Mirror selection / symbol being placed'], ['G', 'Snap to grid on/off'], ['C', 'Draw cable'], ['Esc', 'End command, clear selection'], ['Del', 'Delete'], ['Ctrl+C / X / V', 'Copy, cut, paste (new devices get next free tags)'], ['Ctrl+Z / Y', 'Undo, redo'], ['Ctrl+A', 'Select all on page'], ['Ctrl+S', 'Save'], ['Ctrl+P', 'Print or save all pages as PDF'], ['F', 'Zoom to page'], ['Wheel', 'Zoom'], ['Middle drag / Space+drag', 'Pan'], ['PgUp / PgDn', 'Previous / next page'], ['Double click', 'Edit properties'], ['Right click', 'End current command']];
+  const k = [['W', 'Draw connection'], ['T', 'Insert text'], ['R', 'Rotate selection / symbol being placed'], ['Tab', 'Cycle variants A to H while placing'], ['M', 'Mirror selection / symbol being placed'], ['G', 'Snap to grid on/off'], ['Shift+G', 'Align selection (or the whole page) to the grid'], ['C', 'Draw cable'], ['Esc', 'End command, clear selection'], ['Del', 'Delete'], ['Ctrl+C / X / V', 'Copy, cut, paste (new devices get next free tags)'], ['Ctrl+Z / Y', 'Undo, redo'], ['Ctrl+A', 'Select all on page'], ['Ctrl+F', 'Find and replace'], ['Ctrl+S', 'Save'], ['Ctrl+P', 'Print or save all pages as PDF'], ['F', 'Zoom to page'], ['Z', 'Zoom window (drag a box)'], ['Shift+Z', 'Previous view'], ['Wheel', 'Zoom'], ['Middle drag / Space+drag', 'Pan'], ['PgUp / PgDn', 'Previous / next page'], ['Drag a handle', 'Move the end of a selected connection'], ['Drag a selected connection', 'Move that segment sideways'], ['Double click', 'Edit properties'], ['Right click', 'End current command']];
   dialog('Keyboard shortcuts', [], null, 'OK', `<div class="kbd">${k.map(([a, b]) => `<b>${a}</b><span>${b}</span>`).join('')}</div>`);
 }
 function about() {

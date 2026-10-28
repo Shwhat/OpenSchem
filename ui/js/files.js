@@ -25,10 +25,15 @@ async function saveAs() {
     filePath = p; dirty = false; host.autosave(''); updateTitle(); flash('Saved ' + p);
   } catch (e) { alert('Save failed: ' + e); }
 }
-function printAll() {
+// ids: the pages to print (all pages when left out)
+function printAll(ids) {
   buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
+  const only = ids ? new Set(ids) : null;
   const keep = sel; sel = new Set(); PRINTING = true;
-  $('#printarea').innerHTML = allPages().map(pg => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SH.w} ${SH.h}">${pageSVG(pg, { print: true }).replace(/id="gp"/g, 'id="gp-' + pg.id + '"')}</svg>`).join('');
+  const sizes = new Set();
+  $('#printarea').innerHTML = allPages().filter(pg => !only || only.has(pg.id)).map(pg => { const s = sheetOf(pg); sizes.add(s); const k = Object.keys(SHEETS).find(x => SHEETS[x] === s); return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s.w} ${s.h}" style="width:${s.w}mm;height:${s.h}mm;page:sz${k}">${pageSVG(pg, { print: true }).replace(/id="(gp|fpc-[^"]+|fgp-[^"]+)"/g, 'id="$1-pr' + pg.id + '"').replace(/url\(#(gp|fpc-[^)]+|fgp-[^)]+)\)/g, 'url(#$1-pr' + pg.id + ')')}</svg>`; }).join('');
+  let st = document.getElementById('printsizes'); if (!st) { st = document.createElement('style'); st.id = 'printsizes'; document.head.appendChild(st); }
+  st.textContent = Object.entries(SHEETS).map(([k, s]) => `@page sz${k}{size:${s.w}mm ${s.h}mm;margin:0}`).join('');
   sel = keep; PRINTING = false;
   setTimeout(() => window.print(), 50);
 }
@@ -56,7 +61,7 @@ setInterval(() => { if (dirty) host.autosave(JSON.stringify({ path: filePath, pr
 
 // ---------- startup ----------
 async function start() {
-  await loadPrefs(); applyTheme(); await loadLibrary(); LIB.macros = LIB.macros || [];
+  await loadPrefs(); applyTheme(); await loadLibrary(); await loadParts(); LIB.macros = LIB.macros || [];
   P = ensureProject(newProject()); curId = P.pages[0].id;
   renderSymbols(); renderToolbar();
   render(); zoomFit();
@@ -66,7 +71,9 @@ async function start() {
     const a = await host.getAutosave();
     if (a) { try { const o = JSON.parse(a); if (o.project && confirm('OpenSchem found unsaved work from a previous session. Restore it?')) { loadProject(o.project, o.path || ''); dirty = true; updateTitle(); } else host.autosave(''); } catch (e) {} }
   }
+  // #demo opens the demo project; #ind and #home open its two building blocks (used by the tests)
   if (location.hash === '#demo') loadProject(buildDemo(), '');
-  if (location.hash === '#home') loadProject(buildHomeDemo(), '');
+  if (location.hash === '#ind') loadProject(demoIndustrial(), '');
+  if (location.hash === '#home') loadProject(demoHome(), '');
 }
 start();

@@ -84,7 +84,7 @@ function S() { if (!P.settings) P.settings = Object.assign({}, DEF_SETTINGS); re
 function ensureProject(p) {
   p.settings = Object.assign({}, DEF_SETTINGS, p.settings || {});
   p.levels = p.levels || []; p.pool = p.pool || []; p.circuits = p.circuits || {}; p.assets = p.assets || {};
-  for (const pg of p.pages) { pg.items = pg.items || []; pg.wires = pg.wires || []; pg.cables = pg.cables || []; }
+  for (const pg of p.pages) { pg.items = pg.items || []; pg.wires = pg.wires || []; pg.cables = pg.cables || []; pg.gfx = pg.gfx || []; if (pg.kind === 'layout') pg.lay = pg.lay || []; }
   p.revs = p.revs || []; p.todos = p.todos || [];
   return p;
 }
@@ -184,8 +184,8 @@ function computeLegs() {
 
 // ---------- panel schedule ----------
 const PS_COLS = () => S().reportCols === 'plain'
-  ? [{ h: 'Slot', w: 16, a: 'middle' }, { h: 'Circuit', w: 34 }, { h: 'Breaker', w: 34 }, { h: 'Amps', w: 14, a: 'middle' }, { h: 'Poles', w: 16, a: 'middle' }, { h: 'Type', w: 30 }, { h: 'What it powers', w: 110 }, { h: 'Rooms', w: 146 }]
-  : [{ h: 'Slot', w: 16, a: 'middle' }, { h: 'Circuit (=)', w: 34 }, { h: 'Breaker', w: 34 }, { h: 'A', w: 14, a: 'middle' }, { h: 'Poles', w: 16, a: 'middle' }, { h: 'Type', w: 30 }, { h: 'Description', w: 110 }, { h: 'Locations (+)', w: 146 }];
+  ? [{ h: 'Slot', w: 14, a: 'middle' }, { h: 'Circuit', w: 30 }, { h: 'Breaker', w: 30 }, { h: 'Amps', w: 14, a: 'middle' }, { h: 'Poles', w: 14, a: 'middle' }, { h: 'Type', w: 24 }, { h: 'What it powers', w: 96 }, { h: 'Rooms', w: 104 }, { h: 'Load (VA)', w: 26, a: 'end' }, { h: '% of breaker', w: 24, a: 'end' }, { h: 'Voltage drop', w: 24, a: 'end' }]
+  : [{ h: 'Slot', w: 14, a: 'middle' }, { h: 'Circuit (=)', w: 30 }, { h: 'Breaker', w: 30 }, { h: 'A', w: 14, a: 'middle' }, { h: 'Poles', w: 14, a: 'middle' }, { h: 'Type', w: 24 }, { h: 'Description', w: 96 }, { h: 'Locations (+)', w: 104 }, { h: 'Load (VA)', w: 26, a: 'end' }, { h: '% of rating', w: 24, a: 'end' }, { h: 'V drop', w: 24, a: 'end' }];
 function panelRows() {
   const panels = [...IX.dev.values()].filter(d => d.items.some(i => i.sym === 'rpnl')).map(d => d.tag).sort(natCmp);
   const groups = new Map();
@@ -197,7 +197,7 @@ function panelRows() {
     for (const o of allItems()) { const od = SYM[o.sym]; if (o.fn === fn && fn && od && od.res && !od.brk && od.prefix !== 'PNL' && o.loc) rooms.add(niceRoom(o.loc)); }
     const cpage = P.pages.find(p => p.kind !== 'floor' && p.fn === fn && fn);
     groups.get(pn).push({ slot: it.slot || '', circuit: fn ? (home() || S().reportCols === 'plain' ? friendlyCkt(fn) : '=' + fn) : '-', brk: dispTag(it.tag),
-      amps: it.amps || d.amps, poles: String(d.poles), type: d.brk, desc: it.desc || (cpage ? cpage.desc : ''), rooms: [...rooms].sort(natCmp).join(', '), goto: it.id });
+      amps: it.amps || d.amps, poles: String(d.poles), type: d.brk, desc: it.desc || (cpage ? cpage.desc : ''), rooms: [...rooms].sort(natCmp).join(', '), goto: it.id, ...(({ load, pct, vd, len, awg }) => ({ load, pct, vd, len, awg }))(circuitInfo(it)) });
   }
   for (const l of groups.values()) l.sort((a, b) => natCmp(a.slot, b.slot) || natCmp(a.circuit, b.circuit));
   return groups;
@@ -205,8 +205,8 @@ function panelRows() {
 async function exportPanel() {
   buildIndex();
   const rows = [];
-  for (const [pn, list] of panelRows()) for (const r of list) rows.push([pn, r.slot, r.circuit, r.brk, r.amps, r.poles, r.type, r.desc, r.rooms]);
-  const csv = toCSV(['Panel', 'Slot', 'Circuit', 'Breaker', 'Amps', 'Poles', 'Type', 'Description', 'Rooms'], rows);
+  for (const [pn, list] of panelRows()) for (const r of list) rows.push([pn, r.slot, r.circuit, r.brk, r.amps, r.poles, r.type, r.desc, r.rooms, Math.round(r.load), r.load ? Math.round(r.pct * 10) / 10 : '', r.vd == null ? '' : Math.round(r.vd * 10) / 10]);
+  const csv = toCSV(['Panel', 'Slot', 'Circuit', 'Breaker', 'Amps', 'Poles', 'Type', 'Description', 'Rooms', 'Load (VA)', '% of breaker', 'Voltage drop %'], rows);
   const p = await host.saveText(csv, (P.name || 'project').replace(/[\\/:*?"<>|]/g, '_') + ' panel schedule.csv');
   if (p) flash('Exported ' + p);
 }
@@ -228,10 +228,11 @@ function settingsDlg() {
     ['theme', 'Theme', PREFS.theme, 'select', [['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow Windows']]],
     ['sheet', 'Drawing sheet', PREFS.sheet, 'select', [['white', 'White (paper)'], ['dark', 'Dark']]],
     ['snap', 'Snap to grid (all pages)', PREFS.snap, 'check'],
+    ['autoConnect', 'Connect facing connection points automatically', PREFS.autoConnect, 'check'],
     ['gridSch', 'Schematic grid', String(PREFS.gridSch), 'select', [['1', '1 mm'], ['2', '2 mm'], ['4', '4 mm (symbol grid)'], ['8', '8 mm']]],
     ['gridFp', 'Floor plan grid', String(PREFS.gridFp), 'select', [['1', '1 mm'], ['2', '2 mm'], ['4', '4 mm'], ['8', '8 mm']]],
   ], v => {
-    PREFS.snap = v.snap; PREFS.gridSch = +v.gridSch; PREFS.gridFp = +v.gridFp; PREFS.theme = v.theme; PREFS.sheet = v.sheet; savePrefs(); applyTheme();
+    PREFS.snap = v.snap; PREFS.autoConnect = v.autoConnect; delete v.autoConnect; PREFS.gridSch = +v.gridSch; PREFS.gridFp = +v.gridFp; PREFS.theme = v.theme; PREFS.sheet = v.sheet; savePrefs(); applyTheme();
     delete v.snap; delete v.gridSch; delete v.gridFp; delete v.theme; delete v.sheet;
     commit(() => Object.assign(S(), v)); symKey = ''; renderSymbols(); renderToolbar();
   }, 'OK', '<div class="note">Snap and grid sizes apply to every project. Symbols always keep their 4 mm connection spacing.</div>');
