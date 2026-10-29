@@ -48,35 +48,98 @@ for cmd in pct qm pvesh pveam pvesm awk curl; do
   command -v "$cmd" >/dev/null || fail "Missing '$cmd'. Is this a Proxmox host?"
 done
 [[ -d /etc/pve ]] || fail 'Proxmox cluster filesystem not found.'
-command -v whiptail >/dev/null && DIALOG=1 || DIALOG=0
+# Interactive menu layer modeled on Proxmox Community Scripts.
+# No host packages are installed automatically; whiptail is normally present on PVE.
+[[ -t 0 && "${YES}" != 1 ]] && command -v whiptail >/dev/null ||
+  { [[ -t 0 && "${YES}" != 1 ]] && fail 'whiptail is required for interactive setup (apt install whiptail).'; true; }
 
-# Only prompt when running interactively and no custom configuration was supplied.
-if [[ -t 0 && "$YES" != 1 ]]; then
-  if (( DIALOG )); then
-    MODE=$(whiptail --title 'OpenSchem Proxmox Installer' --menu 'Choose setup mode' 15 66 2 \
-      'default' 'Automatic settings (recommended)' \
-      'advanced' 'Customize LXC resources and networking' 3>&1 1>&2 2>&3) || exit 0
-  else
-    printf 'OpenSchem installer\n1) Default settings\n2) Advanced settings\n'
-    read -r -p 'Choice [1]: ' choice
-    [[ ${choice:-1} == 2 ]] && MODE=advanced || MODE=default
+menu() {
+  local title="$1" prompt="$2"; shift 2
+  whiptail --backtitle "OpenSchem • Proxmox VE" --title "$title" --menu "$prompt" 20 76 11 "$@" 3>&1 1>&2 2>&3
+}
+input() {
+  local title="$1" prompt="$2" value="$3"
+  whiptail --backtitle "OpenSchem • Proxmox VE" --title "$title" --inputbox "$prompt" 12 76 "$value" 3>&1 1>&2 2>&3
+}
+choose_storage_menu() {
+  local content="$1" title="$2" chosen
+  local -a opts=()
+  while read -r name; do
+    [[ -n "$name" ]] && opts+=("$name" "Active; supports $content")
+  done < <(pvesm status --content "$content" | awk 'NR>1 && $3=="active" {print $1}')
+  (("${#opts[@]}" > 0)) || fail "No active $content storage."
+  chosen=$(menu "$title" "Choose Proxmox storage" "${opts[@]}") || exit 0
+  printf '%s' "$chosen"
+}
+choose_bridge_menu() {
+  local -a opts=()
+  local path name
+  for path in /sys/class/net/vmbr*; do
+    [[ -e "$path" ]] || continue
+    name="${path##*/}"
+    opts+=("$name" "Proxmox Linux bridge")
+  done
+  (("${#opts[@]}" > 0)) || fail "No vmbr bridges detected."
+  menu 'Network Bridge' 'Select bridge for the LXC' "${opts[@]}"
+}
+choose_vlan_menu() {
+  local -a opts=("untagged" "Untagged / native network" "custom" "Enter a VLAN ID (1–4094)")
+  local ids="" id conf
+  # VLAN tags used by existing containers plus bridge-vids configured by PVE.
+  ids=$( { grep -hEo 'tag=[0-9]+' /etc/pve/lxc/*.conf 2>/dev/null || true
+          grep -hE 'bridge-vids' /etc/network/interfaces /etc/network/interfaces.d/* 2>/dev/null | grep -Eo '[0-9]{1,4}' || true; } | sed -E 's/^tag=//' | sort -nu | awk '$1>=1 && $1<=4094' | head -n 30)
+  while read -r id; do
+    [[ -n "$id" ]] && opts+=("$id" "Detected on host")
+  done <<< "$ids"
+  conf=$(menu 'Network VLAN' 'Choose an available VLAN or enter your own. The selected bridge must carry the VLAN.' "${opts[@]}") || exit 0
+  if [[ "$conf" == custom ]]; then
+    conf=$(input 'Custom VLAN ID' 'Enter VLAN ID 1–4094' '') || exit 0
   fi
-  # Always ask about container ID and VLAN, including Default mode.
-  ask() {
-    local name="$1" current="${!1}" response
-    read -r -p "$name [$current]: " response
-    [[ -z "$response" ]] || printf -v "$name" '%s' "$response"
-  }
-  [[ -n "$CTID" ]] || CTID="$(pvesh get /cluster/nextid)"
-  printf '\nContainer ID (must be unused; suggested %s):\n' "$CTID"
-  ask CTID
-  printf '\nVLAN tag (1-4094), or untagged for no VLAN tag:\n'
-  ask VLAN
+  printf '%s' "$conf"
+}
+choose_ctid_menu() {
+  local next candidate count=0 selected
+  local -a opts=()
+  next=$(pvesh get /cluster/nextid) || fail 'Cannot determine available container IDs'
+  candidate="$next"
+  while (( count < 12 )); do
+    if ! pct config "$candidate" >/dev/null 2>&1 && ! qm config "$candidate" >/dev/null 2>&1; then
+      opts+=("$candidate" "$([[ $count == 0 ]] && echo 'Recommended' || echo 'Available')")
+      ((count+=1))
+    fi
+    ((candidate+=1))
+  done
+  opts+=("custom" "Enter any unused container ID")
+  selected=$(menu 'Container ID' 'Choose an unused LXC ID' "${opts[@]}") || exit 0
+  if [[ "$selected" == custom ]]; then
+    selected=$(input 'Custom Container ID' 'Enter an unused ID (100 or higher)' "$next") || exit 0
+  fi
+  printf '%s' "$selected"
+}
+if [[ -t 0 && "$YES" != 1 ]]; then
+  MODE=$(menu 'OpenSchem Installer' 'Choose the setup experience' \
+     default 'Recommended values; select ID, bridge, VLAN and storage' \
+     advanced 'Configure OS, resources, IP and application options') || exit 0
+  CTID=$(choose_ctid_menu)
+  BRIDGE=$(choose_bridge_menu) || exit 0
+  VLAN=$(choose_vlan_menu)
+  TEMPLATE_STORAGE=$(choose_storage_menu vztmpl 'Template Storage')
+  DISK_STORAGE=$(choose_storage_menu rootdir 'Container Disk Storage')
   if [[ "$MODE" == advanced ]]; then
-    ask CT_NAME; ask OS_VERSION; ask CORES; ask MEMORY; ask DISK
-    ask BRIDGE; ask IP
-    if [[ "$IP" != dhcp ]]; then ask GATEWAY; fi
-    ask PORT; ask TEMPLATE_STORAGE; ask DISK_STORAGE
+    OS_VERSION=$(menu 'Debian Version' 'Choose Debian version' 13 'Debian 13 (Trixie)' 12 'Debian 12 (Bookworm)') || exit 0
+    CT_NAME=$(input 'Hostname' 'LXC hostname' "$CT_NAME") || exit 0
+    CORES=$(input 'CPU Cores' 'Number of virtual CPU cores' "$CORES") || exit 0
+    MEMORY=$(input 'Memory' 'RAM in MiB' "$MEMORY") || exit 0
+    SWAP=$(input 'Swap' 'Swap in MiB' "$SWAP") || exit 0
+    DISK=$(input 'Disk Size' 'Root filesystem size in GiB' "$DISK") || exit 0
+    IP=$(menu 'IP Configuration' 'Choose addressing method' dhcp 'Automatic (DHCP)' static 'Static IPv4') || exit 0
+    if [[ "$IP" == static ]]; then
+      IP=$(input 'Static IP' 'Enter IPv4 address/CIDR (example: 192.168.1.50/24)' '') || exit 0
+      GATEWAY=$(input 'Gateway' 'Enter IPv4 gateway address' "$GATEWAY") || exit 0
+    fi
+    DNS=$(input 'DNS Server' 'Optional DNS server; blank uses Proxmox defaults' "$DNS") || exit 0
+    PORT=$(input 'Web Port' 'Host port forwarded to OpenSchem (8080)' "$PORT") || exit 0
+    SIGNUP=$(menu 'Registration' 'Allow creating new user accounts?' on 'Yes, create accounts from the login page' off 'No, existing accounts only') || exit 0
   fi
 fi
 
@@ -131,8 +194,8 @@ printf '  OpenSchem: %s, port %s, signup %s\n' "$IMAGE" "$PORT" "$SIGNUP"
 printf '  The LXC has no default root password; use pct enter %s.\n' "$CTID"
 if [[ "$YES" != 1 ]]; then
   [[ -t 0 ]] || fail 'Noninteractive mode requires YES=1.'
-  read -r -p 'Type YES to create this container: ' answer
-  [[ "$answer" == YES ]] || { echo 'Cancelled.'; exit 0; }
+  summary="LXC: $CTID ($CT_NAME), Debian $OS_VERSION\\nCPU: $CORES   RAM: $MEMORY MiB   Disk: $DISK GiB\\nStorage: $DISK_STORAGE\\nBridge: $BRIDGE   VLAN: $VLAN\\nIP: $IP   Web port: $PORT\\n\\nCreate this new container?"
+  whiptail --backtitle "OpenSchem • Proxmox VE" --title 'Confirm Installation' --yesno "$summary" 17 76 || { echo 'Cancelled.'; exit 0; }
 fi
 
 # Record all host-side installation output and errors.
