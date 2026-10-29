@@ -50,16 +50,20 @@ done
 [[ -d /etc/pve ]] || fail 'Proxmox cluster filesystem not found.'
 # Interactive menu layer modeled on Proxmox Community Scripts.
 # No host packages are installed automatically; whiptail is normally present on PVE.
-[[ -t 0 && "${YES}" != 1 ]] && command -v whiptail >/dev/null ||
-  { [[ -t 0 && "${YES}" != 1 ]] && fail 'whiptail is required for interactive setup (apt install whiptail).'; true; }
+# Interact with the actual terminal, even if launched through a pipe or bash -c.
+# YES=1 retains explicit noninteractive behavior for automation.
+if [[ "$YES" != 1 ]]; then
+  [[ -r /dev/tty && -w /dev/tty ]] || fail 'No interactive terminal available. Open the Proxmox node Shell or use SSH.'
+  command -v whiptail >/dev/null || fail 'whiptail is missing. Install with: apt-get update && apt-get install -y whiptail'
+fi
 
 menu() {
   local title="$1" prompt="$2"; shift 2
-  whiptail --backtitle "OpenSchem • Proxmox VE" --title "$title" --menu "$prompt" 20 76 11 "$@" 3>&1 1>&2 2>&3
+  whiptail --backtitle "OpenSchem - Proxmox VE" --title "$title" --menu "$prompt" 20 76 11 "$@" 3>&1 1>&2 2>&3 </dev/tty
 }
 input() {
   local title="$1" prompt="$2" value="$3"
-  whiptail --backtitle "OpenSchem • Proxmox VE" --title "$title" --inputbox "$prompt" 12 76 "$value" 3>&1 1>&2 2>&3
+  whiptail --backtitle "OpenSchem - Proxmox VE" --title "$title" --inputbox "$prompt" 12 76 "$value" 3>&1 1>&2 2>&3 </dev/tty
 }
 choose_storage_menu() {
   local content="$1" title="$2" chosen
@@ -116,7 +120,10 @@ choose_ctid_menu() {
   fi
   printf '%s' "$selected"
 }
-if [[ -t 0 && "$YES" != 1 ]]; then
+if [[ "$YES" != 1 ]]; then
+  whiptail --backtitle "OpenSchem - Proxmox VE" --title "OpenSchem LXC" --yesno \
+    "Install OpenSchem in a new Debian LXC container?\\n\\nDefault settings will still let you choose the Container ID, network bridge, VLAN, and storage." \
+    15 76 </dev/tty || exit 0
   MODE=$(menu 'OpenSchem Installer' 'Choose the setup experience' \
      default 'Recommended values; select ID, bridge, VLAN and storage' \
      advanced 'Configure OS, resources, IP and application options') || exit 0
@@ -193,9 +200,9 @@ printf '  Network: bridge=%s, VLAN=%s, address=%s, gateway=%s\n' "$BRIDGE" "$VLA
 printf '  OpenSchem: %s, port %s, signup %s\n' "$IMAGE" "$PORT" "$SIGNUP"
 printf '  The LXC has no default root password; use pct enter %s.\n' "$CTID"
 if [[ "$YES" != 1 ]]; then
-  [[ -t 0 ]] || fail 'Noninteractive mode requires YES=1.'
+  [[ -r /dev/tty ]] || fail 'Noninteractive mode requires YES=1.'
   summary="LXC: $CTID ($CT_NAME), Debian $OS_VERSION\\nCPU: $CORES   RAM: $MEMORY MiB   Disk: $DISK GiB\\nStorage: $DISK_STORAGE\\nBridge: $BRIDGE   VLAN: $VLAN\\nIP: $IP   Web port: $PORT\\n\\nCreate this new container?"
-  whiptail --backtitle "OpenSchem • Proxmox VE" --title 'Confirm Installation' --yesno "$summary" 17 76 || { echo 'Cancelled.'; exit 0; }
+  whiptail --backtitle "OpenSchem - Proxmox VE" --title 'Confirm Installation' --yesno "$summary" 17 76 </dev/tty || { echo 'Cancelled.'; exit 0; }
 fi
 
 # Record all host-side installation output and errors.
