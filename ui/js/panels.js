@@ -60,17 +60,17 @@ function renderProps() {
   if (pg.custom) { el.innerHTML = customPropsHTML(pg); return; }
   if (pg.report) {
     el.innerHTML = `<div class="ident">${esc(pg.title)}</div><div class="sub">Generated report, sheet ${pg.sheet} of ${pg.sheets}</div>
-      <div class="pgrp"><h4>Report</h4><div class="note">${pg.report === 'cover' ? 'Generated from the project properties (name, description, company, drawn by). Turn it off or move it in Project properties. Make custom copy to edit it.' : pg.report === 'toc' ? 'Every page with its description and latest revision. Click a row to open that page.' : pg.report === 'conn' ? 'Every connection with its source and target, wire number, color and size.' : pg.report === 'cables' || pg.report === 'cabdiag' ? 'Cables with their conductors and where each one goes. Draw cables with the Cable tool.' : pg.report === 'rev' ? 'All revisions and the pages changed in each. Manage them in Project > Revisions.' : pg.report === 'bom' ? 'Grouped by part number. Enter part numbers on the main function of each device (or on each terminal).' : pg.report === 'panel' ? 'One row per breaker, sorted by slot. Set slot, amps and panel on each breaker. Rooms come from the devices on each circuit.' : 'One row per terminal, sorted by terminal number. Targets are found by following connections from each side of the terminal.'} Click a row to jump to the device.</div>
+      <div class="pgrp"><h4>Report</h4><div class="note">${pg.report === 'cover' ? 'Generated from the project properties (name, description, company, drawn by). Turn it off or move it in Project properties. Make custom copy to edit it.' : pg.report === 'toc' ? 'Every page with its description and latest revision. Click a row to open that page.' : pg.report === 'conn' ? 'Every connection with its source and target, wire number, color and size.' : pg.report === 'cables' || pg.report === 'cabdiag' ? 'Cables with their conductors and where each one goes. Draw cables with the Cable tool.' : pg.report === 'tubes' ? 'Every tube with where it starts and ends, grouped by outside diameter. Draw tubes with the Tube tool, or with the Connection tool on a pneumatic page.' : pg.report === 'rev' ? 'All revisions and the pages changed in each. Manage them in Project > Revisions.' : pg.report === 'bom' ? 'Grouped by part number. Enter part numbers on the main function of each device (or on each terminal).' : pg.report === 'panel' ? 'One row per breaker, sorted by slot. Set slot, amps and panel on each breaker. Rooms come from the devices on each circuit.' : 'One row per terminal, sorted by terminal number. Targets are found by following connections from each side of the terminal.'} Click a row to jump to the device.</div>
       <div class="btnrow">${['bom', 'panel', 'term'].includes(pg.report) ? `<button class="btn" data-act="${pg.report === 'bom' ? 'exportBOM' : pg.report === 'panel' ? 'exportPanel' : 'exportTerminals'}">Export CSV</button>` : ''}<button class="btn" data-act="makeCustomCopy">Make custom copy</button><button class="btn" data-act="exportPDF">Export PDF</button><button class="btn" data-act="printAll">Print / PDF</button>${pg.report === 'term' ? '<button class="btn" data-act="terminalEditor">Edit strip...</button>' : ''}${pg.report === 'bom' ? '<button class="btn" data-act="exportBOMXlsx">Export Excel</button>' : ''}${pg.report === 'panel' ? '<button class="btn" data-act="panelDirectoryDlg">Breaker labels...</button>' : ''}</div></div>`;
     return;
   }
   if (!ids.length) {
     const p = IX ? pg.items.length : 0;
     el.innerHTML = `<div class="ident">Page ${esc(pageName(pg))}</div><div class="sub">${esc(pg.desc)}</div>
-      <div class="pgrp"><h4>Page</h4>${row('pg.fn', L('fn'), pg.fn)}${row('pg.loc', L('loc'), pg.loc)}${row('pg.num', 'Page number', pg.num)}${row('pg.desc', 'Description', pg.desc)}${row('pg.size', 'Paper size', '', 'select', SHEET_OPTS().map(([k, l]) => `<option value="${k}" ${(pg.size || P.size || 'A3L') === k ? 'selected' : ''}>${esc(l)}</option>`).join(''))}</div>
+      <div class="pgrp"><h4>Page</h4>${row('pg.fn', L('fn'), pg.fn)}${row('pg.loc', L('loc'), pg.loc)}${row('pg.num', 'Page number', pg.num)}${row('pg.desc', 'Description', pg.desc)}${row('pg.type', 'Page type', '', 'select', PAGE_TYPES.map(([k, l]) => `<option value="${k}" ${(pg.type || '') === k ? 'selected' : ''}>${l}</option>`).join(''))}${row('pg.size', 'Paper size', '', 'select', SHEET_OPTS().map(([k, l]) => `<option value="${k}" ${(pg.size || P.size || 'A3L') === k ? 'selected' : ''}>${esc(l)}</option>`).join(''))}</div>
       ${pg.fn && allCircuits().includes(pg.fn) ? `<div class="pgrp"><h4>Circuit color</h4><div class="prow"><label>${esc(dispCkt(pg.fn))}</label><input type="color" data-k="ckt.${esc(pg.fn)}" value="${circuitColor(pg.fn)}"></div></div>` : ''}
       <div class="pgrp"><h4>Content</h4><div class="note">${p} symbol(s), ${pg.wires.length} connection(s)</div></div>
-      <div class="pgrp"><h4>Project</h4>${row('pr.name', 'Project name', P.name)}${row('pr.company', 'Company', P.company)}${row('pr.author', 'Drawn by', P.author)}</div>`;
+      <div class="pgrp"><h4>Project</h4><div class="prow"><label>Standard</label><input value="${esc(STD_NAMES[projStd()])}" readonly tabindex="-1" title="Chosen when the project was created"></div>${row('pr.name', 'Project name', P.name)}${row('pr.company', 'Company', P.company)}${row('pr.author', 'Drawn by', P.author)}</div>`;
     return;
   }
   if (ids.length > 1) {
@@ -90,6 +90,7 @@ function renderProps() {
       <div class="btnrow"><button class="btn" data-act="delSel">Delete</button></div>`;
     return;
   }
+  if (f.w && f.w.tube) { el.innerHTML = tubePropsHTML(f.w, row); return; }
   if (f.w) {
     const w = f.w;
     el.innerHTML = `<div class="ident">Connection</div><div class="sub">Wire number: <b>${esc(WN.get(w.id) || '(none)')}</b></div>
@@ -115,11 +116,13 @@ function renderProps() {
       <div class="pgrp"><h4>Cross-references</h4><div class="fnlist">${others.map(o => `<div data-goto="${o.id}"><span>${esc(o.ipName)}</span><span class="r">${esc(ref(pg, o))}</span></div>`).join('') || '<span class="note">No partner on another page yet.</span>'}</div></div>`;
   } else if (d.role === 'pe') {
     s += `<div class="ident">PE / ground</div><div class="sub">Joins the PE potential</div>`;
+  } else if (d.role === 'mark') {
+    s += `<div class="ident">${esc(d.name)}</div><div class="sub">Pneumatic symbol without a device tag</div>`;
   } else {
     const dv = IX.dev.get(devKey(it));
     const sameFL = [...IX.dev.values()].filter(x => x.fn === (it.fn || '') && x.loc === (it.loc || ''));
     const tagOpts = sameFL.filter(x => (d.role === 'term') === x.items.some(i => i.sym === 'term')).map(x => `<option value="${esc(x.tag)}">`).join('');
-    s += `<div class="ident">${esc(dispFull(it.fn, it.loc, it.tag))}${it.sym === 'term' ? ':' + esc(it.tn) : ''}</div><div class="sub">${d.name}${it.role === 'main' ? ' (main function)' : it.role === 'aux' ? ' (auxiliary function)' : ''}</div>`;
+    s += `<div class="ident">${esc(dispFull(it.fn, it.loc, it.tag))}${it.sym === 'term' ? ':' + esc(it.tn) : ''}</div><div class="sub">${d.name}${it.role === 'main' ? ' (main function)' : it.role === 'aux' ? ' (auxiliary function)' : it.role === 'sl' ? ' (single-line or pneumatic view)' : ''}${d.std ? ', ' + esc(STD_NAMES[d.std]) : d.pneu ? ', ISO 1219' : ''}</div>`;
     s += `<div class="pgrp"><h4>${home() ? 'Name' : 'Device tag'}</h4>${row('it.fn', L('fn'), it.fn)}${row('it.loc', L('loc'), it.loc, 'text', 'list="dl-room"')}<datalist id="dl-room">${roomNames().map(c => `<option value="${esc(c)}">`).join('')}</datalist>${row('it.tag', d.role === 'term' ? 'Terminal strip' : L('tag'), it.tag, 'text', 'list="dl-tags"')}<datalist id="dl-tags">${tagOpts}</datalist>`;
     if (d.brk) {
       const ci = circuitInfo(it);
@@ -135,6 +138,7 @@ function renderProps() {
     s += '</div>';
     s += `<div class="pgrp"><h4>Data</h4>${row('it.desc', L('desc'), it.desc || '', 'textarea')}`;
     if (d.role === 'plc') s += row('it.addr', 'Address', it.addr || '');
+    if (d.propsHTML) s += d.propsHTML(it, row);
     s += `${row('it.part', 'Part number', it.part || '', 'text', 'list="dl-parts"')}${partDatalist()}${partInfoHTML(it.part)}<div class="btnrow"><button class="btn small" data-act="pickPartFor">Choose from parts...</button></div>${row('it.tech', L('tech'), it.tech || '')}`;
     if (hasLoad(d)) s += row('it.va', 'Load (VA)', it.va ?? '', 'text', `placeholder="${deviceLoad(Object.assign({}, it, { va: '' }))} (default)"`);
     s += '</div>';
@@ -186,7 +190,7 @@ $('#props').addEventListener('change', e => {
   const f = findItem([...sel][0]); if (!f) return;
   if ((scope === 'bx' || scope === 'pin') && f.it && sizedPropChange(f.it, scope, key, v)) return;
   if (scope === 'gf') { if (f.g) gfxPropChange(f.g, key, v); return; }
-  if (scope === 'w') { commit(() => { if (v) f.w[key] = v; else delete f.w[key]; }); return; }
+  if (scope === 'w') { if (f.w.tube && (key === 'od' || key === 'color')) { PREFS[key === 'od' ? 'tubeOd' : 'tubeColor'] = v; savePrefs(); } commit(() => { if (v) f.w[key] = v; else delete f.w[key]; }); return; }
   if (scope === 'cab') { commit(() => { f.cab[key] = v; }, { props: false }); return; }
   if (scope === 'cond') { commit(() => { f.cab.cond = f.cab.cond || {}; if (v) f.cab.cond[key] = v; else delete f.cab.cond[key]; }, { props: false }); return; }
   const it = f.it;
@@ -206,4 +210,5 @@ function applyItemChange(it, key, v) {
     else if (key === 'ipName') { it.ipName = v; P._lastIp = v; }
     else if (key === 'part') applyPart(it, v);
     else it[key] = v;
+    const d = SYM[it.sym]; if (d && d.onChange) d.onChange(it, key);
 }

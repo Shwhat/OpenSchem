@@ -51,10 +51,13 @@ function arrowSVG(tip, dirAng, st, t, col) {
   const a = polarPt(tip, as / 2, dirAng + 45), b = polarPt(tip, as / 2, dirAng + 225); return `<path d="M${r2(a[0])},${r2(a[1])}L${r2(b[0])},${r2(b[1])}" stroke="${col}" stroke-width="${r2(0.45 / t * 1000) / 1000}"/>`;
 }
 function textAt(p, ang, txt0, h, col, anchor = 'middle') { const a = readable(ang); return `<text x="${r2(p[0])}" y="${r2(p[1])}" font-size="${r2(h * 1000) / 1000}" text-anchor="${anchor}" fill="${col}" font-family="Arial, sans-serif" transform="rotate(${r2(-a)} ${r2(p[0])} ${r2(p[1])})">${esc(txt0)}</text>`; }
-function dimSVGBody(d, lv, t, col) {
+function dimSVGBody(d, lv, t, col, hit) {
   const st = dimStyle(d.style); const sw = r2(0.18 / t * 1000) / 1000, h = st.textH / t, gap = st.gap / t, ext = st.ext / t;
   const line = (a, b) => `M${r2(a[0])},${r2(a[1])}L${r2(b[0])},${r2(b[1])}`; let path = '', out = '';
   const extLine = (p, q) => { const L = ptDist(p, q); if (L < gap + 1e-6) return; const u = unit([q[0] - p[0], q[1] - p[1]]); path += line([p[0] + u[0] * gap, p[1] + u[1] * gap], [q[0] + u[0] * ext, q[1] + u[1] * ext]); };
+  // the click band follows the real pieces (extension lines, dimension line or arc) plus a strip through the text
+  let band = '';
+  const textBand = (tp, a, lab) => { const w = Math.max(h, String(lab).length * h * 0.55) / 2; const c = polarPt(tp, h * 0.35, a + 90); band += line(polarPt(c, w, a + 180), polarPt(c, w, a)); };
   const P = dimPts(d, lv);
   if (d.kind === 'lin' || d.kind === 'ali') {
     const { d1, d2 } = dimLine(d, P.p1, P.p2); const L = ptDist(d1, d2); const ang = ptAngle(d1, d2);
@@ -63,7 +66,7 @@ function dimSVGBody(d, lv, t, col) {
     out += arrowSVG(d1, inside ? ang + 180 : ang, st, t, col) + arrowSVG(d2, inside ? ang : ang + 180, st, t, col);
     if (!inside) { path += line(d1, polarPt(d1, 2 * st.as / t, ang + 180)) + line(d2, polarPt(d2, 2 * st.as / t, ang)); }
     const ra = readable(ang); const m = midPt(d1, d2); const tp = polarPt(m, h * 0.35, ra + 90);
-    out += textAt(tp, ang, dimLabel(d, lv, L), h, col);
+    const lab = dimLabel(d, lv, L); out += textAt(tp, ang, lab, h, col); textBand(tp, ra, lab);
   } else if (d.kind === 'ang') {
     const c = P.c, r = Math.max(1e-3, ptDist(c, d.loc)); let a1 = ptAngle(c, P.p1), a2 = ptAngle(c, P.p2), al = ptAngle(c, d.loc);
     if (n360(al - a1) > n360(a2 - a1)) [a1, a2] = [a2, a1];
@@ -71,15 +74,16 @@ function dimSVGBody(d, lv, t, col) {
     path += shapeD(arc);
     for (const [p, a] of [[P.p1, ptAngle(c, P.p1)], [P.p2, ptAngle(c, P.p2)]]) { const onArc = polarPt(c, r, a); if (ptDist(c, p) < r) extLine(p, onArc); }
     out += arrowSVG(polarPt(c, r, a1), a1 - 90, st, t, col) + arrowSVG(polarPt(c, r, a2), a2 + 90, st, t, col);
-    const am = a1 + sweep / 2; out += textAt(polarPt(c, r + h * 0.4, am), am - 90, dimLabel(d, lv, sweep, true), h, col);
+    const am = a1 + sweep / 2; const lab = dimLabel(d, lv, sweep, true), tp = polarPt(c, r + h * 0.4, am); out += textAt(tp, am - 90, lab, h, col); textBand(tp, readable(am - 90), lab);
   } else {
     const c = P.c, r = P.r; const ang = ptAngle(c, d.loc); const E = polarPt(c, r, ang); const far = ptDist(c, d.loc) > r;
     if (d.kind === 'dia') { const F = polarPt(c, r, ang + 180); path += line(F, far ? d.loc : E); out += arrowSVG(E, ang, st, t, col) + arrowSVG(F, ang + 180, st, t, col); }
     else { path += line(c, far ? d.loc : E); out += arrowSVG(E, ang, st, t, col); }
     const val = d.kind === 'dia' ? 2 * r : r; const pre = d.kind === 'dia' ? 'Ø' : 'R';
     const tp = far ? polarPt(d.loc, h * 0.35, readable(ang) + 90) : polarPt(polarPt(c, r / 2, ang), h * 0.35, readable(ang) + 90);
-    out += textAt(tp, ang, pre + ' ' + dimLabel(d, lv, val), h, col);
+    const lab = pre + ' ' + dimLabel(d, lv, val); out += textAt(tp, ang, lab, h, col); textBand(tp, readable(ang), lab);
   }
+  if (hit) hit.d = path + band;
   return `<path d="${path}" stroke="${col}" stroke-width="${sw}" fill="none"/>` + out;
 }
 function leaderSVGBody(s, lv, t, col) {
@@ -150,12 +154,13 @@ function shapeSVGMore(s, t, o, col) {
   if (s.t !== 'dim' && s.t !== 'leader' && s.t !== 'hatch' && s.t !== 'insert') return null;
   const lv = o.lv || shapeLevel(s); const c = o.sel ? 'var(--sel)' : o.ghost ? '#1f6fff' : (s.color || (s.t === 'hatch' ? '#5d6775' : sheetDark() ? '#d0d4da' : '#1d1d1d'));
   let body;
-  if (s.t === 'dim') body = dimSVGBody(s, lv, t, c);
+  const dh = {};
+  if (s.t === 'dim') body = dimSVGBody(s, lv, t, c, dh);
   else if (s.t === 'leader') body = leaderSVGBody(s, lv, t, c);
   else if (s.t === 'hatch') body = hatchSVGBody(o.sel || o.ghost ? Object.assign({}, s, { color: c }) : s, t);
   else body = insertSVGBody(s, lv, t, o, c);
-  const ol = shapeOutlineMore(s);
-  const hit = s.t === 'hatch' ? `<path class="hit" d="${loopsD(s.loops || [])}" fill-rule="evenodd"/>` : s.t === 'insert' ? `<polygon class="hit" points="${polyAttr(insertOutline(s).pts)}"/>` : `<path class="wirehit" d="M${ol.pts.map(q => r2(q[0]) + ',' + r2(q[1])).join('L')}" style="stroke-width:${r2(3 / t)}"/>`;
+  const hd = s.t === 'dim' ? dh.d : s.t === 'leader' ? 'M' + s.pts.map(q => r2(q[0]) + ',' + r2(q[1])).join('L') : '';
+  const hit = s.t === 'hatch' ? `<path class="hit" d="${loopsD(s.loops || [])}" fill-rule="evenodd"/>` : s.t === 'insert' ? `<polygon class="hit" points="${polyAttr(insertOutline(s).pts)}"/>` : `<path class="wirehit" d="${hd}" style="stroke-width:${r2(3 / t)}"/>`;
   if (o.ghost) return `<g class="shpghost" opacity="0.75">${body}</g>`;
   return `<g ${o.locked ? '' : `data-id="${s.id}" `}class="shp${o.sel ? ' ssel' : ''}">${o.locked ? '' : hit}${body}</g>`;
 }

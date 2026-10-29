@@ -42,8 +42,8 @@ function setMode(m, sym, itemId) {
 }
 function renderStatus() {
   const pg = page();
-  const names = { vpadd: 'Add view (drag a box)', select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag or click two corners, or type a size)', roomoval: 'Draw oval room (drag or click two corners)', roomcirc: 'Draw round room (drag from one side, or type a diameter)', roompoly: 'Draw room shape (click corners or type lengths, click the first corner to close)', area: 'Drag a box around the area to show', lplace: 'Place device footprint', lrail: 'DIN rail: drag along the plate', lduct: 'Wire duct: drag along the plate', 'g:line': 'Line: click start and end', 'g:poly': 'Polyline: click points, double click to finish', 'g:rect': 'Rectangle: click two corners', 'g:circle': 'Circle: click center, then a point on the edge', 'g:dim': 'Dimension: click start and end', zoomwin: 'Zoom window: drag a box around the area to zoom to', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
-  $('#st-mode').textContent = (gripOp ? 'Grip: ' + GRIP_NAMES[gripOp.mode] + '  (Space next mode, C copy, Esc cancel)' : names[mode] || (DRAW ? 'Draw: ' + DRAW.T.name + '  (Enter or right click to finish, Esc to end)' : mode)) + (mode === 'place' || mode === 'fpplace' ? '  (R rotate, right click / Esc to end)' : mode === 'wire' ? '  (click points, double click / Esc to finish)' : '');
+  const names = { vpadd: 'Add view (drag a box)', select: 'Select', place: 'Insert: ' + (placeSym ? SYM[placeSym].name : ''), wire: 'Draw connection', tube: 'Draw tube', text: 'Insert text', cable: 'Draw cable (drag across the wires it carries)', macro: 'Place macro' + (placeMacro ? ': ' + placeMacro.name : ''), room: 'Draw room (drag or click two corners, or type a size)', roomoval: 'Draw oval room (drag or click two corners)', roomcirc: 'Draw round room (drag from one side, or type a diameter)', roompoly: 'Draw room shape (click corners or type lengths, click the first corner to close)', area: 'Drag a box around the area to show', lplace: 'Place device footprint', lrail: 'DIN rail: drag along the plate', lduct: 'Wire duct: drag along the plate', 'g:line': 'Line: click start and end', 'g:poly': 'Polyline: click points, double click to finish', 'g:rect': 'Rectangle: click two corners', 'g:circle': 'Circle: click center, then a point on the edge', 'g:dim': 'Dimension: click start and end', zoomwin: 'Zoom window: drag a box around the area to zoom to', fpplace: 'Place on floor plan' + (placeSym ? ': ' + SYM[placeSym].name : '') };
+  $('#st-mode').textContent = (gripOp ? 'Grip: ' + GRIP_NAMES[gripOp.mode] + '  (Space next mode, C copy, Esc cancel)' : names[mode] || (DRAW ? 'Draw: ' + DRAW.T.name + '  (Enter or right click to finish, Esc to end)' : mode)) + (mode === 'place' || mode === 'fpplace' ? '  (R rotate, right click / Esc to end)' : isWireMode() ? '  (click points, double click / Esc to finish)' : '');
   $('#st-pos').textContent = `Page ${pageName(pg)}`;
   $('#st-snap').textContent = `Snap ${PREFS.snap ? 'on' : 'off'} · grid ${isFloor(pg) ? PREFS.gridFp : PREFS.gridSch} mm`;
   const fp = isFloor(pg);
@@ -55,6 +55,7 @@ function renderStatus() {
 let placeMir = false, cdrag = null;
 let drag = null, box = null, pan = null, wireDraft = null, spaceDown = false, lastMouse = [0, 0];
 
+const isWireMode = () => mode === 'wire' || mode === 'tube';
 function snapPt(mx, my) {
   const pg = page(); let best = null, bd = 2.5;
   if (!isFloor(pg) && !pg.report) {
@@ -75,7 +76,7 @@ svg.addEventListener('mousedown', e => {
   const [mx, my] = toMM(e); const sx = snap(mx), sy = snap(my);
   if (e.button === 1 || (e.button === 0 && spaceDown)) { pan = { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y }; svg.classList.add('pan'); e.preventDefault(); return; }
   if (e.button === 2 && mode === 'select' && isFloor(page()) && !isSheet(page())) { const id = hitId(e); const f = id && findShape(id); if (f && shapeRoomPts(f.s)) { sel = new Set([id]); render(); shapeToRoom(); return; } }
-  if (e.button === 2) { if (gripOp) { gripCancel(); return; } if (DRAW && drawEnter()) return; if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
+  if (e.button === 2) { if (gripOp) { gripCancel(); return; } if (DRAW && drawEnter()) return; if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (isWireMode() && wireDraft) finishWire(); else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode !== 'select') setMode('select'); return; }
   if (e.button !== 0) return;
   if (mode === 'zoomwin') { zwin = { start: [mx, my], cur: [mx, my] }; return; }
   const pg = page();
@@ -108,7 +109,7 @@ svg.addEventListener('mousedown', e => {
     const t = prompt('Text:', ''); if (t) commit(() => { const it = onActiveLayer({ id: uid(), sym: 'text', x: sx, y: sy, text: t, size: 3.5 }); pg.items.push(it); sel = new Set([it.id]); });
     setMode('select'); return;
   }
-  if (mode === 'wire') {
+  if (isWireMode()) {
     const [sx, sy] = snapPt(mx, my);
     if (!wireDraft) { wireDraft = { pts: [[sx, sy]] }; drawWirePreview(sx, sy); return; }
     const last = wireDraft.pts[wireDraft.pts.length - 1];
@@ -163,7 +164,7 @@ window.addEventListener('mousemove', e => {
   }
   if (mode.startsWith('g:')) { gfxPreview(...snapPt(mx, my)); return; }
   if (mode === 'place') drawGhost(mx, my);
-  else if (mode === 'wire') drawWirePreview(...snapPt(mx, my));
+  else if (isWireMode()) drawWirePreview(...snapPt(mx, my));
   else if (drag) {
     const d = [snap(mx - drag.start[0]), snap(my - drag.start[1])];
     if (d[0] === drag.d[0] && d[1] === drag.d[1]) return;
@@ -220,7 +221,7 @@ window.addEventListener('mouseup', e => {
 
 svg.addEventListener('dblclick', e => {
   if (mode === 'g:poly') { if (gdraft) gfxFinish(page()); return; }
-  if (mode === 'wire') { if (wireDraft) finishWire(); return; }
+  if (isWireMode()) { if (wireDraft) finishWire(); return; }
   if (mode === 'roompoly') { if (fpoly) { fpoly.pop(); finishPoly(page()); } return; }
   if (isSheet(page())) { const f = e.target.closest('[data-vp]'); const v = f && page().vps.find(x => x.id === f.dataset.vp); if (v) vpOpen(v); return; }
   if (isFloor(page())) { const inp = $('#props input'); if (hitId(e) && inp) { inp.focus(); inp.select(); } return; }
@@ -336,7 +337,8 @@ function drawWirePreview(sx, sy) {
 function finishWire() {
   if (!wireDraft) return;
   const pts = simplify(wireDraft.pts); wireDraft = null; $('#overlay').innerHTML = '';
-  if (pts.length >= 2) commit(() => { const w = onActiveLayer(Object.assign({ id: uid(), pts }, autoWire(page(), pts) || {})); page().wires.push(w); });
+  const tube = mode === 'tube' || isPneuPage(page());
+  if (pts.length >= 2) commit(() => { const w = onActiveLayer(Object.assign({ id: uid(), pts }, tube ? newTubeProps() : autoWire(page(), pts) || {})); page().wires.push(w); });
 }
 
 // ---------- keyboard ----------
@@ -344,7 +346,7 @@ function finishWire() {
 function escapeCommand() {
   if (gripOp) { gripCancel(); return; }
   if (DRAW && drawEscape()) return;
-  if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode.startsWith('g:') && gdraft) { gdraft = null; $('#overlay').innerHTML = ''; } else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (mode === 'wire' && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); }
+  if (mode === 'g:poly' && gdraft) gfxFinish(page()); else if (mode.startsWith('g:') && gdraft) { gdraft = null; $('#overlay').innerHTML = ''; } else if (mode === 'roompoly' && fpoly) finishPoly(page()); else if (isWireMode() && wireDraft) finishWire(); else if (mode !== 'select') setMode('select'); else { sel.clear(); render(); }
   closeMenus();
 }
 window.addEventListener('keydown', e => {

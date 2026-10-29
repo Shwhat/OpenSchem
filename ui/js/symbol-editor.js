@@ -33,12 +33,15 @@ function registerUserSym(def) {
   SYM[def.key] = {
     name: def.name || 'Custom symbol', cat: def.cat || 'My symbols', prefix: def.prefix || null,
     role: def.prefix ? (def.role || 'main') : 'pe', contact: def.contact || undefined, fixed: !def.contact,
-    res: !!def.home, fp: !!def.fpIcon, fpAs: def.fpIcon || undefined, user: true,
+    // the Library field files the symbol with a standard: IEC and NFPA symbols follow the palette's standard filter
+    lib: def.lib || '', std: def.lib === 'IEC' || def.lib === 'NFPA' ? def.lib : undefined, pneu: def.lib === 'Pneumatic' || undefined,
+    res: !!def.home || def.lib === 'Residential', fp: !!def.fpIcon, fpAs: def.fpIcon || undefined, user: true,
     conns: (def.conns || []).map(c => [c[0], c[1], c[2] || '']), box: [box[0] - 0.5, box[1] - 0.5, box[2] + 0.5, box[3] + 0.5],
     draw: () => shapesSVG(def.shapes),
     texts: () => (def.shapes || []).filter(s => s.t === 'text').map(s => [s.x, s.y, s.s, s.size || 2.5, !!s.bold]),
   };
 }
+const SYM_LIBS = [['', '(none)'], ['IEC', 'IEC'], ['NFPA', 'NFPA'], ['Pneumatic', 'Pneumatic'], ['Residential', 'Residential']];
 function userKeys() { return Object.keys(SYM).filter(k => SYM[k].user); }
 async function loadLibrary() {
   try { const t = await host.readData('library.json'); if (t) LIB = JSON.parse(t); } catch (e) {}
@@ -110,7 +113,7 @@ function defFromBuiltin(key) {
   const d = SYM[key];
   if (d.user) { const src = LIB.symbols.find(s => s.key === key) || (P.userSyms || {})[key]; const c = clone(src); c.key = 'u_' + uid(); c.name = src.name + ' (copy)'; return c; }
   return { key: 'u_' + uid(), name: d.name + ' (copy)', cat: 'My symbols', prefix: d.prefix || '', role: ['main', 'aux'].includes(d.role) ? d.role : 'main',
-    contact: d.contact && !d.fixed ? d.contact : '', home: !!d.res, fpIcon: d.fp ? (d.fpAs || key) : '', shapes: builtinToShapes(key), conns: clone(d.conns) };
+    contact: d.contact && !d.fixed ? d.contact : '', lib: d.std || (d.pneu ? 'Pneumatic' : d.res ? 'Residential' : ''), home: !!d.res, fpIcon: d.fp ? (d.fpAs || key) : '', shapes: builtinToShapes(key), conns: clone(d.conns) };
 }
 
 // ---------- symbol editor ----------
@@ -221,6 +224,7 @@ function seDraw() {
       ${field('d.prefix', 'Tag prefix', d.prefix)}
       ${field('d.role', 'Function', d.role || 'main', 'select', [['main', 'Main function'], ['aux', 'Auxiliary function']])}
       ${field('d.contact', 'Contact type', d.contact || '', 'select', [['', 'None (fixed numbers)'], ['NO', 'NO (auto 13/14, 23/24)'], ['NC', 'NC (auto 11/12, 21/22)']])}
+      ${field('d.lib', 'Library', d.lib || '', 'select', SYM_LIBS)}
       ${field('d.home', 'Home device', d.home, 'check')}
       ${field('d.fpIcon', 'Floor-plan icon', d.fpIcon || '', 'select', FP_ICON_OPTS)}
       <div class="note">Tag prefix empty = no device tag (like a ground symbol). Home devices use whole-house numbering and circuit colors.</div>
@@ -495,7 +499,7 @@ function deleteSymbol(key) {
   symKey = ''; render();
 }
 function symbolLibrary() {
-  const rows = LIB.symbols.map(s => `<div class="msg" style="cursor:default"><span style="flex:1">${esc(s.name)} <span class="note">${esc(s.cat || '')}${s.prefix ? ' · ' + esc(s.prefix) : ''}</span></span>
+  const rows = LIB.symbols.map(s => `<div class="msg" style="cursor:default"><span style="flex:1">${esc(s.name)} <span class="note">${esc(s.cat || '')}${s.prefix ? ' · ' + esc(s.prefix) : ''}${s.lib ? ' · ' + esc(s.lib) : ''}</span></span>
     <button type="button" class="btn small" data-lib="edit:${s.key}">Edit</button><button type="button" class="btn small" data-lib="copy:${s.key}">Copy</button><button type="button" class="btn small" data-lib="del:${s.key}">Delete</button></div>`).join('');
   const builtins = SYMORDER.filter(k => !SYM[k].user).map(k => `<option value="${k}">${esc(SYM[k].cat)}: ${esc(SYM[k].name)}</option>`).join('');
   dialog('Symbol library', [], null, 'OK', `<div class="sub">Your symbols are stored in the OpenSchem Data folder next to the program, and projects carry a copy of every custom symbol they use.</div>
@@ -529,10 +533,16 @@ function renderSymbols() {
   const fp = P && isFloor(page());
   const all = SYMORDER.concat(userKeys().filter(k => !SYMORDER.includes(k)));
   const q = symQuery.trim().toLowerCase();
-  const keys = all.filter(k => SYM[k] && (fp ? SYM[k].fp : (!SYM[k].ind || !P || S().industrial)))
-    .filter(k => !q || `${SYM[k].name} ${SYM[k].cat} ${SYM[k].prefix || ''} ${k}`.toLowerCase().includes(q));
-  const cats = []; for (const k of keys) { const c = SYM[k].cat; if (!cats.includes(c)) cats.push(c); }
+  // the project's standard comes first; the other standard is shown on request, in its own categories
+  const std = projStd(), oth = otherStd(std), showOth = !!PREFS.showOtherStd;
+  const catOf = k => SYM[k].std === oth ? oth + ': ' + SYM[k].cat : SYM[k].cat;
+  const keys = all.filter(k => SYM[k] && (fp ? SYM[k].fp : (!SYM[k].ind || !P || S().industrial)) && (fp || SYM[k].std !== oth || showOth))
+    .filter(k => !q || `${SYM[k].name} ${catOf(k)} ${SYM[k].prefix || ''} ${k}`.toLowerCase().includes(q));
+  const pneuFirst = !fp && isPneuPage(page());
+  const ordered = pneuFirst ? keys.filter(k => SYM[k].pneu).concat(keys.filter(k => !SYM[k].pneu)) : keys;
+  const cats = []; for (const k of ordered) { const c = catOf(k); if (!cats.includes(c)) cats.push(c); }
   let s = `<input class="search" id="symsearch" placeholder="Search symbols" value="${esc(symQuery)}">`;
+  if (!fp && (!P || S().industrial)) s += `<label class="symother"><input type="checkbox" id="symother" ${showOth ? 'checked' : ''}> Show ${oth} symbols too <span class="note">(project: ${std})</span></label>`;
   s += '<div class="navbtns"><button class="btn small" data-act="newSymbol">New symbol</button><button class="btn small" data-act="symbolLibrary">Library...</button></div>';
   if (fp) s += '<div class="note" style="padding:0 10px 4px">Click a symbol, then click on the floor plan. Right-click a symbol to copy and modify it.</div>';
   for (const c of cats) {
@@ -540,12 +550,13 @@ function renderSymbols() {
     s += `<div class="symcat sc-h" data-symcat="${esc(c)}"><span class="caret">${open ? '▾' : '▸'}</span>${esc(c)}</div>`;
     if (!open) continue;
     s += '<div class="symgrid">';
-    for (const k of keys.filter(k => SYM[k].cat === c)) s += `<div class="symcard${mode === 'place' && placeSym === k ? ' on' : ''}" data-sym="${k}" title="${esc(SYM[k].name)}">${fp ? fpIcon(k).replace('width:20px;height:20px', 'width:40px;height:40px') : symPreview(k)}<span>${esc(SYM[k].name)}</span></div>`;
+    for (const k of ordered.filter(k => catOf(k) === c)) s += `<div class="symcard${mode === 'place' && placeSym === k ? ' on' : ''}" data-sym="${k}" title="${esc(SYM[k].name)}">${fp ? fpIcon(k).replace('width:20px;height:20px', 'width:40px;height:40px') : symPreview(k)}<span>${esc(SYM[k].name)}</span></div>`;
     s += '</div>';
   }
   if (!keys.length) s += '<div class="note" style="padding:8px 10px">No symbols match.</div>';
   if (!fp && !q) s += '<div class="symcat">Other</div><div class="navbtns"><button class="btn small" data-act="wireMode">Connection (W)</button><button class="btn small" data-act="textMode">Text (T)</button></div>';
   $('#tab-symbols').innerHTML = s;
+  const so = $('#symother'); if (so) so.onchange = () => { PREFS.showOtherStd = so.checked; savePrefs(); renderSymbols(); };
   const inp = $('#symsearch');
   inp.oninput = () => { symQuery = inp.value; renderSymbols(); const n = $('#symsearch'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
 }

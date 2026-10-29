@@ -86,7 +86,7 @@ export const tests = {
     await t.page.fill('#czq', 'renumber'); await t.page.click('[data-czadd="renumberDlg"]');
     await t.confirm();
     await t.open();
-    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'View', 'Project', 'X']);
+    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'Pneumatics', 'View', 'Project', 'X']);
   },
   'a new program version resets the saved ribbon so new buttons show up': async t => {
     await t.open();
@@ -98,7 +98,7 @@ export const tests = {
     t.ok((await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent))).includes('X'), 'same version keeps the saved ribbon');
     await t.eval(() => { PREFS.appVersion = '1.0.0'; savePrefs(); });
     await t.open();
-    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'View', 'Project']);
+    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'Pneumatics', 'View', 'Project']);
     t.eq(await t.eval(() => [PREFS.ribbon, PREFS.appVersion === APP_VERSION]), [null, true]);
     t.ok(await t.eval(() => DEFAULT_RIBBON.find(x => x.id === 'fmodify').groups.some(g => g.items.includes('alignToGrid'))), 'Align to grid is on the Modify tab');
   },

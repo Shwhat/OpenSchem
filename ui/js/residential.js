@@ -82,7 +82,7 @@ const DEF_SETTINGS = { terms: 'eng', tagStyle: 'eng', numbering: 'house', fpSymb
   reportCols: 'eng', circuitColors: true, switchLegs: true, defAwg: '14' };
 function S() { if (!P.settings) P.settings = Object.assign({}, DEF_SETTINGS); return P.settings; }
 function ensureProject(p) {
-  p.settings = Object.assign({}, DEF_SETTINGS, p.settings || {});
+  p.settings = Object.assign({}, DEF_SETTINGS, p.settings || {}); p.std = p.std === 'NFPA' ? 'NFPA' : 'IEC';
   p.levels = p.levels || []; p.pool = p.pool || []; p.circuits = p.circuits || {}; p.assets = p.assets || {};
   for (const pg of p.pages) { pg.items = pg.items || []; pg.wires = pg.wires || []; pg.cables = pg.cables || []; pg.gfx = pg.gfx || []; if (pg.kind === 'layout') pg.lay = pg.lay || []; }
   p.revs = p.revs || []; p.todos = p.todos || [];
@@ -227,7 +227,7 @@ function settingsDlg() {
     ['industrial', 'Show industrial symbols', s.industrial, 'check'],
     ['circuitColors', 'Circuit colors on floor plans', s.circuitColors, 'check'],
     ['switchLegs', 'Switch legs on floor plans', s.switchLegs, 'check'],
-    ['theme', 'Theme', PREFS.theme, 'select', [['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow Windows']]],
+    ['theme', 'Theme', PREFS.theme, 'select', [['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow system']]],
     ['sheet', 'Drawing sheet', PREFS.sheet, 'select', [['white', 'White (paper)'], ['dark', 'Dark']]],
     ['snap', 'Snap to grid (all pages)', PREFS.snap, 'check'],
     ['autoConnect', 'Connect facing connection points automatically', PREFS.autoConnect, 'check'],
@@ -241,7 +241,7 @@ function settingsDlg() {
 }
 function newResidential() {
   if (!confirmDiscard()) return;
-  const p = newProject(); p.name = 'My home';
+  const p = newProject(); p.name = 'My home'; p.std = 'NFPA';
   p.settings = Object.assign({}, DEF_SETTINGS, { terms: 'home', tagStyle: 'home', industrial: false, reportCols: 'plain' });
   p.pages = [newPage('PANEL', '', '1', 'Main panel'), newPage('CKT1', '', '1', 'Circuit 1')];
   const lv = { id: uid(), name: 'Main floor', rooms: [], places: [], image: null, scale: 48 }; p.levels = [lv];

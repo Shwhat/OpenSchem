@@ -7,8 +7,8 @@
 // cell keeps your value and gets a marker when the project value under it changes. Locked reports keep a frozen
 // copy of the project data; unlocking keeps the frozen copy until you press Refresh.
 const SECTION_DEFS = [['cover', 'Cover sheet'], ['toc', 'Table of contents'], ['sch', 'Schematic'], ['lay', 'Panel layouts'], ['fp', 'Floor plans'], ['custom', 'Custom reports'], ['rep', 'Reports']];
-const REPORT_DEFS = [['panel', 'Panel schedules'], ['bom', 'Bill of materials'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview']];
-const CUSTOM_KINDS = [['bom', 'Bill of materials'], ['panel', 'Panel schedule'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview'], ['toc', 'Table of contents'], ['cover', 'Cover sheet']];
+const REPORT_DEFS = [['panel', 'Panel schedules'], ['bom', 'Bill of materials'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['tubes', 'Tubing list'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview']];
+const CUSTOM_KINDS = [['bom', 'Bill of materials'], ['panel', 'Panel schedule'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['tubes', 'Tubing list'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview'], ['toc', 'Table of contents'], ['cover', 'Cover sheet']];
 const sectionLabel = k => k === 'sch' ? (home() ? 'Circuits' : 'Schematic') : (SECTION_DEFS.find(s => s[0] === k) || [k, k])[1];
 const reportLabel = k => (REPORT_DEFS.find(s => s[0] === k) || CUSTOM_KINDS.find(s => s[0] === k) || [k, k])[1];
 function keepOrder(saved, def) { const o = (saved || []).filter(k => def.includes(k)); return o.concat(def.filter(k => !o.includes(k))); }
@@ -66,6 +66,7 @@ function customSource(kind, ctx = {}) {
     }
     return { cols: CABD_COLS(), rows };
   }
+  if (kind === 'tubes') return { cols: TUBE_COLS(), rows: tubeRows() };
   if (kind === 'doors') { const rows = openingRows(); return { cols: OPEN_COLS(), rows: rows.map(r => ({ key: r.o.id, cells: r.cells, goto: r.o.id })) }; }
   if (kind === 'rev') return { cols: REV_COLS(), rows: (P.revs || []).map(r => ({ key: 'rev:' + r.rev, cells: [r.rev + (r.closed ? '' : ' (open)'), r.date || '', r.desc || '', r.by || '', P.pages.filter(p => (p.revs || []).includes(r.rev)).map(pageName).join(', ')] })) };
   if (kind === 'toc') return { cols: TOC_COLS(), rows: (ctx.toc || []).map(p => Object.assign({ key: 'page:' + p.id }, tocRowFor(p))) };

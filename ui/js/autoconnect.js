@@ -43,7 +43,7 @@ function segHitsBox(a, b, bx) {
 function autoConnect(pg, items) {
   if (!PREFS.autoConnect || !items.length || isFloor(pg) || isLayout(pg) || pg.report) return 0;
   const segs = autoSegments(pg, items);
-  for (const pts of segs) pg.wires.push(onActiveLayer(Object.assign({ id: uid(), pts, auto: true }, autoWire(pg, pts) || {})));
+  for (const pts of segs) pg.wires.push(onActiveLayer(Object.assign({ id: uid(), pts, auto: true }, isPneuPage(pg) ? newTubeProps() : autoWire(pg, pts) || {})));
   return segs.length;
 }
 // after moving: drop automatic connections the move left crooked, then connect again

@@ -80,7 +80,8 @@ function insertMacroDlg() {
     const [op, id] = b.dataset.mac.split(':'); const m = ms.find(x => x.id === id); if (!m) return;
     if (op === 'ins') {
       if (isFloor(page()) || page().report) { alert('Open a schematic page first.'); return; }
-      $('#dlg').close(); placeMacro = m; setMode('macro'); flash(`Click to place "${m.name}". Esc to finish.`);
+      // the check reuses this dialog when the macro uses the other standard
+      stdCheck(m, `The macro "${m.name}"`).then(src => { if ($('#dlg').open) $('#dlg').close(); if (!src) return; placeMacro = src; setMode('macro'); flash(`Click to place "${m.name}". Esc to finish.`); });
     } else if (op === 'ren') { const n = prompt('Macro name:', m.name); if (n) { m.name = n; saveLibrary(); $('#dlg').close(); insertMacroDlg(); } }
     else if (op === 'del') { if (confirm(`Delete macro "${m.name}"?`)) { LIB.macros = ms.filter(x => x !== m); saveLibrary(); $('#dlg').close(); insertMacroDlg(); } }
   };

@@ -17,7 +17,7 @@ function render0(o = {}) {
   buildIndex(); if (syncDeviceBoxes()) buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
   applyLayerStyles(); renderCanvas();
   renderPages(); renderPageTabs(); renderToolbar();
-  const sk = `${isFloor(page())}|${S().industrial}|${S().fpSymbols}`; if (sk !== symKey) { symKey = sk; renderSymbols(); }
+  const sk = `${isFloor(page())}|${S().industrial}|${S().fpSymbols}|${projStd()}|${isPneuPage(page())}`; if (sk !== symKey) { symKey = sk; renderSymbols(); }
   if (!$('#tab-devices').classList.contains('hidden')) renderDevices();
   if (o.props !== false) renderProps();
   renderTodo();
@@ -25,7 +25,7 @@ function render0(o = {}) {
 }
 function renderCanvas() { useSheet(page()); $('#content').innerHTML = pageSVG(page()); applyView(); }
 function updateTitle() {
-  const n = (filePath ? filePath.split(/[\\/]/).pop() : 'Untitled.osp') + (dirty ? ' *' : '');
+  const n = host.fileLabel(filePath) + (dirty ? ' *' : '');
   $('#docname').textContent = `${P.name}  |  ${n}`;
   host.title(`${dirty ? '* ' : ''}${P.name} - OpenSchem`);
   host.setDirty(dirty);

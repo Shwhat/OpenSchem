@@ -3,7 +3,7 @@
 // canvas. An area is a row of columns; a column is a stack of groups; a group holds panels as tabs. Drag a tab to move
 // a panel: onto another group to tab it or split beside it, to a window edge to dock, or onto the canvas to float it.
 // Floating windows stick to each other and to the docked panels, and join another panel when dropped on its tab bar.
-// Layouts are saved as named workspaces in the program preferences (data folder).
+// Layouts are saved as named workspaces in the user preferences (prefs.json).
 const PANELS = {
   pages: { title: 'Pages', el: '#tab-pages', home: 'left' },
   devices: { title: 'Devices', el: '#tab-devices', home: 'left' },

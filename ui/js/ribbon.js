@@ -34,6 +34,8 @@ const RI = {
   ribbon: '<svg viewBox="0 0 20 20"><rect x="2" y="4" width="16" height="4" fill="#dbe6f7" stroke="#2b4f91"/><rect x="2" y="9" width="16" height="7" fill="#fff" stroke="#556"/><path d="M5 12h3M10 12h3" stroke="#556" stroke-width="1.5"/></svg>',
   library: '<svg viewBox="0 0 20 20"><rect x="3" y="3" width="4" height="14" fill="#dbe6f7" stroke="#2b4f91"/><rect x="8" y="3" width="4" height="14" fill="#f4e2c2" stroke="#8a6d1d"/><path d="M13 4l3.5-.8 2.5 13-3.5.8z" fill="#e3f0e3" stroke="#2f7d32"/></svg>',
   newsym: '<svg viewBox="0 0 20 20"><rect x="3" y="3" width="11" height="11" fill="none" stroke="#2b3442" stroke-width="1.3" stroke-dasharray="2 1.5"/><path d="M15 12v6M12 15h6" stroke="#2f7d32" stroke-width="1.8"/></svg>',
+  tube: '<svg viewBox="0 0 20 20"><path d="M3 15h6V5h8" fill="none" stroke="#1f5fbf" stroke-width="2.4"/><path d="M3 15h6V5h8" fill="none" stroke="#dbe6f7" stroke-width="0.9"/></svg>',
+  mfr: '<svg viewBox="0 0 20 20"><path d="M2 17V9l4 2.5V9l4 2.5V9l4 2.5V4h3v13z" fill="#e3e8ef" stroke="#2b3442" stroke-width="1.1"/><path d="M5 14h2M9 14h2M13 14h2" stroke="#2b3442"/></svg>',
   room: '<svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="12" fill="none" stroke="#2b3442" stroke-width="1.8"/></svg>',
   roomoval: '<svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5.5" fill="none" stroke="#2b3442" stroke-width="1.8"/></svg>',
   roomcirc: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#2b3442" stroke-width="1.8"/></svg>',
@@ -166,7 +168,7 @@ const CMDS = {
   prevPage: ['Previous', 'prev', 'prevPage'], nextPage: ['Next', 'next', 'nextPage'],
   addPage: ['New page', 'page', 'addPage'], addFloorPage: ['Floor plan page', 'fpage', 'addFloorPage'], pageProps: ['Page props', 'props', 'pageProps'], dupPage: ['Duplicate', 'dup', 'dupPage'], delPage: ['Delete page', 'del', 'delPage'],
   renumberDlg: ['Renumber', 'num', 'renumberDlg'], wireDlg: ['Wire numbers', 'num', 'wireDlg'], lockWires: ['Lock wires', 'lock', 'lockWires'],
-  goPanel: ['Panel schedule', 'report', 'goPanel'], goBOM: ['BOM', 'report', 'goBOM'], goTerms: ['Terminals', 'report', 'goTerms'], partsDlg: ['Parts', 'parts', 'partsDlg'], toggleAutoConnect: ['Auto connect', 'autoconn', 'toggleAutoConnect', () => PREFS.autoConnect], alignToGrid: ['Align to grid', 'align', 'alignToGrid'], newLayoutPage: ['Panel layout', 'layout', 'newLayoutPage'], findDlg: ['Find', 'find', 'findDlg'], terminalEditor: ['Terminal strip', 'tstrip', 'terminalEditor'], exportDevicesXlsx: ['Excel export', 'xlsx', 'exportDevicesXlsx'], importDevicesXlsx: ['Excel import', 'xlsxin', 'importDevicesXlsx'], exportBOMXlsx: ['BOM Excel', 'xlsx', 'exportBOMXlsx'], gLine: ['Line', 'gline', 'gLine', () => mode === 'g:line'], gPoly: ['Polyline', 'gpoly', 'gPoly', () => mode === 'g:poly'], gRect: ['Rectangle', 'grect', 'gRect', () => mode === 'g:rect'], gCircle: ['Circle', 'gcircle', 'gCircle', () => mode === 'g:circle'], gDim: ['Dimension', 'gdim', 'gDim', () => mode === 'g:dim'], gfxImage: ['Image', 'image', 'gfxImage'], panelDirectoryDlg: ['Breaker labels', 'label', 'panelDirectoryDlg'], loadDefaultsDlg: ['Load defaults', 'load', 'loadDefaultsDlg'],
+  goPanel: ['Panel schedule', 'report', 'goPanel'], goBOM: ['BOM', 'report', 'goBOM'], goTerms: ['Terminals', 'report', 'goTerms'], partsDlg: ['Parts', 'parts', 'partsDlg'], tubeMode: ['Tube', 'tube', 'tubeMode', () => mode === 'tube'], goTubes: ['Tubing list', 'report', 'goTubes'], copyPage: ['Copy page', 'copy', 'copyPage'], pastePage: ['Paste page', 'paste', 'pastePage'], mfrDlg: ['Manufacturers', 'mfr', 'mfrDlg'], toggleAutoConnect: ['Auto connect', 'autoconn', 'toggleAutoConnect', () => PREFS.autoConnect], alignToGrid: ['Align to grid', 'align', 'alignToGrid'], newLayoutPage: ['Panel layout', 'layout', 'newLayoutPage'], findDlg: ['Find', 'find', 'findDlg'], terminalEditor: ['Terminal strip', 'tstrip', 'terminalEditor'], exportDevicesXlsx: ['Excel export', 'xlsx', 'exportDevicesXlsx'], importDevicesXlsx: ['Excel import', 'xlsxin', 'importDevicesXlsx'], exportBOMXlsx: ['BOM Excel', 'xlsx', 'exportBOMXlsx'], gLine: ['Line', 'gline', 'gLine', () => mode === 'g:line'], gPoly: ['Polyline', 'gpoly', 'gPoly', () => mode === 'g:poly'], gRect: ['Rectangle', 'grect', 'gRect', () => mode === 'g:rect'], gCircle: ['Circle', 'gcircle', 'gCircle', () => mode === 'g:circle'], gDim: ['Dimension', 'gdim', 'gDim', () => mode === 'g:dim'], gfxImage: ['Image', 'image', 'gfxImage'], panelDirectoryDlg: ['Breaker labels', 'label', 'panelDirectoryDlg'], loadDefaultsDlg: ['Load defaults', 'load', 'loadDefaultsDlg'],
   exportPanel: ['Panel CSV', 'csv', 'exportPanel'], exportBOM: ['BOM CSV', 'csv', 'exportBOM'], exportTerminals: ['Terminals CSV', 'csv', 'exportTerminals'],
   settingsDlg: ['Settings', 'settings', 'settingsDlg'], customizeRibbon: ['Customize', 'ribbon', 'customizeRibbon'],
   symbolLibrary: ['Symbol library', 'library', 'symbolLibrary'], newSymbol: ['New symbol', 'newsym', 'newSymbol'],
@@ -190,13 +192,23 @@ const DEFAULT_RIBBON = [
     { name: 'Project', items: ['checkProject', 'revisionsDlg'] },
   ] },
   { id: 'insert', name: 'Insert', groups: [
-    { name: 'Coils and contacts', items: ['sym:coil', 'sym:no', 'sym:nc', 'sym:mc3'] },
-    { name: 'Command and protection', items: ['sym:pbno', 'sym:pbnc', 'sym:estop', 'sym:cb3', 'sym:fuse', 'sym:ol3'] },
-    { name: 'Loads', items: ['sym:motor', 'sym:lamp', 'sym:ps'] },
-    { name: 'Connections', items: ['wireMode', 'cableMode', 'sym:term', 'sym:ip', 'sym:pe'] },
+    { name: 'Coils and contacts', items: ['sym:coil', 'sym:tdon', 'sym:no', 'sym:nc', 'sym:co', 'sym:tno_on', 'sym:mc3', 'sym:solc'] },
+    { name: 'Command and protection', items: ['sym:pbno', 'sym:pbnc', 'sym:estop', 'sym:sel', 'sym:cb3', 'sym:mpcb', 'sym:disc3', 'sym:fuse', 'sym:ol3'] },
+    { name: 'Switches and sensors', items: ['sym:lsno', 'sym:lsnc', 'sym:prox', 'sym:psw', 'sym:tsw', 'sym:lvl', 'sym:flow'] },
+    { name: 'Loads', items: ['sym:motor', 'sym:motor1', 'sym:lamp', 'sym:horn', 'sym:heater', 'sym:vfd', 'sym:xfmr', 'sym:ps'] },
+    { name: 'Connections', items: ['wireMode', 'cableMode', 'sym:term', 'sym:plug', 'sym:ip', 'sym:pe'] },
+    { name: 'Single-line', items: ['sym:sl_cb', 'sym:sl_disc', 'sym:sl_fuse', 'sym:sl_k', 'sym:sl_ol', 'sym:sl_motor', 'sym:sl_xfmr', 'sym:sl_vfd'] },
     { name: 'Boxes and PLC', items: ['sym:bbox', 'sym:dbox', 'sym:plccard', 'sym:plcin', 'sym:plcout'] },
     { name: 'Graphics', items: ['gLine', 'gPoly', 'gRect', 'gCircle', 'gDim', 'gfxImage', 'textMode'] },
     { name: 'Home', items: ['sym:rbrk1', 'sym:rbrkgf', 'sym:rswt', 'sym:rsw3', 'sym:rdim', 'sym:rout', 'sym:routgf', 'sym:rlgt', 'sym:rfan', 'sym:rsmk', 'sym:rjbx', 'sym:rnbar'] },
+  ] },
+  { id: 'pneu', name: 'Pneumatics', groups: [
+    { name: 'Air supply', items: ['sym:pn_sup', 'sym:pn_exh', 'sym:pn_sil', 'sym:pn_frl', 'sym:pn_gauge', 'sym:pn_res'] },
+    { name: 'Valves', items: ['sym:pn_v22', 'sym:pn_v32', 'sym:pn_v52', 'sym:pn_v53c', 'sym:pn_v53e', 'sym:pn_v53p'] },
+    { name: 'Flow', items: ['sym:pn_shut', 'sym:pn_check', 'sym:pn_fc', 'sym:pn_qe'] },
+    { name: 'Actuators', items: ['sym:pn_cyl_sa', 'sym:pn_cyl_da', 'sym:pn_cyl_dac', 'sym:pn_cyl_mag', 'sym:pn_cyl_rl'] },
+    { name: 'Vacuum and sensors', items: ['sym:pn_vac', 'sym:pn_cup', 'sym:pn_psw', 'sym:pn_psens'] },
+    { name: 'Tubes', items: ['tubeMode', 'goTubes'] },
   ] },
   { id: 'floor', name: 'Floor plan', contextual: true, groups: [
     { name: 'Walls', items: ['selectMode', 'dWall', 'wallSettingsDlg', 'dDoor', 'dDoorDouble', 'dDoorPocket', 'dDoorBifold', 'dDoorSliding', 'dDoorGarage', 'dWindow', 'dOpening'] },
@@ -233,13 +245,13 @@ const DEFAULT_RIBBON = [
     { name: 'Options', items: ['settingsDlg', 'customizeRibbon'] },
   ] },
   { id: 'project', name: 'Project', groups: [
-    { name: 'Pages', items: ['addPage', 'addFloorPage', 'newLayoutPage', 'pageProps', 'dupPage', 'delPage'] },
+    { name: 'Pages', items: ['addPage', 'addFloorPage', 'newLayoutPage', 'pageProps', 'dupPage', 'copyPage', 'pastePage', 'delPage'] },
     { name: 'Numbering', items: ['renumberDlg', 'wireDlg', 'lockWires', 'terminalEditor'] },
-    { name: 'Reports', items: ['goToc', 'goPanel', 'goBOM', 'goConn', 'goCables', 'goTerms'] },
+    { name: 'Reports', items: ['goToc', 'goPanel', 'goBOM', 'goConn', 'goCables', 'goTubes', 'goTerms'] },
     { name: 'Revisions', items: ['revisionsDlg'] },
     { name: 'Export', items: ['exportPDF', 'exportSVG', 'exportPNG', 'exportPanel', 'exportBOM', 'exportTerminals'] },
     { name: 'Excel', items: ['exportDevicesXlsx', 'importDevicesXlsx', 'exportBOMXlsx'] },
-    { name: 'Symbols and parts', items: ['symbolLibrary', 'newSymbol', 'partsDlg'] },
+    { name: 'Symbols and parts', items: ['symbolLibrary', 'newSymbol', 'partsDlg', 'mfrDlg'] },
     { name: 'Home', items: ['loadDefaultsDlg', 'panelDirectoryDlg'] },
   ] },
 ];
@@ -251,7 +263,7 @@ function ribbonDef() {
 }
 function cmdInfo(id) {
   if (id.startsWith('sym:')) {
-    const k = id.slice(4); const d = SYM[k]; if (!d) return null;
+    const k = stdSym(id.slice(4)); const d = SYM[k]; if (!d) return null;
     return { label: d.name, sym: k };
   }
   const c = CMDS[id]; if (!c) return null;
@@ -266,7 +278,7 @@ function renderToolbar() {
     else if (!fp && ribbonTab === 'floor') ribbonTab = 'home';
     lastPageKind = kind;
   }
-  const tabs = def.filter(t => !t.contextual || fp);
+  const tabs = def.filter(t => (!t.contextual || fp) && !(t.id === 'pneu' && !S().industrial));
   if (!tabs.some(t => t.id === ribbonTab)) ribbonTab = (tabs[0] || {}).id;
   const tab = tabs.find(t => t.id === ribbonTab);
   let s = '<div class="rtabs">' + tabs.map(t => `<div class="rtab${t.id === ribbonTab ? ' active' : ''}${t.contextual ? ' ctx' : ''}" data-rtab="${esc(t.id)}">${esc(t.name)}</div>`).join('') + (typeof workspaceSelectHTML === 'function' ? workspaceSelectHTML() : '') + '</div><div class="rpanel">';
@@ -359,7 +371,7 @@ function customizeRibbon() {
   };
 }
 
-// ---------- preferences in the portable data folder ----------
+// ---------- preferences (prefs.json, kept per user on the server) ----------
 async function loadPrefs() {
   try { const t = await host.readData('prefs.json'); if (t) Object.assign(PREFS, JSON.parse(t)); } catch (e) {}
   // a new program version starts from the default ribbon, so new buttons always show up

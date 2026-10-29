@@ -116,7 +116,7 @@ function itemSVG(it, pg, isSel, ghost, o = {}, locked = false) {
     }
     return s + '</g>';
   }
-  if (d.role === 'pe' || d.role === 'bar') return s + '</g>';
+  if (d.role === 'pe' || d.role === 'bar' || d.role === 'mark') return s + '</g>';
   // device label
   const lines = [];
   const stripCont = d.role === 'term' && !ghost && pg.items.some(o => o !== it && o.sym === 'term' && devKey(o) === devKey(it) && (o.rot || 0) === rot &&
@@ -129,6 +129,15 @@ function itemSVG(it, pg, isSel, ghost, o = {}, locked = false) {
     if (dv) {
       if (it.role === 'aux' && dv.main) lines.push([ref(pg, dv.main), false, 'tx ly-xref', pgIdOf(dv.main)]);
       else if (it.role === 'aux' && !dv.main) lines.push(['no main function', false, 'tw ly-xref']);
+      else if (it.role === 'sl') {
+        // another view of the device (single-line, or a pneumatic view): refer to the other views, main function first
+        const oth = dv.items.filter(o => o !== it).sort((a, b) => (b.role === 'main') - (a.role === 'main')); const r = oth.map(o => ref(pg, o));
+        for (let i = 0; i < r.length; i += 3) lines.push([r.slice(i, i + 3).join(' '), false, 'tx ly-xref', pgIdOf(oth[i])]);
+      }
+      else if (it.role === 'main' && d.mirror) {
+        const sl = dv.items.filter(o => o.role === 'sl');
+        if (sl.length) lines.push([sl.map(o => ref(pg, o)).join(' '), false, 'tx ly-xref', pgIdOf(sl[0])]);
+      }
       else if (it.role === 'main' && !d.mirror) {
         const oth = dv.items.filter(o => o !== it); const r = oth.map(o => ref(pg, o));
         for (let i = 0; i < r.length; i += 3) lines.push([r.slice(i, i + 3).join(' '), false, 'tx ly-xref', pgIdOf(oth[i])]);
@@ -155,8 +164,9 @@ function itemSVG(it, pg, isSel, ghost, o = {}, locked = false) {
     const dv = IX.dev.get(devKey(it));
     const entries = [];
     if (dv) for (const o of dv.items) {
-      if (o.role === 'main') continue;
-      const kind = CONTACT_KIND[o.sym] || 'NO'; const cl = o.cl || [];
+      if (o.role === 'main' || o.role === 'sl') continue;
+      const kind = CONTACT_KIND[o.sym] || (SYM[o.sym] && SYM[o.sym].contact) || 'NO'; const cl = o.cl || [];
+      if (kind === 'CO') { entries.push({ kind: 'NC', a: cl[0] || '', b: (cl[1] || '') + '/' + (cl[2] || ''), r: ref(pg, o), link: pgIdOf(o) }); continue; }
       for (let i = 0; i < cl.length; i += 2) entries.push({ kind, a: cl[i] || '', b: cl[i + 1] || '', r: ref(pg, o), link: pgIdOf(o) });
     }
     if (entries.length) {
@@ -166,15 +176,18 @@ function itemSVG(it, pg, isSel, ghost, o = {}, locked = false) {
       s += `<g class="sym ly-xrefg" stroke-width="0.25">`;
       entries.forEach((e, i) => {
         const gy = y0 + i * lh, gx = x0 + 1;
-        s += e.kind === 'NO'
+        // NFPA projects show parallel-line contacts (a slash for NC), IEC projects blade contacts
+        if (isNFPA()) s += `<path d="M${gx},${gy - 1.4}v0.8M${gx - 0.9},${gy - 0.6}h1.8M${gx - 0.9},${gy + 0.6}h1.8M${gx},${gy + 1.4}v-0.8${e.kind === 'NC' ? `M${gx - 1},${gy + 1.1}L${gx + 1},${gy - 1.1}` : ''}"/>`;
+        else s += e.kind === 'NO'
           ? `<path d="M${gx},${gy - 1.4}v0.9M${gx},${gy + 1.4}v-0.9l-0.9,-1.2"/>`
           : `<path d="M${gx},${gy - 1.4}v0.9h0.8M${gx},${gy + 1.4}v-0.9l1,-1.3"/>`;
       });
       s += '</g>';
+      const rx = x0 + Math.max(10.5, 3.8 + Math.max(...entries.map(e => `${e.a}-${e.b}`.length)) * 1.2);
       entries.forEach((e, i) => {
         const gy = y0 + i * lh;
         s += txt(x0 + 3, gy + 0.8, `${e.a}-${e.b}`, { size: FSS, cls: 'ly-xref' });
-        s += txt(x0 + 10.5, gy + 0.8, e.r, { size: FSS, cls: 'tx ly-xref', link: e.link });
+        s += txt(rx, gy + 0.8, e.r, { size: FSS, cls: 'tx ly-xref', link: e.link });
       });
     }
   }
@@ -212,11 +225,14 @@ function pageSVG0(pg, o = {}) {
     if (!objShown(w, o)) continue;
     const isSel = !o.print && sel.has(w.id); const lk = !o.print && objLocked(w);
     const d = 'M' + w.pts.map(p => p.join(',')).join('L');
-    const wc = !isSel && w.color && wireColor(w.color) ? ` style="stroke:${wireColor(w.color)}"` : '';
+    const wc = w.tube ? ` style="${!isSel ? `stroke:${TUBE_RGB[w.color] || '#1f5fbf'};` : ''}stroke-width:0.5"` : !isSel && w.color && wireColor(w.color) ? ` style="stroke:${wireColor(w.color)}"` : '';
     s += `<g ${lk ? '' : `data-id="${w.id}" `}class="${isSel ? 'selw' : ''}">`;
     if (wOn) s += `${lk ? '' : `<path class="wirehit" d="${d}"/>`}<path class="wire ly-wire" d="${d}"${wc}/>`;
     const num = WN.get(w.id); const lp = wireLabelPos(w);
-    if (wnOn && num && lp && lp.len >= 10) {
+    if (w.tube && wnOn && lp && lp.len >= 10) {
+      const lab = [w.tag, tubeOdLabel(w.od)].filter(Boolean).join(' ');
+      s += lp.vert ? txt(lp.x - 0.9, lp.y, lab, { size: FSS, anchor: 'middle', rot: -90, cls: (isSel ? 'tx ' : '') + 'ly-wno' }) : txt(lp.x, lp.y - 0.9, lab, { size: FSS, anchor: 'middle', cls: (isSel ? 'tx ' : '') + 'ly-wno' });
+    } else if (wnOn && num && lp && lp.len >= 10) {
       s += lp.vert ? txt(lp.x - 0.9, lp.y, num, { size: FSS, anchor: 'middle', rot: -90, cls: (isSel ? 'tx ' : '') + 'ly-wno' })
                    : txt(lp.x, lp.y - 0.9, num, { size: FSS, anchor: 'middle', cls: (isSel ? 'tx ' : '') + 'ly-wno' });
     }
