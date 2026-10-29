@@ -17,7 +17,7 @@ function render0(o = {}) {
   buildIndex(); if (syncDeviceBoxes()) buildIndex(); NETS = computeNets(); WN = computeWireNumbers(); REPORTS = buildReports();
   applyLayerStyles(); renderCanvas();
   renderPages(); renderPageTabs(); renderToolbar();
-  const sk = `${isFloor(page())}|${S().industrial}|${S().fpSymbols}`; if (sk !== symKey) { symKey = sk; renderSymbols(); }
+  const sk = `${isFloor(page())}|${S().industrial}|${S().fpSymbols}|${projStd()}|${isPneuPage(page())}`; if (sk !== symKey) { symKey = sk; renderSymbols(); }
   if (!$('#tab-devices').classList.contains('hidden')) renderDevices();
   if (o.props !== false) renderProps();
   renderTodo();

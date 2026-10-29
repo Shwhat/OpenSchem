@@ -276,6 +276,11 @@ func TestDataFiles(t *testing.T) {
 	if !strings.Contains(body, `"x"`) {
 		t.Fatal("parts are shared")
 	}
+	a.req("PUT", "/api/data/manufacturers.json", map[string]any{"manufacturers": []map[string]string{{"code": "DEV", "name": "Devon Controls"}}})
+	_, body = b.do("GET", "/api/data/manufacturers.json", "", false)
+	if !strings.Contains(body, `"DEV"`) {
+		t.Fatal("the manufacturer list is shared")
+	}
 	for _, bad := range []string{"users.json", "sessions.json", "..%2Fusers.json", "autosave.json"} {
 		code, _ := a.do("GET", "/api/data/"+bad, "", false)
 		if code == 200 {

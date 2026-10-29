@@ -11,7 +11,7 @@ export const tests = {
   'BOM groups by part number and flags missing parts': async t => {
     await t.open('#ind');
     const bom = await t.eval(() => bomRows().map(r => [r.qty, r.part, r.missing]));
-    t.ok(bom.some(r => r[0] === 2 && r[1] === 'DF101'), 'two fuses share one row');
+    t.ok(bom.some(r => r[0] === 2 && r[1] === 'SCH.DF101'), 'two fuses share one row');
     t.eq(bom.filter(r => r[2]).length, 2, 'devices without part numbers');
     t.ok(bom.findIndex(r => r[2]) > bom.findIndex(r => !r[2]), 'missing parts sorted last');
   },

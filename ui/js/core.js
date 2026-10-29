@@ -175,7 +175,7 @@ const lastMain = {};
 let clip = null;
 
 function newProject() {
-  return { app: 'OpenSchem', ver: FORMAT_VERSION, name: 'New project', company: '', author: '', created: today(),
+  return { app: 'OpenSchem', ver: FORMAT_VERSION, std: 'IEC', name: 'New project', company: '', author: '', created: today(),
            wireScheme: 'seq', wireStart: 1, potNames: true,
            pages: [newPage('', '', '1', 'Cover / main power')] };
 }
@@ -281,6 +281,7 @@ function computeNets() {
 function computeWireNumbers() {
   const nets = new Map();
   P.pages.forEach((pg, pi) => pg.wires.forEach(w => {
+    if (w.tube || pg.type === 'sl') return;
     const r = NETS.find('w:' + w.id);
     if (!nets.has(r)) nets.set(r, { wires: [], first: null });
     const n = nets.get(r); n.wires.push({ w, pg, pi });
@@ -332,7 +333,9 @@ function nextTerminal(fn, loc, strip) {
   return String(max + 1);
 }
 function assignContactNumbers(it) {
-  const d = SYM[it.sym]; if (!d.contact || d.fixed || it.role === 'main') return;
+  const d = SYM[it.sym];
+  if (d.coilNo) { const k = devKey(it); const n = [...allItems()].filter(o => o !== it && devKey(o) === k && SYM[o.sym] && SYM[o.sym].coilNo).length; it.cl = [`A${2 * n + 1}`, `A${2 * n + 2}`]; return; }
+  if (!d.contact || d.fixed || it.role === 'main') return;
   let maxSeq = 0; const k = devKey(it);
   for (const o of allItems()) {
     if (o === it || devKey(o) !== k) continue;
@@ -340,7 +343,7 @@ function assignContactNumbers(it) {
     const s = parseInt(String((o.cl || [])[0] || '').slice(0, -1), 10); if (!isNaN(s)) maxSeq = Math.max(maxSeq, s);
   }
   const s = maxSeq + 1;
-  it.cl = d.contact === 'NO' ? [s + '3', s + '4'] : [s + '1', s + '2'];
+  it.cl = d.contact === 'NO' ? [s + '3', s + '4'] : d.contact === 'CO' ? [s + '1', s + '2', s + '4'] : [s + '1', s + '2'];
 }
 function makeItem(sym, x, y, rot, pg) {
   const d = SYM[sym];
@@ -349,7 +352,7 @@ function makeItem(sym, x, y, rot, pg) {
   if (sym === 'ip') { it.ipName = P._lastIp || 'L1'; delete it.fn; delete it.loc; }
   else if (sym === 'pe') { delete it.fn; delete it.loc; }
   else if (sym === 'term') { it.tag = lastMain.X || 'X1'; it.tn = nextTerminal(it.fn, it.loc, it.tag); }
-  else if (d.role === 'aux') {
+  else if (d.role === 'aux' || d.role === 'sl') {
     const lm = lastMain[d.prefix];
     it.tag = lm && IX.dev.has(`${it.fn}\u0001${it.loc}\u0001${lm}`) ? lm : nextTag(it.fn, it.loc, d.prefix);
     assignContactNumbers(it);

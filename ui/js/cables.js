@@ -50,6 +50,7 @@ function traverse(pg, start, skipWire) {
       else if (d.role === 'pe') t = 'PE';
       else if (d.role === 'bar') t = d.pot + ' bar';
       else if (d.role === 'term') t = dispOnPage(it, pg) + ':' + (it.tn || '');
+      else if (!d.prefix || !it.tag) t = d.name + ((it.cl || [])[c.i] ? ':' + it.cl[c.i] : '');
       else t = dispOnPage(it, pg) + ':' + ((it.cl || [])[c.i] || c.i + 1);
       if (!targets.includes(t)) targets.push(t);
     }

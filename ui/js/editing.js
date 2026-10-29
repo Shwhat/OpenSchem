@@ -25,13 +25,30 @@ function copySel() {
   clip = clone({ items: pg.items.filter(i => sel.has(i.id)), wires: pg.wires.filter(w => sel.has(w.id)), cables: (pg.cables || []).filter(c => sel.has(c.id)), gfx: (pg.gfx || []).filter(g => sel.has(g.id)) });
   flash(`Copied ${clip.items.length + clip.wires.length + clip.cables.length + clip.gfx.length} object(s)`);
 }
-function paste() {
+async function paste() {
   if (!clip) return; const pg = page(); if (pg.report || isFloor(pg)) return;
-  commit(() => { sel = insertContent(clip, G * 4, G * 4, pg, false); autoConnect(pg, pg.items.filter(i => sel.has(i.id))); });
+  const src = await stdCheck(clip, 'The pasted content'); if (!src) return;
+  commit(() => { sel = insertContent(src, G * 4, G * 4, pg, false); autoConnect(pg, pg.items.filter(i => sel.has(i.id))); });
+}
+// copy a whole schematic page, to paste it as a new page in this or another project
+function copyPage() {
+  const pg = page(); if (pg.report || isFloor(pg) || isLayout(pg)) { flash('Open a schematic page to copy it'); return; }
+  clip = clone({ page: { fn: pg.fn, loc: pg.loc, desc: pg.desc, size: pg.size, type: pg.type }, items: pg.items, wires: pg.wires, cables: pg.cables || [], gfx: pg.gfx || [] });
+  flash(`Copied page ${pageName(pg)}`);
+}
+async function pastePage() {
+  if (!clip || !clip.page) { flash('Copy a page first (Page > Copy page)'); return; }
+  const src = await stdCheck(clip, 'The copied page'); if (!src) return; const sp = src.page;
+  commit(() => {
+    const num = String(Math.max(0, ...P.pages.filter(p => !isFloor(p) && p.fn === (sp.fn || '') && p.loc === (sp.loc || '')).map(p => parseInt(p.num, 10) || 0)) + 1);
+    const np = newPage(sp.fn || '', sp.loc || '', num, sp.desc || ''); if (sp.size) np.size = sp.size; if (sp.type) np.type = sp.type;
+    P.pages.push(np); insertContent(src, 0, 0, np, false); sortPages(); curId = np.id; sel.clear();
+  });
+  zoomFit();
 }
 
 // ---------- pages ----------
-function goPage(id, keepSel) { const old = page(); if (old && !isFloor(old) && !old.report) lastSchemId = old.id; curId = id; if (mode === 'area' || mode === 'room' || mode === 'roompoly' || mode === 'roomoval' || mode === 'roomcirc' || (mode === 'fpplace' && !placeItemId)) setMode('select'); if (!keepSel) sel.clear(); if (mode === 'wire') wireDraft = null; render(); }
+function goPage(id, keepSel) { const old = page(); if (old && !isFloor(old) && !old.report) lastSchemId = old.id; curId = id; if (mode === 'area' || mode === 'room' || mode === 'roompoly' || mode === 'roomoval' || mode === 'roomcirc' || (mode === 'fpplace' && !placeItemId)) setMode('select'); if (!keepSel) sel.clear(); if (mode === 'wire' || mode === 'tube') wireDraft = null; render(); }
 function stepPage(dir) { const all = allPages(); const i = all.indexOf(page()) + dir; if (i >= 0 && i < all.length) goPage(all[i].id); }
 const notOnReport = () => { if (page().report) { flash('Report pages are generated automatically'); return true; } return false; };
 function addPage() {
@@ -40,10 +57,11 @@ function addPage() {
     ['fn', L('fn'), pg.fn], ['loc', L('loc'), pg.loc],
     ['num', 'Page number', String(Math.max(0, ...P.pages.filter(p => !isFloor(p) && p.fn === pg.fn && p.loc === pg.loc).map(p => parseInt(p.num, 10) || 0)) + 1)],
     ['desc', 'Description', ''],
+    ['type', 'Page type', pg.type || '', 'select', PAGE_TYPES],
     ['size', 'Paper size', pg.size || P.size || 'A3L', 'select', SHEET_OPTS()],
   ], v => {
     if (P.pages.some(p => !isFloor(p) && p.fn === v.fn && p.loc === v.loc && p.num === v.num)) { alert('A page with that name already exists.'); return false; }
-    commit(() => { const np = newPage(v.fn, v.loc, v.num, v.desc); if (v.size !== (P.size || 'A3L')) np.size = v.size; P.pages.push(np); sortPages(); curId = np.id; sel.clear(); });
+    commit(() => { const np = newPage(v.fn, v.loc, v.num, v.desc); if (v.size !== (P.size || 'A3L')) np.size = v.size; if (v.type) np.type = v.type; P.pages.push(np); sortPages(); curId = np.id; sel.clear(); });
     zoomFit();
   });
 }
@@ -60,13 +78,14 @@ function pageProps() {
   }
   dialog('Page properties', [
     ['fn', L('fn'), pg.fn], ['loc', L('loc'), pg.loc], ['num', 'Page number', pg.num], ['desc', 'Description', pg.desc],
+    ['type', 'Page type', pg.type || '', 'select', PAGE_TYPES],
     ['size', 'Paper size', pg.size || P.size || 'A3L', 'select', SHEET_OPTS()],
     ['move', home() ? 'Also move devices on this page' : 'Also move devices on page to new =/+', true, 'check'],
   ], v => {
     if (P.pages.some(p => p !== pg && !isFloor(p) && p.fn === v.fn && p.loc === v.loc && p.num === v.num)) { alert('A page with that name already exists.'); return false; }
     commit(() => {
       if (v.move) for (const it of pg.items) { if (it.fn === pg.fn) it.fn = v.fn; if (it.loc === pg.loc) it.loc = v.loc; }
-      Object.assign(pg, { fn: v.fn, loc: v.loc, num: v.num, desc: v.desc }); setPageSize(pg, v.size); sortPages();
+      Object.assign(pg, { fn: v.fn, loc: v.loc, num: v.num, desc: v.desc }); if (v.type) pg.type = v.type; else delete pg.type; setPageSize(pg, v.size); sortPages();
     });
     zoomFit();
   });

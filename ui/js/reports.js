@@ -66,6 +66,8 @@ function bomRows() {
     const part = c.part || ''; const type = c.ctype || 'unspecified';
     add(part ? 'p:' + part : 'cab:' + type, { part, desc: 'Cable, ' + type, tech: '', missing: !part, first: { id: c.id } }, (home() ? 'Cable ' + c.tag.replace(/^W/, '') : '-' + c.tag) + (c.len ? ' (' + c.len + ')' : ''));
   }
+  // tubes with a part number (tubes without one are listed on the tubing list only)
+  for (const pg of P.pages) for (const w of pg.wires) if (w.tube && w.part) add('p:' + w.part, { part: w.part, desc: 'Tube, ' + tubeOdLabel(w.od), tech: '', missing: false, first: { id: w.id } }, w.tag + (w.len ? ' (' + w.len + ')' : ''));
   const list = [...groups.values()].sort((a, b) => (a.missing - b.missing) || natCmp(a.part, b.part) || natCmp(a.tags[0], b.tags[0]));
   return list.map((g, i) => { const pd = partOf(g.part) || {}; const price = pd.price ? pnum(pd.price) : null; return { key: g.key, pos: i + 1, qty: g.qty, part: g.part, mfr: pd.mfr || '', desc: g.desc, tech: g.tech || pd.tech || '', tags: g.tags, missing: g.missing, price, total: price == null ? null : price * g.qty, goto: g.first.id }; });
 }
@@ -215,8 +217,9 @@ function connectionRows() {
   const cabOf = new Map();
   for (const pg of P.pages) for (const c of pg.cables || []) for (const cr of cableCrossings(pg, c)) cabOf.set(cr.w.id, c.tag);
   for (const pg of P.pages) {
-    if (isFloor(pg)) continue;
+    if (isFloor(pg) || pg.type === 'sl') continue;
     for (const w of pg.wires) {
+      if (w.tube) continue;
       const [f, t] = wireEnds(pg, w);
       if (!f && !t) continue;
       rows.push({ cells: [WN.get(w.id) || '', f, t, w.color || '', w.awg ? w.awg + ' AWG' : (w.cs || ''), cabOf.get(w.id) || '', pageName(pg) + '.' + colOf(w.pts[0][0])], goto: w.id, link: pg.id });
@@ -260,6 +263,9 @@ function buildExtraReports(reps) {
     }
     mkReport(reps, { id: 'rep:cabd', report: 'cabdiag', num: 'CABD', desc: 'Cable diagrams', title: 'Cable diagrams' }, rows, CABD_COLS());
   }
+  // tubing list
+  const tr = tubeRows();
+  if (tr.length) mkReport(reps, { id: 'rep:tubes', report: 'tubes', num: 'TUB', desc: 'Tubing list', title: 'Tubing list' }, tr, TUBE_COLS());
   // revisions
   if ((P.revs || []).length) {
     const all = P.pages;

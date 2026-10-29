@@ -17,7 +17,7 @@ function demoHome() {
   };
   const W = (pg, ...pts) => pg.wires.push({ id: uid(), pts });
   // panel
-  I(pnl, 'rpnl', 100, 80, { tag: 'PNL1', desc: 'Main panel, 200 A', part: 'HOM2040M200PC' });
+  I(pnl, 'rpnl', 100, 80, { tag: 'PNL1', desc: 'Main panel, 200 A', part: 'SQD.HOM2040M200PC' });
   I(pnl, 'rnbar', 96, 140); I(pnl, 'rgbar', 168, 140);
   W(pnl, [104, 92], [104, 140]); W(pnl, [112, 92], [112, 124], [168, 124], [168, 140]);
   pnl.items.push({ id: uid(), sym: 'text', x: 220, y: 70, text: 'Service: 200 A, 120/240 V\nMain bonding jumper at panel', size: 3.5 });

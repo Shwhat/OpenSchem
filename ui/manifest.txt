@@ -6,6 +6,8 @@ js/core.js
 js/residential.js
 js/layers.js
 js/boxes.js
+js/standards.js
+js/pneumatic.js
 js/migrate.js
 js/units.js
 js/osnap.js

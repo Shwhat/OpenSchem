@@ -59,6 +59,7 @@ input,select,textarea,button{font:inherit;color:inherit}
 .badge.main{background:#dbe9fb;color:#174a92}
 
 .symcat{padding:8px 10px 4px;font-weight:600;color:var(--muted);font-size:11.5px}
+.symother{display:flex;align-items:center;gap:6px;padding:2px 10px 6px;font-size:12px;cursor:pointer}.symother input{width:auto;margin:0}
 .symgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:0 8px}
 .symcard{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 4px;border:1px solid var(--line2);border-radius:4px;background:#fff;cursor:pointer;text-align:center;font-size:11px;line-height:1.15}
 .symcard:hover{border-color:#8fb0e3;background:#f4f8ff}
@@ -204,7 +205,7 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 .cz-row.on{background:var(--accent);color:#fff}
 .cz-btns{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}
 /* symbol editor */
-.se{display:grid;grid-template-columns:300px 1fr;gap:14px}
+.se{display:grid;grid-template-columns:300px 1fr;gap:14px}.se-left{height:0;min-height:100%;overflow-y:auto;padding-right:4px}
 .se h4{margin:6px 0 6px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .se .prow{grid-template-columns:110px 1fr}
 .se-tools{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
@@ -457,7 +458,7 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 
 /* floor plan shapes and grips */
 .shp .hit{fill:transparent;stroke:none}
-.ssel path,.ssel polygon:not(.hit),.ssel circle{stroke:var(--sel)}
+.ssel path:not(.wirehit):not(.hit),.ssel polygon:not(.hit),.ssel circle{stroke:var(--sel)}
 .ssel text{fill:var(--sel)}
 .grip{fill:#3d7bff;stroke:#fff;cursor:pointer}
 .grip:hover{fill:#ff8a00}

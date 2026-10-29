@@ -8,7 +8,13 @@ function loadProject(p, path) {
   if (up && path) flash('Upgraded from an older OpenSchem file. Saving writes the new format.');
   host.attach(filePath);
 }
-function fileNew() { if (!confirmDiscard()) return; loadProject(newProject(), ''); }
+// a new project: name and standard (IEC or NFPA). The standard is fixed after this.
+function fileNew() {
+  if (!confirmDiscard()) return;
+  dialog('New project', [['name', 'Project name', 'New project'], ['std', 'Standard', 'IEC', 'select', [['IEC', 'IEC 60617 (international)'], ['NFPA', 'NFPA 79 (North America)']]]], v => {
+    const p = newProject(); p.name = v.name || 'New project'; p.std = v.std === 'NFPA' ? 'NFPA' : 'IEC'; loadProject(p, '');
+  }, 'Create', '<div class="note">The standard sets the default symbols and the device letters (for example K and S, or CR and PB). It cannot be changed later. Symbols of the other standard can still be placed.</div>');
+}
 async function openFile() {
   if (!confirmDiscard()) return;
   if (!host.has) { const i = document.createElement('input'); i.type = 'file'; i.accept = '.osp,.json'; i.onchange = async () => { const t = await i.files[0].text(); try { loadProject(JSON.parse(t), i.files[0].name); } catch (e) { alert('Could not open file: ' + e.message); } }; i.click(); return; }
@@ -71,7 +77,8 @@ async function start() {
     if (a) { try { const o = JSON.parse(a); if (o.project && confirm('OpenSchem found unsaved work from a previous session. Restore it?')) { host.pending = o.srv || null; loadProject(o.project, o.path || ''); dirty = true; updateTitle(); } else host.autosave(''); } catch (e) {} }
   }
   // #demo opens the demo project; #ind and #home open its two building blocks (used by the tests)
-  if (location.hash === '#demo') loadProject(buildDemo(), '');
+  if (location.hash === '#demo') loadProject(buildDemo('IEC'), '');
+  if (location.hash === '#demo-nfpa') loadProject(buildDemo('NFPA'), '');
   if (location.hash === '#ind') loadProject(demoIndustrial(), '');
   if (location.hash === '#home') loadProject(demoHome(), '');
 }

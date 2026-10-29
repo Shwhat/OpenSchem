@@ -56,7 +56,7 @@ type Project struct {
 }
 
 // files the interface may read and write through /api/data; prefs are per user, the rest are shared
-var dataFiles = map[string]bool{"prefs.json": false, "library.json": true, "parts.json": true, "blocks.json": true}
+var dataFiles = map[string]bool{"prefs.json": false, "library.json": true, "parts.json": true, "blocks.json": true, "manufacturers.json": true}
 
 var (
 	errNotFound  = errors.New("not found")

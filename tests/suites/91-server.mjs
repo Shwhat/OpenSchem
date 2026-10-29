@@ -102,7 +102,7 @@ export const tests = {
     await openApp(p, '?p=' + id);
     t.eq(await p.evaluate(() => [P.name, P.desc, filePath, P.author]), ['Garage subpanel', 'second', 'srv:' + id, 'saved on server']);
     // New project, then Open from the list
-    await p.evaluate(() => fileNew());
+    await p.evaluate(() => fileNew()); await p.click('#dlgbtns .primary'); await p.waitForFunction(() => !$('#dlg').open);
     t.eq(await p.evaluate(() => [filePath, location.search]), ['', '']);
     await p.evaluate(() => { openFile(); });
     await p.waitForSelector('#pbrows a.pb-open');
@@ -161,7 +161,7 @@ export const tests = {
     t.eq(await b.page.evaluate(() => [host.srv.access, host.srv.readOnly]), ['edit', true]);
     t.ok((await b.page.textContent('#docname')).includes('read-only while'), 'shows who is editing');
     // the owner closes it; the second editor gets the lock on the next check
-    await p.evaluate(() => fileNew());
+    await p.evaluate(() => fileNew()); await p.click('#dlgbtns .primary');
     await p.waitForTimeout(200);
     await b.page.evaluate(() => host.lock(false));
     t.eq(await b.page.evaluate(() => host.srv.readOnly), false);

@@ -88,4 +88,17 @@ export const tests = {
     const s = await shapes(t); const d2 = s.filter(x => x.t === 'dim')[1]; const l2 = s.filter(x => x.t === 'line')[1];
     t.eq(d2.r1.id, l2.id, 'copy refers to the copied line');
   },
+  'selected dimension and line show only their own lines; the empty area inside a dimension does not select it': async t => {
+    await blank(t, [{ id: 'd', t: 'dim', kind: 'lin', p1: [60, 100], p2: [140, 100], loc: [100, 70], dir: 'h' }, L('l', [60, 150], [140, 150])]);
+    await t.eval(() => { sel = new Set(['d', 'l']); render(); });
+    const strokes = await t.eval(() => [...document.querySelectorAll('#content .ssel .wirehit')].map(e => getComputedStyle(e).stroke));
+    t.eq(strokes.length, 2, 'both selected objects keep a click band'); t.ok(strokes.every(s => s === 'transparent' || s === 'rgba(0, 0, 0, 0)'), 'click band stays invisible: ' + strokes.join('|'));
+    t.ok(await t.eval(() => [...document.querySelectorAll('#content .ssel path:not(.wirehit)')].some(e => getComputedStyle(e).stroke !== 'transparent' && getComputedStyle(e).stroke !== 'rgba(0, 0, 0, 0)')), 'own lines turn the selection color');
+    await t.eval(() => { sel = new Set(); render(); });
+    // the old band was a zigzag from the text location through p1, p2 and the dimension line ends: (100,70)-(60,100) crosses (80,85)
+    await t.click(80, 86); t.eq(await t.eval(() => [...sel]), [], 'empty area inside the old X');
+    await t.click(120, 86); t.eq(await t.eval(() => [...sel]), [], 'other half of the old X');
+    await t.click(100, 70); t.eq(await t.eval(() => [...sel]), ['d'], 'the dimension line still selects it');
+    await t.eval(() => { sel = new Set(); render(); }); await t.click(60, 85); t.eq(await t.eval(() => [...sel]), ['d'], 'an extension line selects it');
+  },
 };

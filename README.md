@@ -14,7 +14,7 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Read-only projects can still be changed on screen and saved as your own copy
 - Import a project from your computer (in the project list or by dropping an `.osp` file on the window), and File > Download project to get an `.osp` file
 - The address bar holds the open project, so a page reload or a bookmark opens it again
-- Preferences are per user; the symbol and macro library, parts database and block library are shared by everyone on the server
+- Preferences are per user; the symbol and macro library, parts database, manufacturer list and block library are shared by everyone on the server
 - Unsaved work is kept on the server every 30 seconds and offered back the next time you sign in
 - Change password (signs out your other devices) and Sign out from the account menu at the right of the menu bar
 - Exports (PDF, CSV, Excel, DXF, SVG, PNG) download through the browser
@@ -28,7 +28,14 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Find and replace across tags, descriptions, part numbers and more, with bulk edit of the results
 - Terminal strip editor (renumber, function texts, part numbers for the whole strip)
 - Display layers (symbols, tags, descriptions, connection labels, cross-references, connections, wire numbers, junctions, cables, text) with show, print and color settings, plus user layers that can be hidden, left out of print or locked
-- IEC-style symbol library (coils, contacts, protection, motors, PLC I/O, terminals, interruption points) plus residential symbols (breakers, switches, dimmers, outlets, lights, fans, detectors, panels)
+- Each project uses one standard, IEC 60617 or NFPA 79, chosen in the New project dialog and fixed after that. It sets the default symbols and the device letters (K, S, Q, F in IEC projects; CR, M, PB, LS, OL, CB, FU, PL, SOL in NFPA projects). The palette can also show the other standard, so any symbol can be placed in any project
+- IEC 60617 library: coils (relay, on-delay and off-delay timers), NO, NC, changeover and timed contacts, pushbuttons, emergency stop, selector, limit, proximity, pressure, temperature, level and flow switches, breakers 1P, 2P and 3P, motor protective breaker, disconnect, fuse, overload relay, control transformer, motors 3~, 1~ and DC, indicator lamp, horn, heater, drive, power supply, solenoid valve coil, plug and socket, PLC I/O, terminals and interruption points
+- NFPA 79 library with the same set in North American style: circle coils (relay and motor starter), parallel-line contacts with a slash for NC, pushbuttons with terminal circles, wedge limit switches, arc breakers, pilot lights with a color letter, MTR motors
+- Single-line symbols in both standards (breaker, motor protective breaker, fuse, disconnect, contactor or starter, overload, motor, transformer, drive). A single-line symbol with the same tag as the multi-line symbol is the same device: they cross-reference each other and the device is counted once in the bill of materials
+- Copying content between standards: when a pasted selection, a copied page (Page > Copy page and Paste page) or a macro uses the other standard, a list shows each symbol and what it will change to, with Convert to project standard or Keep as is
+- Page types: schematic, single-line and pneumatic. Single-line pages have no wire numbers and stay out of the connection list
+- Residential symbols (breakers, switches, dimmers, outlets, lights, fans, detectors, panels)
+- User symbols have a Library field (IEC, NFPA, Pneumatic, Residential) that files them with a standard
 - Device tagging with =Function +Location -Device, automatic device and contact numbering, contact mirrors and cross-references
 - Align to grid (Shift+G) for the selection or the whole page; on floor plans it covers devices, rooms, walls, doors and windows (they stay on their wall), shapes, free dimensions and blocks
 - Automatic connections between facing connection points when symbols are placed or moved (can be turned off)
@@ -38,6 +45,13 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Cables with conductor assignment
 - Macros for reusable circuit blocks
 - Custom symbol editor with a portable user library that works like a page: snap on or off with a choice of grid, align to grid, window and crossing selection, grips to reshape lines, rectangles and circles after placing, exact coordinates, move, rotate, mirror, duplicate, arrow-key nudge, undo and redo, wheel zoom and pan
+
+**Pneumatics**
+- ISO 1219 library: air supply, exhaust, silencer, filter-regulator-lubricator, gauge, reservoir, shut-off, check, one-way flow control and quick exhaust valves, 2/2, 3/2, 5/2 and 5/3 valves (closed, exhaust and pressure center), single and double acting, cushioned, magnetic piston and rodless cylinders, vacuum generator, suction cup, pressure switch and pressure sensor
+- Valve actuators set in the properties (solenoid, spring, pilot, lever, push button, none) with an optional detent; a pilot actuator adds its pilot port (12 or 14). Ports are numbered 1, 2, 3, 4, 5, 12 and 14
+- Tubes are their own line type: the Connection tool draws tubes on pneumatic pages, and the Tube tool draws them anywhere. Each tube has a number, outside diameter, color, length and part number; new tubes take the size and color chosen last
+- Valve solenoid coils on electrical pages carry the valve's tag and cross-reference the valve on the pneumatic page; a valve with two solenoids numbers them A1/A2 and A3/A4. A pneumatic pressure switch with the same tag as its electrical contact is one device
+- Tubing list report: From, To, tube OD, color, length and part number, grouped by tube size. Tubes with a part number are also on the bill of materials
 
 **Floor plans**
 - Floor-plan pages per level, with whole-level, single-room and custom-area views
@@ -64,15 +78,17 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Panel layout pages drawn to scale, with the enclosure, DIN rails, wire ducts and device footprints sized from the parts database
 
 **Parts and loads**
-- Parts database in the data folder (part number, manufacturer, description, category, technical data, price, watts, datasheet, size) with search, CSV import and export, and a picker in device properties
+- Parts database in the data folder (part number, manufacturer, order number, type number, description, category, technical data, price, watts, datasheet, size) with search, CSV import and export, and a picker in device properties
+- Part numbers follow the convention manufacturer code plus order number (PXC.3031212, SIE.3RT2015-1BB41). The part number is built from the two and is the unique key: saving a part that already exists offers to open the existing one, and a CSV import that contains existing parts asks once whether to skip or replace them
+- Shared manufacturer list (short code of 2 to 6 capitals or digits, name, supplier, website) with common manufacturers to start from. A manufacturer can be added from the part dialog; a code used by parts cannot be changed or deleted
 - Load calculation per circuit with editable defaults, percent of breaker rating, 80% warning in the project check, and voltage drop from wire size and run length with a 3% warning
 - Printable breaker labels: panel directory in the two-column door layout, letter page or 4 × 6 in label
 
 **Reports**
 - Cover sheet and table of contents
-- Panel schedule with load, percent of rating and voltage drop, bill of materials with manufacturer, prices and total cost, terminal diagrams, connection list, cable overview and cable diagrams, revision overview
+- Panel schedule with load, percent of rating and voltage drop, bill of materials with manufacturer, prices and total cost, terminal diagrams, connection list, cable overview and cable diagrams, tubing list, revision overview
 - Project properties turn each generated report on or off (cover sheet and table of contents included) and set the order of the page tree sections and of the reports; the same order is used for the page tree, PDF export, printing and sheet numbers
-- Custom reports: an editable copy of any report (bill of materials, panel schedule, terminal diagrams, connection list, cables, door and window schedule, revisions, table of contents, cover sheet). Pick rows by ticking them and with filters, hide or rename columns, edit any cell, add rows and notes. Live reports follow the project and mark edited cells whose project value changed; locked reports stay frozen until you refresh them
+- Custom reports: an editable copy of any report (bill of materials, panel schedule, terminal diagrams, connection list, cables, tubing list, door and window schedule, revisions, table of contents, cover sheet). Pick rows by ticking them and with filters, hide or rename columns, edit any cell, add rows and notes. Live reports follow the project and mark edited cells whose project value changed; locked reports stay frozen until you refresh them
 - CSV and Excel (.xlsx) export, Excel import that updates existing devices by ID, and vector PDF export with bookmarks and clickable cross-references; PDF export and printing let you choose the pages
 
 **Project tools**
@@ -83,9 +99,9 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Engineering and homeowner display modes, light and dark themes
 - Customizable tabbed ribbon
 
-## Demo project
+## Demo projects
 
-Help > Open demo project opens one project that uses every feature (pump station control panel, home wiring, floor plans, panel layout, note card page and more). It is built by `ui/js/demo.js` from the two building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
+Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
 
 ## Running with Docker
 
@@ -137,7 +153,7 @@ sessions.json          sign-in sessions (hashed tokens), kept for 30 days of ina
 projects.json          project list: owner, sharing, revision
 projects/<id>.osp      project contents
 users/<id>/            per-user preferences (prefs.json) and unsaved work (autosave.json)
-shared/                symbol and macro library, parts database, block library
+shared/                symbol and macro library, parts database, manufacturer list, block library
 ```
 
 ## Project layout
@@ -153,7 +169,7 @@ docker-compose.yml   Example deployment
 ui/index.html        Page skeleton
 ui/style.css         All styles, including dark theme
 ui/manifest.txt      Script load order (used by the server, the tests and tools/assemble.py)
-ui/js/               Application code, one file per area (host.js: server connection, project list, sharing and account; navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dock.js: panels and workspaces)
+ui/js/               Application code, one file per area (standards.js: IEC and NFPA symbols, single-line symbols and converting between standards; pneumatic.js: pneumatic symbols, tubes and the tubing list; parts.js: parts database and manufacturers; host.js: server connection, project list, sharing and account; navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dock.js: panels and workspaces)
 ui/vendor/           Third-party libraries (PDF export)
 tests/               Automated tests (tests/fixtures holds DXF files made by make_dxf.py)
 tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser

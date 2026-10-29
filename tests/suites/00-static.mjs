@@ -31,6 +31,6 @@ export const tests = {
   'app starts without errors': async t => {
     await t.open();
     t.eq(await t.eval(() => P.pages.length), 1);
-    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'View', 'Project']);
+    t.eq(await t.eval(() => [...document.querySelectorAll('.rtab')].map(x => x.textContent)), ['Home', 'Insert', 'Pneumatics', 'View', 'Project']);
   },
 };
