@@ -2,7 +2,7 @@ name: Docker image
 
 on:
   push:
-    branches: [docker]
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
