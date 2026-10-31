@@ -45,7 +45,7 @@ export const tests = {
     await t.eval(() => setMode('room')); await t.drag(242, 232, 358, 270);
     await t.page.fill('#dlgbody input[name="name"]', 'Garage'); await t.enter();
     t.eq(await t.eval(() => P.levels[0].rooms.find(r => r.name === 'Garage').pts[0][1]), 230, 'top edge locks to Living wall');
-    await t.eval(() => setMode('roompoly'));
+    await t.eval(() => { PREFS.ortho = true; setMode('roompoly'); });
     for (const [x, y] of [[282, 42], [380, 42], [380, 141], [282, 141], [282, 42]]) await t.click(x, y);
     await t.page.fill('#dlgbody input[name="name"]', 'Office'); await t.enter();
     t.eq(await t.eval(() => P.levels[0].rooms.find(r => r.name === 'Office').pts), [[280, 40], [380, 40], [380, 140], [280, 140]]);

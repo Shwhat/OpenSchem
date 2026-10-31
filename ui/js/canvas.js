@@ -47,8 +47,8 @@ function renderStatus() {
   $('#st-pos').textContent = `Page ${pageName(pg)}`;
   $('#st-snap').textContent = `Snap ${PREFS.snap ? 'on' : 'off'} · grid ${isFloor(pg) ? PREFS.gridFp : PREFS.gridSch} mm`;
   const fp = isFloor(pg);
-  $('#st-prec').innerHTML = fp ? `<span class="pt${osnapMaster() ? ' on' : ''}" data-act="toggleOsnap" title="Object snap (F3)">OSNAP</span><span class="pt${PREFS.ortho ? ' on' : ''}" data-act="toggleOrtho" title="Ortho (F8)">ORTHO</span><span class="pt${PREFS.polar ? ' on' : ''}" data-act="togglePolar" title="Polar tracking (F10)">POLAR</span>` : '';
-  cmdSync();
+  $('#st-prec').innerHTML = fp ? `<span class="pt${osnapMaster() ? ' on' : ''}" data-act="toggleOsnap" title="Object snap (F3)">OSNAP</span><span class="pt${PREFS.ortho ? ' on' : ''}" data-act="toggleOrtho" title="Ortho (F8)">ORTHO</span><span class="pt${PREFS.polar ? ' on' : ''}" data-act="togglePolar" title="Polar tracking (F10)">POLAR</span><span class="pt${dynOn() ? ' on' : ''}" data-act="toggleDyn" title="Dynamic input (F12)">DYN</span>` : '';
+  cmdSync(); if (typeof dynUpdate === 'function') dynUpdate();
 }
 
 // ---------- pointer interaction ----------
@@ -147,10 +147,10 @@ window.addEventListener('mousemove', e => {
     zwin.cur = toMM(e); const [a, b] = zwin.start, [c, d] = zwin.cur;
     $('#overlay').innerHTML = `<rect class="zoombox" x="${Math.min(a, c)}" y="${Math.min(b, d)}" width="${Math.abs(c - a)}" height="${Math.abs(d - b)}"/>`; return;
   }
-  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox && !gripOp) return;
+  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox && !gripOp && !(DRAW && DRAW.press)) return;
   const [mx, my] = toMM(e);
   if (isLayout(page())) { if (mode.startsWith('g:')) gfxPreview(snap(mx), snap(my)); else layMove(page(), mx, my); return; }
-  if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox || gripOp) fpMove(page(), mx, my); return; }
+  if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox || gripOp || (DRAW && DRAW.press)) fpMove(page(), mx, my); dynUpdate(); return; }
   $('#st-pos').textContent = `X ${snap(mx)}  Y ${snap(my)}  |  Column ${colOf(mx)}  |  Page ${pageName(page())}`;
   if (mode === 'macro') { drawMacroGhost(mx, my); return; }
   if (mode === 'cable') {
@@ -185,6 +185,7 @@ window.addEventListener('mouseup', e => {
     setMode(zwPrev); return;
   }
   if (isLayout(page()) && (ldrag || lbox)) { layUp(page()); return; }
+  if (isFloor(page()) && DRAW && DRAW.press && !isSheet(page())) { const pg = page(), lv = levelOf(pg); const [mx, my] = toMM(e); if (lv) drawUp(pg, lv, toPlan(pg, mx, my), e.clientX, e.clientY); return; }
   if (isFloor(page()) && (fdrag || fbox || gripOp)) { fpUp(page()); return; }
   if (cdrag) {
     const { a, b } = cdrag; cdrag = null; $('#overlay').innerHTML = '';
@@ -351,8 +352,10 @@ function escapeCommand() {
 }
 window.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase();
+  if (e.key === 'F12' && !$('#dlg').open) { e.preventDefault(); toggleDyn(); return; }
   if (tag === 'input' || tag === 'textarea' || tag === 'select') { if (e.key === 'Escape') e.target.blur(); return; }
   if ($('#dlg').open) return;
+  if (dynKey(e)) return;
   const k = e.key.toLowerCase(), c = e.ctrlKey || e.metaKey;
   if (!c && !e.altKey && fpAwaiting() && /^[0-9.'"@#,<\-\/]$/.test(e.key)) { e.preventDefault(); cmdType(e.key); return; }
   if (!c && !e.altKey && (DRAW || gripOp) && /^[a-z]$/i.test(e.key)) { e.preventDefault(); cmdType(e.key); return; }

@@ -28,7 +28,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
 // program-wide preferences (saved in the OpenSchem Data folder)
-const PREFS = { snap: true, autoConnect: true, gridSch: 4, gridFp: 2, appVersion: null, ribbon: null, symOpen: {}, theme: 'light', sheet: 'white', ortho: true, polar: false, polarInc: 45, osnapOn: true, osnap: null, cmdline: false, dock: null, workspace: 'Schematic', workspaces: {} };
+const PREFS = { snap: true, autoConnect: true, gridSch: 4, gridFp: 2, appVersion: null, ribbon: null, symOpen: {}, theme: 'light', sheet: 'white', ortho: false, polar: false, dyn: true, polarInc: 45, osnapOn: true, osnap: null, cmdline: false, dock: null, workspace: 'Schematic', workspaces: {} };
 const gs = () => PREFS.gridSch || 4;
 const snap = v => PREFS.snap ? r2(Math.round(v / gs()) * gs()) : Math.round(v * 4) / 4;
 const clone = o => JSON.parse(JSON.stringify(o));

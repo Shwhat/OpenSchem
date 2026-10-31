@@ -45,6 +45,7 @@ js/demo.js
 js/cmdline.js
 js/draw.js
 js/grips.js
+js/dynin.js
 js/curves.js
 js/edit.js
 js/walls.js

@@ -67,11 +67,12 @@ export const tests = {
     await t.eval(() => setMode('d:rect')); await t.click(140, 200); await t.eval(() => fpTyped(`4',2'`));
     await t.eval(() => setMode('d:spline')); await t.click(60, 60); await t.click(90, 80); await t.click(120, 60); await t.key('Enter');
     const s = await shapes(t);
-    t.eq([s[0].t, s[0].closed, s[0].pts.length, s[0].pts[0]], ['pline', true, 5, [200, 160]]);
-    t.eq([s[1].pts.length, s[1].b.filter(x => x).length], [8, 4]);
-    t.ok(near(s[1].pts[0][0], 60 + 6 * 25.4 / 48, 0.02), 'corner radius is 6 inches');
-    const b = await t.eval(() => bboxPts(levelOf(page()).shapes[2].pts));
-    t.ok(near(b[2] - b[0], 48 * 25.4 / 48, 0.02) && near(b[3] - b[1], 24 * 25.4 / 48, 0.02), 'typed width,height');
+    t.eq([s[0].t, s[0].n, s[0].c, s[0].r, s[0].rot, s[0].ic], ['polygon', 5, [200, 180], 20, 90, 'I']);
+    t.eq(await t.eval(() => rp(polyVerts(levelOf(page()).shapes[0])[0])), [200, 160], 'first corner where clicked');
+    t.eq([s[1].t, s[1].c, s[1].w, s[1].h, s[1].rot], ['rect', [90, 220], 60, 40, 0]);
+    t.ok(near(s[1].r, 6 * 25.4 / 48, 0.02), 'corner radius is 6 inches');
+    t.eq(await t.eval(() => { const p = asPline(levelOf(page()).shapes[1]); return [p.pts.length, p.b.filter(x => x).length]; }), [8, 4], 'drawn with rounded corners');
+    t.ok(s[2].t === 'rect' && near(s[2].w, 48 * 25.4 / 48, 0.02) && near(s[2].h, 24 * 25.4 / 48, 0.02), 'typed width,height');
     t.eq([s[3].t, s[3].pts.length], ['spline', 3]);
   },
   'text tool places text with a height on paper': async t => {

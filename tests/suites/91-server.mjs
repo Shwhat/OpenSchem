@@ -102,7 +102,7 @@ export const tests = {
     await openApp(p, '?p=' + id);
     t.eq(await p.evaluate(() => [P.name, P.desc, filePath, P.author]), ['Garage subpanel', 'second', 'srv:' + id, 'saved on server']);
     // New project, then Open from the list
-    await p.evaluate(() => fileNew()); await p.click('#dlgbtns .primary'); await p.waitForFunction(() => !$('#dlg').open);
+    await p.evaluate(() => fileNew()); await p.click('#dlgbtns .primary'); await p.waitForFunction(() => !$('#dlg').open && filePath === '');
     t.eq(await p.evaluate(() => [filePath, location.search]), ['', '']);
     await p.evaluate(() => { openFile(); });
     await p.waitForSelector('#pbrows a.pb-open');

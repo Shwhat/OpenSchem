@@ -170,7 +170,7 @@ function alignFloorShapes(lv, on, sn) {
     if (!on(s.id) || s.t === 'opening' || s.t === 'hatch') continue;
     if (s.t === 'line' || s.t === 'wall') { const a = sp(s.a), b = sp(s.b); if (spread([a, b])) { s.a = a; s.b = b; } }
     else if (s.t === 'pline' || s.t === 'spline' || s.t === 'leader') { const q = s.pts.map(sp); if (spread(q)) s.pts = q; }
-    else if (s.t === 'arc' || s.t === 'circle' || s.t === 'ellipse') s.c = sp(s.c);
+    else if (s.t === 'arc' || s.t === 'circle' || s.t === 'ellipse' || s.t === 'rect' || s.t === 'polygon') s.c = sp(s.c);
     else if (s.t === 'text' || s.t === 'insert') s.p = sp(s.p);
     else if (s.t === 'dim' && !(s.r1 || s.r2 || s.ref || s.l1 || s.l2)) for (const k of ['p1', 'p2', 'loc', 'c']) if (s[k]) s[k] = sp(s[k]);
   }

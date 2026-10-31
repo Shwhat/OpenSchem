@@ -32,6 +32,7 @@ function elNearest(e, p) {
 
 // ---------- paths of shapes ----------
 function curveOf(s) {
+  if (isParam(s)) return curveOf(asPline(s));
   if (s.t === 'line' || s.t === 'wall') return { els: [{ k: 'L', a: s.a, b: s.b }], closed: false };
   if (s.t === 'arc') return { els: [{ k: 'A', c: s.c, r: s.r, a0: s.a0, sw: arcSweep(s) }], closed: false };
   if (s.t === 'circle') return { els: [{ k: 'A', c: s.c, r: s.r, a0: 0, sw: 360 }], closed: true };

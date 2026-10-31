@@ -229,9 +229,9 @@ function floorContentSVG(pg, lv, t, o) {
 let fAim = null;           // last cursor point after snapping, in plan coordinates (typed lengths aim at it)
 // One drawing point from a mouse position: grid, direction lock (ortho or polar), object snap, shared walls.
 // o.last previous point, o.skip rooms to leave out, o.extra points of the shape being drawn, o.walls false to skip wall sharing.
-function fpPoint(pg, lv, raw, o = {}) {
+function fpPointRaw(pg, lv, raw, o = {}) {
   const sp = [fsnap(raw[0]), fsnap(raw[1])];
-  const tr = trackPoint(o.last, sp);
+  const tr = trackPoint(o.free ? null : o.last, sp);
   const hit = osnapFind(pg, lv, raw, { last: o.last, skip: o.skip, extra: o.extra });
   if (hit) return { p: hit.p, hit, sp };
   let q = tr.p;
@@ -239,12 +239,15 @@ function fpPoint(pg, lv, raw, o = {}) {
     const rs = roomSnap(pg, lv, q, o.skip);
     if (rs.hit) {
       q = rs.p;
-      if (o.last && PREFS.ortho) q = Math.abs(sp[0] - o.last[0]) >= Math.abs(sp[1] - o.last[1]) ? [q[0], o.last[1]] : [o.last[0], q[1]];
+      if (o.last && !o.free && PREFS.ortho) q = Math.abs(sp[0] - o.last[0]) >= Math.abs(sp[1] - o.last[1]) ? [q[0], o.last[1]] : [o.last[0], q[1]];
       return { p: q, wall: true, sp };
     }
   }
   return { p: q, tracked: tr.tracked, sp };
 }
+const fpPoint = (pg, lv, raw, o) => fpPointLocked(pg, lv, raw, o);
+// with dynamic input values locked (Tab), the cursor only moves the free values
+function fpPointLocked(pg, lv, raw, o = {}) { const r = fpPointRaw(pg, lv, raw, o); const q = typeof dynLock === 'function' ? dynLock(r.p, o.last) : null; return q ? { p: q, sp: r.sp } : r; }
 const fpMark = (pg, r) => r.hit ? osnapMarker(pg, r.hit) : r.wall ? snapMark(pg, r.p) : '';
 const BOX_MODES = ['room', 'roomoval', 'roomcirc', 'area'];
 
@@ -278,7 +281,7 @@ function fpDown(e, pg, mx, my) {
   const lv = levelOf(pg); if (!lv) return;
   const p = toPlan(pg, mx, my); const sp = [fsnap(p[0]), fsnap(p[1])];
   if (gripOp) { if (gripOp.lv !== lv) gripCancel(); else { gripDown(pg, lv, p); return; } }
-  if (mode.startsWith('d:')) { if (DRAW && DRAW.T.picking && DRAW.T.picking(DRAW)) drawPick(e, pg, lv, p); else drawDown(pg, lv, p); return; }
+  if (mode.startsWith('d:')) { if (DRAW && DRAW.T.picking && DRAW.T.picking(DRAW)) drawPick(e, pg, lv, p); else drawPress(pg, lv, p, e.clientX, e.clientY); return; }
   if (mode === 'fpplace') { fpPlaceAt(pg, lv, fpPoint(pg, lv, p, { walls: false }).p); return; }
   if (BOX_MODES.includes(mode)) {
     const r = fpPoint(pg, lv, p, { walls: mode !== 'area' });
@@ -365,8 +368,6 @@ function fpBoxOverlay(pg, mark) {
   if (fbox.select) s = `<rect class="selbox ${b[0] < a[0] ? 'cross' : 'win'}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
   else {
     s = mode === 'roomoval' || mode === 'roomcirc' ? `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}" style="stroke-opacity:.35"/><ellipse class="selbox" cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}"/>` : `<rect class="selbox" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
-    const W = formatLength(toRealMm(lv, Math.abs(b[0] - a[0]))), H = formatLength(toRealMm(lv, Math.abs(b[1] - a[1])));
-    s += `<text class="rdout" x="${B[0] + 8 * u}" y="${B[1] - 8 * u}" font-size="${11 * u}" style="stroke-width:${2.5 * u}">${esc(mode === 'roomcirc' ? 'Ø ' + W : W + ' × ' + H)}</text>`;
   }
   $('#overlay').innerHTML = s + mark;
 }

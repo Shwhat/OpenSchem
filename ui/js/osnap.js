@@ -96,14 +96,13 @@ function trackPoint(last, q) {
   }
   return { p: q, tracked: false };
 }
-// dashed tracking line (polar) and a length < angle readout at the cursor
+// dashed tracking line (polar); the values show in the dynamic input box
 function trackOverlay(pg, last, p, tracked) {
   if (!last) return '';
   const lv = levelOf(pg), a = toSheet(pg, last[0], last[1]), b = toSheet(pg, p[0], p[1]); const u = 1 / (view.s || 1);
-  const len = formatLength(toRealMm(lv, ptDist(last, p))); const ang = Math.round(ptAngle(last, p) * 10) / 10;
   let s = '';
   if (tracked) { const dx = b[0] - a[0], dy = b[1] - a[1], k = 40 * u / (Math.hypot(dx, dy) || 1); s += `<path class="trk" d="M${a[0]},${a[1]}L${b[0] + dx * k},${b[1] + dy * k}" style="stroke-width:${1.2 * u}"/>`; }
-  return s + `<text class="rdout" x="${b[0] + 8 * u}" y="${b[1] - 8 * u}" font-size="${11 * u}" style="stroke-width:${2.5 * u}">${esc(len)} &lt; ${ang}°</text>`;
+  return s;
 }
 
 // ---------- toggles and settings ----------

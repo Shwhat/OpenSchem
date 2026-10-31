@@ -88,7 +88,9 @@ function buildDemo(std = 'IEC') {
   lv.places.push({ id: uid(), item: out5.id, x: 385, y: 136, rot: 180 });
   // drawn shapes: furniture, appliances, a door swing and labels
   const SH = o => { lv.shapes = lv.shapes || []; lv.shapes.push(Object.assign({ id: uid() }, o)); };
-  SH(Object.assign(rectPline([196, 74], [244, 104], 4, 0), { fill: '#efe6d8' }));
+  SH(Object.assign(rectFrom([196, 74], [244, 104], 4, 0), { fill: '#efe6d8' }));
+  SH({ t: 'rect', c: [150, 90], w: 18, h: 10, rot: 30, ch: 2, color: '#6b4f2a' });
+  SH({ t: 'pline', pts: [[60, 236], [84, 236], [84, 248], [60, 248]], b: [0, 1, 0, 0], closed: true, dash: 'dash' });
   SH({ t: 'text', p: [212, 92], text: 'Table', h: 2.5, rot: 0 });
   SH({ t: 'line', a: [60, 122], b: [140, 122], lw: '0.5' });
   SH({ t: 'text', p: [84, 129], text: 'Counter', h: 2.2, rot: 0 });
@@ -96,7 +98,7 @@ function buildDemo(std = 'IEC') {
   SH({ t: 'arc', c: [120, 222], r: 14, a0: 90, a1: 180, dash: 'dash' }); SH({ t: 'line', a: [120, 222], b: [120, 208] });
   SH({ t: 'pline', pts: [[226, 214], [226, 224], [300, 224], [300, 214]], wd: [[1.2, 1.2], [1.2, 1.2], [1.2, 1.2]] });
   SH({ t: 'ellipse', c: [263, 200], rx: 14, ry: 6, rot: 0, fill: '#e7edf5' });
-  SH({ t: 'pline', pts: polygonPts([320, 92], 6, 9, 90, 'I'), closed: true });
+  SH({ t: 'polygon', c: [320, 92], n: 6, r: 9, rot: 90, ic: 'I' });
   SH({ t: 'pline', pts: [[368, 60], [400, 60], [400, 100]], b: [0, 0.4142], color: '#1e7a3c' });
   SH({ t: 'spline', pts: [[368, 212], [378, 203], [390, 215], [402, 206]], color: '#1e7a3c', lw: '0.7' });
   SH({ t: 'ellipse', c: [263, 200], rx: 18, ry: 9, rot: 0, a0: 200, a1: 340, dash: 'hidden' });

@@ -6,11 +6,13 @@
 //   arc     { c, r, a0, a1 }              counter-clockwise from a0 to a1
 //   circle  { c, r }
 //   ellipse { c, rx, ry, rot }
+//   rect    { c, w, h, rot, r, ch }       center, width along rot, height across, corner radius or corner cut
+//   polygon { c, n, r, rot, ic }          n sides; ic 'I': r to the corners, 'C': r to the edge middles; rot aims at r
 //   spline  { pts, closed }               a smooth curve through the points
 //   text    { p, text, h, rot }           h: text height on paper (mm)
 // Every shape also has id, and optionally color, lw (line width on paper, mm), dash, fill, layer.
 const D2R = Math.PI / 180;
-const SHAPE_NAMES = { wall: 'Wall', opening: 'Opening', line: 'Line', pline: 'Polyline', arc: 'Arc', circle: 'Circle', ellipse: 'Ellipse', spline: 'Spline', text: 'Text' };
+const SHAPE_NAMES = { wall: 'Wall', opening: 'Opening', line: 'Line', pline: 'Polyline', arc: 'Arc', circle: 'Circle', ellipse: 'Ellipse', rect: 'Rectangle', polygon: 'Polygon', spline: 'Spline', text: 'Text' };
 const SHAPE_LW = ['0.13', '0.18', '0.25', '0.35', '0.5', '0.7', '1', '1.4'];
 const lvShapes = lv => lv ? (lv.shapes || (lv.shapes = [])) : [];
 const n360 = a => ((a % 360) + 360) % 360;
@@ -64,6 +66,33 @@ function plEndDir(pts, b) {
   return bu ? ch + 2 * Math.atan(bu) / D2R : ch;
 }
 
+// ---------- rectangles and polygons (kept as shapes, drawn and edited through their polyline) ----------
+const isParam = s => s.t === 'rect' || s.t === 'polygon';
+// a point given in the rectangle's own axes (x along rot, y across it, Y up) and back
+function rectAt(s, x, y) { const a = (s.rot || 0) * D2R, cs = Math.cos(a), sn = Math.sin(a); return [s.c[0] + x * cs - y * sn, s.c[1] - (x * sn + y * cs)]; }
+function rectLocal(s, p) { const a = (s.rot || 0) * D2R, cs = Math.cos(a), sn = Math.sin(a); const vx = p[0] - s.c[0], vy = s.c[1] - p[1]; return [vx * cs + vy * sn, -vx * sn + vy * cs]; }
+// corners in order: lower left, lower right, upper right, upper left (in the rectangle's axes)
+const rectCorners = s => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => rectAt(s, i * s.w / 2, j * s.h / 2));
+// rectangle from two opposite corners, square to the page
+function rectFrom(a, b, r, ch) {
+  const s = { t: 'rect', c: rp(midPt(a, b)), w: r2(Math.abs(b[0] - a[0])), h: r2(Math.abs(b[1] - a[1])), rot: 0 };
+  if (r) s.r = r2(r); else if (ch) s.ch = r2(ch);
+  return s;
+}
+const polyA0 = s => (s.rot || 0) + (s.ic === 'C' ? 180 / s.n : 0);
+const polyVR = s => s.ic === 'C' ? s.r / Math.cos(Math.PI / s.n) : s.r;
+const polyVerts = s => Array.from({ length: s.n }, (_, i) => polarPt(s.c, polyVR(s), polyA0(s) + i * 360 / s.n));
+// the same outline as a closed polyline, with the shape's style (Explode, trim, fillet, export)
+function asPline(s) {
+  const o = { t: 'pline', closed: true }; for (const k of ['id', 'color', 'lw', 'dash', 'fill', 'layer']) if (s[k] != null) o[k] = s[k];
+  if (s.t === 'polygon') { o.pts = polyVerts(s).map(rp); return o; }
+  const hw = s.w / 2, hh = s.h / 2; const k = Math.min(s.r || s.ch || 0, Math.min(hw, hh));
+  if (!(k > 0.01)) { o.pts = rectCorners(s).map(rp); return o; }
+  o.pts = [[-hw + k, -hh], [hw - k, -hh], [hw, -hh + k], [hw, hh - k], [hw - k, hh], [-hw + k, hh], [-hw, hh - k], [-hw, -hh + k]].map(([x, y]) => rp(rectAt(s, x, y)));
+  if (s.r) { const q = r2(Math.tan(Math.PI / 8) * 1e6) / 1e6; o.b = [0, q, 0, q, 0, q, 0, q]; }
+  return o;
+}
+
 // ---------- splines (Catmull-Rom through the points, drawn as cubic Bezier pieces) ----------
 function splineBez(s) {
   const p = s.pts, n = p.length; if (n < 2) return [];
@@ -89,6 +118,7 @@ function textBox(s) {
 // { pts, closed }: the outline as a list of points
 function shapeOutline(s) {
   if (s.t === 'line') return { pts: [s.a, s.b], closed: false };
+  if (isParam(s)) return shapeOutline(asPline(s));
   if (s.t === 'pline') {
     const pts = [s.pts[0]];
     for (const [a, b, bu] of plSegs(s)) { const k = bu && bulgeArc(a, b, bu); if (k) pts.push(...tessArc(k.c, k.r, k.a0, k.sweep).slice(1)); else pts.push(b); }
@@ -106,7 +136,7 @@ function shapeOutline(s) {
   if (typeof shapeOutlineMore === 'function') { const r = shapeOutlineMore(s); if (r) return r; }
   return { pts: [], closed: false };
 }
-const shapeClosed = s => s.t === 'circle' || (s.t === 'ellipse' && !isEArc(s)) || ((s.t === 'pline' || s.t === 'spline') && !!s.closed);
+const shapeClosed = s => isParam(s) || s.t === 'circle' || (s.t === 'ellipse' && !isEArc(s)) || ((s.t === 'pline' || s.t === 'spline') && !!s.closed);
 const shapeBox = s => bboxPts(shapeOutline(s).pts);
 function outlineSegs(o) { const out = []; for (let i = 0; i < o.pts.length - (o.closed ? 0 : 1); i++) out.push([o.pts[i], o.pts[(i + 1) % o.pts.length]]); return out; }
 function shapeLength(s) {
@@ -143,6 +173,7 @@ function shapeSnapGeom(s, pts, segs) {
   } else if (s.t === 'circle') { add(s.c, 'cen'); for (const q of [0, 90, 180, 270]) add(polarPt(s.c, s.r, q), 'qua'); }
   else if (isEArc(s)) { add(s.c, 'cen'); const o = shapeOutline(s); add(o.pts[0], 'end'); add(o.pts[o.pts.length - 1], 'end'); }
   else if (s.t === 'ellipse') { add(s.c, 'cen'); for (let i = 0; i < 4; i++) add(ellipsePt(s, i * Math.PI / 2), 'qua'); }
+  else if (isParam(s)) { add(s.c, 'cen'); shapeSnapGeom(asPline(s), pts, segs); return; }
   else if (s.t === 'spline') s.pts.forEach(p => add(p, 'end'));
   else if (s.t === 'text') { add(s.p, 'end'); return; }
   else if (s.t === 'wall') { add(s.a, 'end'); add(s.b, 'end'); add(midPt(s.a, s.b), 'mid'); wallPoly(s).forEach(p => add(p, 'end')); }
@@ -173,6 +204,8 @@ function transformShape(s, T) {
     else { s.a0 = r2(n360(s.a0 + T.rot)); s.a1 = r2(n360(s.a1 + T.rot)); }
   } else if (s.t === 'circle') { s.c = m(s.c); s.r = r2(s.r * T.k); }
   else if (s.t === 'ellipse') { s.c = m(s.c); s.rx = r2(s.rx * T.k); s.ry = r2(s.ry * T.k); s.rot = r2(n360(T.mir != null ? 2 * T.mir - (s.rot || 0) : (s.rot || 0) + T.rot)); if (T.mir != null && isEArc(s)) { const a0 = n360(-s.a1), a1 = n360(-s.a0); s.a0 = r2(a0); s.a1 = r2(a1); } }
+  else if (s.t === 'rect') { s.c = m(s.c); s.w = r2(s.w * T.k); s.h = r2(s.h * T.k); if (s.r) s.r = r2(s.r * T.k); if (s.ch) s.ch = r2(s.ch * T.k); s.rot = r2(n360(T.mir != null ? 2 * T.mir - (s.rot || 0) : (s.rot || 0) + T.rot)); }
+  else if (s.t === 'polygon') { s.c = m(s.c); s.r = r2(s.r * T.k); const a0 = n360(T.mir != null ? 2 * T.mir - polyA0(s) : polyA0(s) + T.rot); s.rot = r2(n360(a0 - (s.ic === 'C' ? 180 / s.n : 0))); }
   else if (s.t === 'spline') s.pts = s.pts.map(m);
   else if (s.t === 'text') { s.p = m(s.p); s.h = r2(s.h * T.k * 1000) / 1000; if (T.mir == null) s.rot = r2(n360((s.rot || 0) + T.rot)); }
   else if (s.t === 'wall') { s.a = m(s.a); s.b = m(s.b); s.th = r2(s.th * T.k * 1000) / 1000; if (T.mir != null) s.just = { l: 'r', r: 'l' }[s.just] || s.just; }
@@ -198,6 +231,7 @@ const shapeColor = s => s.color || (sheetDark() ? '#d0d4da' : '#1d1d1d');
 function shapeD(s) {
   const P2 = p => `${r2(p[0])},${r2(p[1])}`;
   if (s.t === 'line') return `M${P2(s.a)}L${P2(s.b)}`;
+  if (isParam(s)) return shapeD(asPline(s));
   if (s.t === 'pline') {
     let d = 'M' + P2(s.pts[0]);
     for (const [a, b, bu] of plSegs(s)) {
@@ -275,8 +309,17 @@ function shapePropsHTML(pg, lv, list) {
     const s = one;
     if (s.t === 'line') { sub = `${L(ptDist(s.a, s.b))} at ${r2(ptAngle(s.a, s.b))}°`; geo = row('shp.len', 'Length', L(ptDist(s.a, s.b))); }
     else if (s.t === 'circle') { sub = `Radius ${L(s.r)}, area ${A(shapeArea(s))}`; geo = row('shp.r', 'Radius', L(s.r)) + row('shp.d', 'Diameter', L(2 * s.r)); }
-    else if (s.t === 'arc') { sub = `Radius ${L(s.r)}, ${r2(arcSweep(s))}°, length ${L(shapeLength(s))}`; geo = row('shp.r', 'Radius', L(s.r)); }
-    else if (s.t === 'ellipse') { sub = `${L(2 * s.rx)} x ${L(2 * s.ry)}, area ${A(shapeArea(s))}`; geo = row('shp.rx', 'First half axis', L(s.rx)) + row('shp.ry', 'Second half axis', L(s.ry)); }
+    else if (s.t === 'arc') { sub = `Radius ${L(s.r)}, ${r2(arcSweep(s))}°, length ${L(shapeLength(s))}`; geo = row('shp.r', 'Radius', L(s.r)) + row('shp.a0', 'Start angle (degrees)', r2(s.a0), 'number') + row('shp.a1', 'End angle (degrees)', r2(s.a1), 'number'); }
+    else if (s.t === 'ellipse') { sub = `${L(2 * s.rx)} x ${L(2 * s.ry)}, area ${A(shapeArea(s))}`; geo = row('shp.rx', 'First half axis', L(s.rx)) + row('shp.ry', 'Second half axis', L(s.ry)) + row('shp.rot', 'Rotation (degrees)', r2(s.rot || 0), 'number'); }
+    else if (s.t === 'rect') {
+      const cm = s.r ? 'round' : s.ch ? 'cut' : 'square';
+      sub = `${L(s.w)} x ${L(s.h)}, area ${A(shapeArea(s))}`;
+      geo = row('shp.w', 'Width', L(s.w)) + row('shp.h', 'Height', L(s.h)) + row('shp.rot', 'Rotation (degrees)', r2(s.rot || 0), 'number')
+        + row('shp.corner', 'Corners', '', 'select', opt([['square', 'Square'], ['round', 'Rounded'], ['cut', 'Cut']], cm)) + (cm !== 'square' ? row('shp.csize', cm === 'round' ? 'Corner radius' : 'Corner cut', L(s.r || s.ch)) : '');
+    } else if (s.t === 'polygon') {
+      sub = `${s.n} sides, side ${L(2 * polyVR(s) * Math.sin(Math.PI / s.n))}, area ${A(shapeArea(s))}`;
+      geo = row('shp.n', 'Sides', s.n, 'number', 'min="3" max="64" step="1"') + row('shp.r', 'Radius', L(s.r)) + row('shp.ic', 'Radius to', '', 'select', opt([['I', 'Corners (inscribed)'], ['C', 'Side middles (circumscribed)']], s.ic || 'I')) + row('shp.rot', 'Rotation (degrees)', r2(s.rot || 0), 'number');
+    }
     else if (s.t === 'pline' || s.t === 'spline') {
       sub = `${s.pts.length} points, length ${L(shapeLength(s))}${s.closed ? ', area ' + A(shapeArea(s)) : ''}`;
       geo = `<div class="prow"><label>Closed</label><input type="checkbox" data-k="shp.closed" ${s.closed ? 'checked' : ''} style="width:auto"></div>`;
@@ -294,7 +337,7 @@ function shapePropsHTML(pg, lv, list) {
   return `<div class="ident">${one ? SHAPE_NAMES[one.t] : list.length + ' shapes'}</div><div class="sub">${esc(sub)}</div>
     ${geo ? `<div class="pgrp"><h4>Geometry</h4>${geo}</div>` : ''}<div class="pgrp"><h4>Style</h4>${st}</div>
     <div class="note">Drag a grip (square) to reshape. Click a grip, then press Space to switch between stretch, move, rotate, scale and mirror.</div>
-    <div class="btnrow">${roomOK ? '<button class="btn" data-act="shapeToRoom">Make room</button>' : ''}<button class="btn" data-act="rotateSel">Rotate 90°</button><button class="btn" data-act="delSel">Delete</button></div>`;
+    <div class="btnrow">${roomOK ? '<button class="btn" data-act="shapeToRoom">Make room</button>' : ''}${list.some(isParam) ? '<button class="btn" data-act="eExplode">Explode</button>' : ''}<button class="btn" data-act="rotateSel">Rotate 90°</button><button class="btn" data-act="delSel">Delete</button></div>`;
 }
 function applyShapeProp(pg, lv, s, key, v) {
   if (applyWallProp(pg, lv, s, key, v)) return;
@@ -307,7 +350,14 @@ function applyShapeProp(pg, lv, s, key, v) {
   else if (key === 'fill') { if (shapeClosed(s)) s.fill = v; }
   else if (key === 'layer') { if (v === '__') return; if (v) s.layer = v; else delete s.layer; }
   else if (key === 'len' && s.t === 'line') { const d = len(); if (d) s.b = rp(polarPt(s.a, d, ptAngle(s.a, s.b))); }
-  else if (key === 'r' && (s.t === 'circle' || s.t === 'arc')) { const d = len(); if (d) s.r = r2(d); }
+  else if (key === 'r' && (s.t === 'circle' || s.t === 'arc' || s.t === 'polygon')) { const d = len(); if (d) s.r = r2(d); }
+  else if ((key === 'a0' || key === 'a1') && s.t === 'arc') { const a = parseFloat(v); if (isFinite(a)) s[key] = r2(n360(a)); }
+  else if (key === 'rot' && (s.t === 'ellipse' || s.t === 'rect' || s.t === 'polygon')) { const a = parseFloat(v); if (isFinite(a)) s.rot = r2(n360(a)); }
+  else if ((key === 'w' || key === 'h') && s.t === 'rect') { const d = len(); if (d) s[key] = r2(d); }
+  else if (key === 'corner' && s.t === 'rect') { const k = s.r || s.ch || r2(Math.min(s.w, s.h) / 8); delete s.r; delete s.ch; if (v === 'round') s.r = k; else if (v === 'cut') s.ch = k; }
+  else if (key === 'csize' && s.t === 'rect') { const d = len(); if (d) { if (s.ch) s.ch = r2(d); else s.r = r2(d); } }
+  else if (key === 'n' && s.t === 'polygon') { const n = Math.round(parseFloat(v)); if (n >= 3 && n <= 64) s.n = n; }
+  else if (key === 'ic' && s.t === 'polygon') s.ic = v === 'C' ? 'C' : 'I';
   else if (key === 'd' && s.t === 'circle') { const d = len(); if (d) s.r = r2(d / 2); }
   else if ((key === 'rx' || key === 'ry') && s.t === 'ellipse') { const d = len(); if (d) s[key] = r2(d); }
   else if (key === 'closed' && (s.t === 'pline' || s.t === 'spline')) { if (s.pts.length >= 3 || !v) s.closed = !!v; }

@@ -13,6 +13,8 @@ function shapeGrips(s) {
   if (s.t === 'arc') return [arcStart(s), arcEnd(s), arcMid(s), s.c];
   if (s.t === 'circle') return [s.c, ...[0, 90, 180, 270].map(a => polarPt(s.c, s.r, a))];
   if (s.t === 'ellipse') return [s.c, ...[0, 1, 2, 3].map(i => ellipsePt(s, i * Math.PI / 2))];
+  if (s.t === 'rect') { const c = rectCorners(s); return c.concat(c.map((p, i) => midPt(p, c[(i + 1) % 4])), [s.c]); }
+  if (s.t === 'polygon') return [s.c, ...polyVerts(s)];
   if (s.t === 'spline') return s.pts.slice();
   if (s.t === 'text') return [s.p];
   if (s.t === 'wall') return [s.a, s.b, midPt(s.a, s.b)];
@@ -42,6 +44,10 @@ function gripStretch(s, i, q) {
   else if (s.t === 'ellipse') {
     if (i === 0) s.c = q;
     else if (ptDist(s.c, q) > 0.01) { if (i === 1 || i === 3) { s.rx = r2(ptDist(s.c, q)); s.rot = r2(n360(ptAngle(s.c, q) + (i === 3 ? 180 : 0))); } else s.ry = r2(ptDist(s.c, q)); }
+  } else if (s.t === 'rect') rectGrip(s, i, q);
+  else if (s.t === 'polygon') {
+    if (i === 0) s.c = q;
+    else if (ptDist(s.c, q) > 0.01) { const d = ptDist(s.c, q); s.r = r2(s.ic === 'C' ? d * Math.cos(Math.PI / s.n) : d); const a0 = ptAngle(s.c, q) - (i - 1) * 360 / s.n; s.rot = r2(n360(a0 - (s.ic === 'C' ? 180 / s.n : 0))); }
   } else if (s.t === 'spline') s.pts[i] = q;
   else if (s.t === 'text') s.p = q;
   else if (s.t === 'wall') { if (i === 0) s.a = q; else if (i === 1) s.b = q; else { const m = midPt(s.a, s.b), d = [q[0] - m[0], q[1] - m[1]]; s.a = shiftPt(s.a, d); s.b = shiftPt(s.b, d); } }
@@ -50,6 +56,16 @@ function gripStretch(s, i, q) {
     if (i === 0) s.c = rp(axPt(w, ax, sq, 0)); else { const at = openingAt(s, w); const nw = 2 * Math.abs(sq - at); if (nw > 0.5) s.w = r2(Math.min(nw, ax.len) * 1000) / 1000; }
   } else if (typeof gripStretchMore === 'function') gripStretchMore(s, i, q);
   return s;
+}
+// rectangle grips: 0-3 corners (the opposite corner stays), 4-7 side middles (the opposite side stays), 8 center (moves)
+function rectGrip(s, i, q) {
+  if (i === 8) { s.c = q; return; }
+  const p = rectLocal(s, q), hw = s.w / 2, hh = s.h / 2;
+  let x0 = -hw, x1 = hw, y0 = -hh, y1 = hh;
+  if (i < 4) { const [sx, sy] = [[-1, -1], [1, -1], [1, 1], [-1, 1]][i]; if (sx < 0) x0 = p[0]; else x1 = p[0]; if (sy < 0) y0 = p[1]; else y1 = p[1]; }
+  else if (i === 4) y0 = p[1]; else if (i === 5) x1 = p[0]; else if (i === 6) y1 = p[1]; else x0 = p[0];
+  const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0); if (w < 0.01 || h < 0.01) return;
+  s.c = rp(rectAt(s, (x0 + x1) / 2, (y0 + y1) / 2)); s.w = r2(w); s.h = r2(h);
 }
 const gripAt = (s, p) => shapeGrips(s).findIndex(g => ptDist(g, p) < 0.02);
 
@@ -129,7 +145,6 @@ function gripPreview(pg, q, r) {
   if (op.mode === 'rotate') label += ' ' + r2(ptDist(op.base, q) < 1e-6 ? 0 : ptAngle(op.base, q)) + '°';
   else if (op.mode === 'scale') label += ' x' + (Math.round(ptDist(op.base, q) / op.ref * 100) / 100);
   else label += ' ' + formatLength(toRealMm(lv, ptDist(op.base, q)));
-  s += `<text class="rdout" x="${b[0] + 8 * u}" y="${b[1] - 8 * u}" font-size="${11 * u}" style="stroke-width:${2.5 * u}">${esc(label)}</text>`;
   $('#overlay').innerHTML = s + (r ? fpMark(pg, r) : '');
 }
 function gripPoint(pg, lv, raw) { return fpPoint(pg, lv, raw, { last: gripOp.base, skip: gripSkip(gripOp) }); }

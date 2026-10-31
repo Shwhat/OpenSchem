@@ -99,6 +99,7 @@ function cmdSubmit(text) {
 }
 $('#cmdinput').addEventListener('keydown', e => {
   const inp = e.target;
+  if (e.key === 'F12') { e.preventDefault(); e.stopPropagation(); toggleDyn(); return; }
   if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const t = inp.value; inp.value = ''; cmdSubmit(t); if (!PREFS.cmdline && document.activeElement === inp && !fpAwaiting()) cmdDone(); cmdSync(); }
   else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (inp.value) inp.value = ''; else { cmdDone(); escapeCommand(); } cmdSync(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); if (cmdHi > 0) { cmdHi--; inp.value = CMDHIST[cmdHi] || ''; } }

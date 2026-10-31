@@ -454,7 +454,31 @@ dialog::backdrop{background:rgba(20,28,40,.35)}
 .osm{fill:none;stroke:#e0a100;pointer-events:none}
 .osm text{fill:#7a5b00;stroke:#fff;paint-order:stroke;font-family:var(--font)}
 .trk{stroke:#28a745;fill:none;stroke-dasharray:4,3;pointer-events:none}
-.rdout{fill:var(--text);stroke:#fff;paint-order:stroke;font-family:var(--font);pointer-events:none}
+/* dynamic input box beside the cursor (floor plans); colors follow the sheet, not the app theme */
+#dyn{position:fixed;z-index:60;pointer-events:none;font-family:var(--font);font-size:13px;color:#1d1d1d;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+#dyn .dynp{background:#ffffff;border:1px solid #8b96a5;border-radius:3px;padding:2px 7px;box-shadow:0 1px 3px rgba(0,0,0,.18);white-space:nowrap}
+#dyn .dynarr{color:#1f5fbf}
+#dyn .dynrow{display:flex;gap:4px}
+#dyn .dynf{display:inline-flex;align-items:center;gap:5px;background:#ffffff;border:1px solid #8b96a5;border-radius:3px;padding:2px 7px;box-shadow:0 1px 3px rgba(0,0,0,.18);white-space:nowrap;font-variant-numeric:tabular-nums}
+#dyn .dynf i{font-style:normal;color:#5d6775;font-size:11px}
+#dyn .dynf b{font-weight:600;color:#8a929c}
+#dyn .dynf.act{border-color:#1f6fff;box-shadow:0 0 0 1px #1f6fff}
+#dyn .dynf.typed b,#dyn .dynf.lock b,#dyn.ro .dynf b{color:#111}
+#dyn .dynf u{display:inline-block;width:1px;height:13px;background:#111;margin-left:1px;vertical-align:-2px;animation:dynblink 1s steps(1) infinite}
+#dyn .dynlock{width:10px;height:12px;fill:#1f5fbf;stroke:#1f5fbf;stroke-width:1.2}
+#dyn .dynmenu{pointer-events:auto;background:#ffffff;border:1px solid #8b96a5;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.25);padding:2px 0}
+#dyn .dynopt{padding:3px 12px;cursor:pointer}
+#dyn .dynopt.on,#dyn .dynopt:hover{background:#dce8fb}
+#dyn.dk{color:#eef1f4}
+#dyn.dk .dynp,#dyn.dk .dynf,#dyn.dk .dynmenu{background:#20252c;border-color:#6b7685}
+#dyn.dk .dynf i{color:#aab3be}
+#dyn.dk .dynf b{color:#8f99a5}
+#dyn.dk .dynf.typed b,#dyn.dk .dynf.lock b,#dyn.dk.ro .dynf b{color:#ffffff}
+#dyn.dk .dynf u{background:#ffffff}
+#dyn.dk .dynarr,#dyn.dk .dynlock{color:#8fb6ff;fill:#8fb6ff;stroke:#8fb6ff}
+#dyn.dk .dynf.act{border-color:#5d9bff;box-shadow:0 0 0 1px #5d9bff}
+#dyn.dk .dynopt.on,#dyn.dk .dynopt:hover{background:#2f3d52}
+@keyframes dynblink{50%{opacity:0}}
 
 /* floor plan shapes and grips */
 .shp .hit{fill:transparent;stroke:none}

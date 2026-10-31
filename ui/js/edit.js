@@ -162,6 +162,8 @@ function offsetShape(pick, d, side) {
   const s = pick.s, cv = pick.cv; const sg = sideSign(cv, side);
   if (s && s.t === 'circle') { const r = s.r - sg * d; return r > 0.01 ? Object.assign(clone(s), { id: uid(), r: r2(r) }) : null; }
   if (s && s.t === 'ellipse') { const inside = sg > 0; const rx = s.rx + (inside ? -d : d), ry = s.ry + (inside ? -d : d); return rx > 0.01 && ry > 0.01 ? Object.assign(clone(s), { id: uid(), rx: r2(rx), ry: r2(ry) }) : null; }
+  if (s && s.t === 'polygon') { const r = s.r - sg * d * (s.ic === 'C' ? 1 : 1 / Math.cos(Math.PI / s.n)); return r > 0.01 ? Object.assign(clone(s), { id: uid(), r: r2(r) }) : null; }
+  if (s && s.t === 'rect' && !s.ch) { const w = s.w - 2 * sg * d, h = s.h - 2 * sg * d; const o = Object.assign(clone(s), { id: uid(), w: r2(w), h: r2(h) }); if (s.r) { const r = s.r - sg * d; if (r > 0.01) o.r = r2(r); else delete o.r; } return w > 0.01 && h > 0.01 ? o : null; }
   if (s && s.t === 'spline') {
     const o = clone(s); o.id = uid();
     o.pts = s.pts.map((p, i) => { const a = s.pts[Math.max(0, i - 1)], b = s.pts[Math.min(s.pts.length - 1, i + 1)]; const dir = ptAngle(a, b) + 90 * sg; return rp(polarPt(p, d, dir)); });
@@ -173,7 +175,7 @@ function offsetShape(pick, d, side) {
   if (r) { r.id = uid(); if (r.t === 'wall') delete r.tag; }
   return r;
 }
-const offsetable = s => ['line', 'wall', 'pline', 'arc', 'circle', 'ellipse', 'spline'].includes(s.t);
+const offsetable = s => ['line', 'wall', 'pline', 'arc', 'circle', 'ellipse', 'rect', 'polygon', 'spline'].includes(s.t);
 drawTool('offset', {
   name: 'Offset',
   init(D) { D.stage = 'dist'; D.want = 'dist'; D.d = PREFS.offsetD ? toPlanMm(levelOf(page()), PREFS.offsetD) : 0; D.through = PREFS.offsetThrough || false; },
@@ -204,7 +206,9 @@ function mergeEls(els) {
   }
   return out;
 }
-const trimmable = s => ['line', 'wall', 'pline', 'arc', 'circle', 'ellipse', 'spline'].includes(s.t);
+const trimmable = s => ['line', 'wall', 'pline', 'arc', 'circle', 'ellipse', 'rect', 'polygon', 'spline'].includes(s.t);
+// a rectangle or polygon becomes a plain closed polyline (same id) before its corners are edited
+function toPlineInPlace(s) { if (!isParam(s)) return s; const p = asPline(s); for (const k of Object.keys(s)) delete s[k]; return Object.assign(s, p); }
 function replaceShape(lv, s, pieces) {
   const i = lvShapes(lv).indexOf(s); const made = pieces.filter(Boolean).map(p => Object.assign(p, { id: uid() }));
   lv.shapes.splice(i, 1, ...made);
@@ -295,8 +299,9 @@ function plCorner(s, v, o) {
 }
 function corner(pg, lv, A, pa, B, pb, o) {
   // two segments of the same polyline that meet
-  if (A.s === B.s && A.s.t === 'pline') {
-    const s = A.s, n = s.pts.length; const i = Math.min(A.i, B.i), j = Math.max(A.i, B.i);
+  if (A.s === B.s && (A.s.t === 'pline' || isParam(A.s))) {
+    const s = A.s; if (isParam(s)) { const t0 = asPline(s), n0 = t0.pts.length, i0 = Math.min(A.i, B.i), j0 = Math.max(A.i, B.i); const v0 = j0 - i0 === 1 ? j0 : (i0 === 0 && j0 === n0 - 1 ? 0 : -1); if (v0 < 0 || !plCorner(t0, v0, o)) { flash(o.chamfer ? 'That chamfer does not fit' : 'That radius does not fit (or a segment is an arc)'); return false; } commit(() => { for (const k of Object.keys(s)) delete s[k]; Object.assign(s, t0); }); return true; }
+    const n = s.pts.length; const i = Math.min(A.i, B.i), j = Math.max(A.i, B.i);
     let v = j - i === 1 ? j : (s.closed && i === 0 && j === n - 1 ? 0 : -1);
     if (v < 0) { flash('Pick two segments that meet'); return false; }
     const t = clone(s); if (!plCorner(t, v, o)) { flash(o.chamfer ? 'That chamfer does not fit' : 'That radius does not fit (or a segment is an arc)'); return false; }
@@ -318,7 +323,7 @@ function corner(pg, lv, A, pa, B, pb, o) {
   });
   return true;
 }
-const cornerPick = s => ['line', 'wall', 'pline'].includes(s.t);
+const cornerPick = s => ['line', 'wall', 'pline', 'rect', 'polygon'].includes(s.t);
 function cornerTool(name, chamfer) {
   return {
     name,
@@ -349,8 +354,8 @@ function cornerTool(name, chamfer) {
     point(D, q, c) {
       const raw = c.raw || q;
       if (D.stage === 'pl') {
-        const pk = pickShape(c.pg, c.lv, raw, s => s.t === 'pline'); if (!pk) { flash(tolPick); return; }
-        let n = 0; commit(() => { for (let v = pk.s.pts.length - 1; v >= 0; v--) if (plCorner(pk.s, v, this.o(D))) n++; });
+        const pk = pickShape(c.pg, c.lv, raw, s => s.t === 'pline' || isParam(s)); if (!pk) { flash(tolPick); return; }
+        let n = 0; commit(() => { toPlineInPlace(pk.s); for (let v = pk.s.pts.length - 1; v >= 0; v--) if (plCorner(pk.s, v, this.o(D))) n++; });
         flash(`${n} corner(s) done`); D.stage = 'a'; return;
       }
       const pk = pickShape(c.pg, c.lv, raw, cornerPick); if (!pk) { flash(tolPick); return; }
@@ -439,13 +444,14 @@ function explodeSel(lv) {
       if (!sel.has(s.id)) { out.push(s); continue; }
       const parts = typeof explodeOther === 'function' ? explodeOther(lv, s) : null;
       if (parts) { out.push(...parts); n++; continue; }
+      if (isParam(s)) { out.push(Object.assign(asPline(s), { id: uid() })); n++; continue; }
       if (s.t !== 'pline') { out.push(s); continue; }
       for (const e of curveOf(s).els) { const p = shapeFromEls({ t: 'line', color: s.color, lw: s.lw, dash: s.dash, layer: s.layer }, [e], false); p.id = uid(); out.push(p); }
       n++;
     }
     lv.shapes = out; sel = new Set();
   });
-  if (!n) flash('Select polylines, blocks or dimensions to explode'); return n;
+  if (!n) flash('Select rectangles, polygons, polylines, blocks or dimensions to explode'); return n;
 }
 const immediateTool = (name, fn) => ({
   name, init(D) { selInit(D, 'go'); if (D.stage === 'go') { fn(levelOf(page())); drawExit(); } }, picking: D => D.stage === 'sel',

@@ -195,7 +195,7 @@ function dxfWriter() {
 const dxfNum = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isFinite(x) ? String(x) : '0'; };
 // the plan as simple primitives for export: { t: line | pline | circle | arc | ellipse | text, layer }
 function exportPrims(lv) {
-  const out = []; const add = (s, layer) => { if (s) out.push(Object.assign(s, { layer: s.layer && typeof s.layer === 'string' && s.layer.startsWith('L') ? ((userLayers().find(l => l.id === s.layer) || {}).name || layer) : layer })); };
+  const out = []; const add = (s, layer) => { if (s && isParam(s)) s = asPline(s); if (s) out.push(Object.assign(s, { layer: s.layer && typeof s.layer === 'string' && s.layer.startsWith('L') ? ((userLayers().find(l => l.id === s.layer) || {}).name || layer) : layer })); };
   const cr = wallCorners(lv);
   for (const w of lvWalls(lv)) for (const p of wallPieces(lv, w, cr.get(w.id))) add({ t: 'pline', pts: p, closed: true, layer: w.layer }, 'A-WALL');
   for (const s of lvShapes(lv)) {

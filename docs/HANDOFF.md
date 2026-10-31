@@ -32,6 +32,17 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - Item roles: `main`, `aux`, `sl` (single-line or pneumatic view of a device: cross-referenced, counted once on the BOM), `mark` (pneumatic air supply and exhaust, no tag). Symbol flags: `std`, `pair`, `pneu`, `valve`, `coilNo`, `propsHTML`, `onChange`.
 - Tests: `15-standards.mjs` and `16-pneumatic.mjs`; parts tests in `80-parts-loads.mjs`.
 
+### Code map for 1.16.0 additions
+
+- `ui/js/shapes.js`: shape types `rect` `{ c, w, h, rot, r | ch }` and `polygon` `{ c, n, r, rot, ic }` (`isParam()`). `asPline(s)` gives the same outline as a closed polyline with the shape's style and id; outline, path, snaps, curves (`curveOf` in `curves.js`), DXF export (`exportPrims` in `dxf.js`), trim and break all go through it. `rectAt()`/`rectLocal()` convert to and from the rectangle's own axes; `rectCorners()`, `rectFrom(a, b, r, ch)`, `polyVerts()`, `polyA0()`, `polyVR()`. Properties: rectangle Width, Height, Rotation, Corners, Corner radius or cut; polygon Sides, Radius, Radius to, Rotation; ellipse Rotation; arc Start and End angle.
+- `ui/js/grips.js`: rectangle grips 0-3 corners, 4-7 side middles, 8 center (`rectGrip()`); polygon grips 0 center, then corners.
+- `ui/js/edit.js`: offset keeps rectangles (without cut corners) and polygons; fillet and chamfer on one of their corners turn them into a polyline in place (same id); Explode turns them into closed polylines; `toPlineInPlace()`.
+- `ui/js/draw.js`: tool flag `free(D)` (the next point sizes a shape, so `fpPoint` skips Ortho and Polar: rectangle corner, circle radius, ellipse other axis). `drawPress()` / `drawUp()`: a release more than 6 px from the press is the next point (press-drag-release on every draw tool).
+- `ui/js/floor.js`: `fpPoint` = `fpPointRaw` plus `dynLock()` (locked dynamic input values steer the cursor); option `free`.
+- `ui/js/dynin.js`: dynamic input. `DYN` state (typed text per field, locked values, active field, X,Y mode, options menu). `dynCtx()` decides the fields from `fpAwaiting()` (x y, dx dy, len ang, w h, dia, num, fac); `dynLive()` the cursor values; `dynKey()` is called first by the window keydown handler; `dynText()` turns the fields into the typed syntax the commands already read (`10'<90`, `4',2'`, `#x,y`, `@dx,dy`) and `dynSubmit()` sends it through `fpTyped()`. Options come from the `[A/B]` part of the prompt (`dynOptions()`, `dynOptWord()`). The box is `#dyn` (styles in `style.css`, class `ro` when off, `dk` on a dark sheet). `PREFS.dyn`, F12 (also from the command line), DYN in the status bar, ribbon Precision group. The old SVG `.rdout` readouts are gone.
+- `ui/js/core.js`: `PREFS.ortho` now false by default, `PREFS.dyn` true.
+- Tests: `49-dyn.mjs`.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -47,13 +58,7 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 
 ## Bug list (inspect and fix on the next build)
 
-Floor plan drawing tools should work like AutoCAD.
-
-1. Rectangle never placed (floor plan Draw tools). Cause: Ortho is on by default (`PREFS.ortho: true` in `core.js`), so the second corner is locked level with the first, giving zero width or height; the ghost hides and `point()` in `draw.js` rejects the click. An object snap overrides ortho, so it only worked when ending on an existing line. Same setting made polylines feel stuck at 90 degrees. Fix: Ortho off by default; two-corner shapes ignore Ortho and Polar for the opposite corner.
-2. Press-drag-release and click-click both work on every two-point tool (line, rectangle, circle, ellipse, wall, dimension).
-3. True shape objects instead of closed polylines: rectangle (width, height, rotation, corner radius or cut), circle (center, radius or diameter), ellipse (center, two radii, rotation), polygon (center, sides, radius, inscribed or circumscribed), arc (center, radius, start and end angle). Values editable in Properties; AutoCAD-style grips (edge handles stretch one side, corner handles resize from the opposite corner, center moves). Still work with offset, room from shape, DXF export (as polylines). Explode command converts to plain polylines or lines.
-4. Readout while drawing is unreadable in both themes. Cause: `.rdout` in `style.css` uses the theme text color with an always-white outline, 11 px. Fix: label with a solid background matching the sheet, contrasting text, larger font. Per tool: rectangle width x height, circle radius or diameter, line, polyline and wall length and angle. Decided: AutoCAD-style dynamic input, the readout values are boxes next to the cursor you can type into (details below, pending confirmation).
-5. Dynamic input (proposed, AutoCAD behavior): on by default, F12 and a DYN status bar button toggle it. First point: X and Y boxes. Next points: length and angle boxes, relative to the last point (rectangle: width and height; circle: radius; polygon: radius; arc: radius then angles). Typing goes into the active box; Tab moves to the next box and locks the typed value (lock icon), so the cursor only controls the unlocked value; Enter accepts. A comma switches to X,Y entry; @ relative, # absolute. The current command prompt shows beside the cursor, with Down arrow opening its options (Fillet, Chamfer, and so on). The command line keeps working alongside.
+None open.
 
 ## Open ideas, not yet specified
 
@@ -83,6 +88,13 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - 1.12.1 (commit 380a49f): ribbon reset on version change; floor plan Align to grid.
 - 1.13.0 (commit 1f0de32): keyboard-first dialogs, panel docking improvements, Open to-dos filter, New page split button, Place on schematic order, circuit legend object, symbol editor works like a page, driving dimensions, report settings and order, custom reports. 164 tests. Last Windows version.
 - 1.14.0 (commit 1b16c3e): server version with accounts, projects on the server, sharing, one editor at a time with an edit lock, per-user preferences and autosave, shared libraries, browser downloads for exports, security headers, Dockerfile and compose file. 171 browser tests.
+- 1.16.0 (floor plan drawing works like AutoCAD):
+  - Bug fix: the rectangle never placed. Ortho was on by default and locked the second corner level with the first (zero height); it only worked when the last click snapped to a line. Ortho is now off by default, and the points that size a shape (rectangle corner, circle radius, ellipse other axis) ignore Ortho and Polar. Polylines no longer feel stuck at 90 degrees.
+  - Press-drag-release as well as click-click on every draw tool (line, rectangle, circle, ellipse, wall, dimension and the rest).
+  - Rectangles and polygons are true shapes (Properties, grips, Explode to a polyline, offset keeps the shape, fillet or chamfer of one corner makes a polyline, DXF export as polylines). Ellipse rotation and arc start and end angles in Properties.
+  - Dynamic input (AutoCAD style) beside the cursor: prompt, typeable value boxes, Tab locks, Enter accepts, comma for X,Y, Down arrow for options, F12 and DYN toggle. Readable in light and dark sheets; with it off the values still show (read only) and typing goes to the command line.
+  - Demo: rounded table and a rotated cut-corner rectangle as rectangle shapes, the hexagon as a polygon shape, a closed polyline with an arc.
+  - 201 browser tests and the Go server tests pass. Image archives for amd64 and arm64 delivered.
 - 1.15.0 (commit 048b8b8, merged into `main` by PR #1; the `docker` branch is deleted):
   - Bug fix: a selected floor plan dimension (and selected lines, polylines, arcs, leaders) no longer shows its click band in blue. The dimension click band is built from its real pieces plus a strip through the text, so the empty area inside the old X no longer selects it.
   - Part numbers `MFR.OrderNumber`, built automatically and read-only. Fields: Manufacturer, Order number, Type number, plus the existing ones. Shared manufacturer list (`manufacturers.json`: code, name, supplier, website) starting with PXC, SIE, RIT, WAG, SCH, ABB, AB, EAT, SQD, LEV, FES, SMC; Project > Manufacturers and a ribbon button. "Add manufacturer..." in the part dialog's picker. Codes 2 to 6 capitals or digits; a code in use cannot be renamed or deleted. Duplicate on save: not saved, offers to open the existing part. CSV import: asks once Skip/Replace/Cancel; unknown manufacturer names are added with a code made from the name. No conversion of old parts; the demos use the new format.
@@ -110,6 +122,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 ## Known limits
 
 - Rooms made from walls follow the walls only while the walls still enclose the room.
+- Dynamic input locks (Tab) steer the cursor for length and angle, width and height, and X,Y; a single value (radius, angle, scale) is only accepted with Enter.
+- Blocks from the built-in block library still draw their rectangles as polylines.
 - Hatches are not associative, and DXF export writes hatches as boundary outlines and blocks as plain geometry.
 - Splines stored by control points in a DXF come in as traced polylines.
 - Driving dimensions move geometry by "stretch" rules; a dimension whose two ends are connected through such pieces cannot be changed this way and says so.
@@ -121,4 +135,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.15.0 is on `main` (merged from the former `docker` branch); GitHub Actions publishes the images. The Windows version is retired. Both Proxmox installer scripts were removed (commit 4c8689d, pushed to `main`). Next: I describe the bugs I found in 1.15.0, we settle fixes, then rebuild as 1.15.1 or 1.16.0. Manufacturer part library import is on hold.
+1.16.0 is built locally and not committed or pushed: the floor plan drawing fixes (rectangle bug, Ortho off by default, press-drag-release, rectangle and polygon shapes, dynamic input). 201 browser tests and the Go server tests pass. Image archives `openschem-1.16.0-amd64.tar.gz` and `openschem-1.16.0-arm64.tar.gz` delivered. Two existing tests were fixed along the way: `40-floor.mjs` room snapping now turns Ortho on itself, and `91-server.mjs` waits for the new project after the New project dialog closes (it raced the dialog's close handler). Waiting for my testing, then commit and push to `main` when I ask. Manufacturer part library import is on hold.
