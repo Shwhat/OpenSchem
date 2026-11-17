@@ -171,4 +171,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.18.1 fixes the building views shell (steps and seams at wall pieces, doors and windows out of line) and makes the 3D window's Shell mode match the report. It is committed and pushed to `main`; GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.1-amd64.tar.gz` and `openschem-1.18.1-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.18.1 fixes the building views shell (steps and seams at wall pieces, doors and windows out of line) and makes the 3D window's Shell mode match the report. It is committed and pushed to `main` (commit f9d6ff6); GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.1-amd64.tar.gz` and `openschem-1.18.1-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
