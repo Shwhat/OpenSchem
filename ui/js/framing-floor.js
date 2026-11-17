@@ -67,19 +67,19 @@ const V3 = { yaw: -0.6, pitch: 0.6, zoom: 1, cut: true, scene: null, orbit: null
 function view3D() {
   const pg = page(); let scene = null, title = ''; V3.M = null; V3.mode = 'shell';
   if (isFloor(pg) && levelOf(pg)) { scene = levelScene(levelOf(pg)); title = '3D view of ' + levelOf(pg).name; }
-  else if (isFrame(pg) && bldOf(pg)) { const M = frameModel(bldOf(pg)); if (M.errs && M.errs.length) { alert(M.errs.join('\n')); return; } scene = buildingScene(M); V3.M = M; title = '3D view of ' + bldOf(pg).name; }
+  else if (isFrame(pg) && bldOf(pg)) { const M = frameModel(bldOf(pg)); if (M.errs && M.errs.length) { alert(M.errs.join('\n')); return; } scene = { boxes: [], floors: [] }; V3.M = M; title = '3D view of ' + bldOf(pg).name; }
   if (!scene) { flash('Open a floor plan or framing page for a 3D view'); return; }
-  if (!scene.boxes.length && !scene.floors.length) { flash('Nothing to show yet: draw walls, rooms or blocks first'); return; }
+  if (!V3.M && !scene.boxes.length && !scene.floors.length) { flash('Nothing to show yet: draw walls, rooms or blocks first'); return; }
   V3.scene = scene; V3.yaw = -0.6; V3.pitch = 0.6; V3.zoom = 1;
-  dialog(title, [], null, 'Close', `<div class="v3wrap"><canvas id="v3canvas" class="v3canvas"></canvas><div class="v3bar"><span class="note">Drag to turn, scroll to zoom.</span><span class="v3ctl">${V3.M ? '<span class="seg v3mode"><button type="button" class="on" data-v3mode="shell">Shell</button><button type="button" data-v3mode="framing">Framing</button><button type="button" data-v3mode="exploded">Exploded</button></span>' : ''}<label class="v3cut"><input type="checkbox" id="v3cut" ${V3.cut ? 'checked' : ''}> Lower walls facing me</label> <button type="button" class="btn small" id="v3top">Top</button> <button type="button" class="btn small" id="v3reset">Reset view</button></span></div></div>`);
+  dialog(title, [], null, 'Close', `<div class="v3wrap"><canvas id="v3canvas" class="v3canvas"></canvas><div class="v3bar"><span class="note">Drag to turn, scroll to zoom.</span><span class="v3ctl">${V3.M ? '<span class="seg v3mode"><button type="button" class="on" data-v3mode="shell">Shell</button><button type="button" data-v3mode="framing">Framing</button><button type="button" data-v3mode="exploded">Exploded</button></span>' : ''}${V3.M ? '' : `<label class="v3cut"><input type="checkbox" id="v3cut" ${V3.cut ? 'checked' : ''}> Lower walls facing me</label>`} <button type="button" class="btn small" id="v3top">Top</button> <button type="button" class="btn small" id="v3reset">Reset view</button></span></div></div>`);
   const dlg = $('#dlg'); dlg.style.width = '1000px'; dlg.style.maxWidth = '94vw';
   const cv = $('#v3canvas');
   cv.addEventListener('pointerdown', e => { V3.orbit = { x: e.clientX, y: e.clientY, yaw: V3.yaw, pitch: V3.pitch }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); });
   cv.addEventListener('pointermove', e => { if (!V3.orbit) return; V3.yaw = V3.orbit.yaw + (e.clientX - V3.orbit.x) * 0.008; V3.pitch = Math.max(0.1, Math.min(1.5, V3.orbit.pitch + (e.clientY - V3.orbit.y) * 0.006)); draw3D(cv); });
   const end = () => { V3.orbit = null; }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
   cv.addEventListener('wheel', e => { e.preventDefault(); V3.zoom = Math.max(0.3, Math.min(4, V3.zoom * Math.exp(-e.deltaY * 0.0012))); draw3D(cv); }, { passive: false });
-  $('#v3cut').addEventListener('change', e => { V3.cut = e.target.checked; draw3D(cv); });
-  document.querySelectorAll('[data-v3mode]').forEach(bt => bt.addEventListener('click', () => { V3.mode = bt.dataset.v3mode; document.querySelectorAll('[data-v3mode]').forEach(x => x.classList.toggle('on', x === bt)); $('.v3cut').style.visibility = V3.mode === 'shell' ? '' : 'hidden'; draw3D(cv); }));
+  if ($('#v3cut')) $('#v3cut').addEventListener('change', e => { V3.cut = e.target.checked; draw3D(cv); });
+  document.querySelectorAll('[data-v3mode]').forEach(bt => bt.addEventListener('click', () => { V3.mode = bt.dataset.v3mode; document.querySelectorAll('[data-v3mode]').forEach(x => x.classList.toggle('on', x === bt)); draw3D(cv); }));
   $('#v3top').addEventListener('click', () => { V3.pitch = 1.5; V3.yaw = 0; draw3D(cv); });
   $('#v3reset').addEventListener('click', () => { V3.yaw = -0.6; V3.pitch = 0.6; V3.zoom = 1; draw3D(cv); });
   requestAnimationFrame(() => draw3D(cv));
@@ -120,43 +120,8 @@ function levelScene(lv) {
   }
   return { boxes, floors };
 }
-function buildingScene(M) {
-  const boxes = [], floors = [], b = M.b, R = M.roof, WD = M.WD;
-  const W = M.W || M.L, D = M.D || WD; const WALLC = '#e8e2d6', GLASS = '#bcdcec', ROOFC = '#8a6b4a';
-  const z0 = M.floor ? M.floor.deckT + M.floor.jd : 0;
-  if (M.floor) { boxes.push({ pts: rect4(0, 0, W, D), z0: 0, z1: z0, color: '#c9b68e' }); if (M.floor.skids) M.floor.skidPos.forEach(p => boxes.push({ pts: M.floor.longAxis === 'x' ? rect4(0, p, W, p + M.floor.skidW) : rect4(p, 0, p + M.floor.skidW, D), z0: -M.floor.skidH, z1: 0, color: '#7d6a50' })); }
-  floors.push({ pts: rect4(WD, WD, W - WD, D - WD), color: '#d6c4a0', z: z0 + 0.5 });
-  for (const fw of M.walls) {
-    const d = fw.def, H = fw.wallTop;
-    const foot = (a, c) => { if (b.mode === 'wall') return rect4(a, 0, c, WD); const p0 = d.toPlan(a), p1 = d.toPlan(c), lo = Math.min(p0, p1), hi = Math.max(p0, p1);
-      if (d.key === 'front') return rect4(lo, 0, hi, WD); if (d.key === 'back') return rect4(lo, D - WD, hi, D); if (d.key === 'right') return rect4(W - WD, lo, W, hi); return rect4(0, lo, WD, hi); };
-    const mid = foot(fw.len / 2 - 1, fw.len / 2 + 1)[0];
-    const seg = (a, c, h0, h1, col) => { if (c - a > 1 && h1 - h0 > 1) boxes.push({ pts: foot(a, c), z0: z0 + h0, z1: z0 + h1, color: col || WALLC, wall: true, mid }); };
-    let pos = 0;
-    for (const op of fw.ops) {
-      seg(pos, op.roL, 0, H);
-      if (op.type === 'window') { seg(op.roL, op.roR, 0, op.sill); const g = foot(op.roL, op.roR).map(p => p.slice()); boxes.push({ pts: g, z0: z0 + op.sill, z1: z0 + op.top, color: GLASS, glass: true, mid, thin: true }); }
-      seg(op.roL, op.roR, op.top, H); pos = op.roR;
-    }
-    seg(pos, fw.len, 0, H);
-    // gable and rake walls: the triangle or slope above the plates, in steps
-    if (R && d.fill) {
-      const n = 12; for (let i = 0; i < n; i++) { const a = fw.len * i / n, c = fw.len * (i + 1) / n; const h = Math.max(R.f(d.toPlan(a)), R.f(d.toPlan(c)), 0); if (h > 5) seg(a, c, H, H + h); }
-    }
-  }
-  if (R) {
-    const top = z0 + M.wallTop, th = 20;
-    const planes = [];
-    const P3 = (u, v) => R.axis === 'x' ? [u, v] : [v, u];   // u across the slope, v along the ridge
-    const zAt = u => top + R.f(u) + R.rd * R.sf;
-    const v0 = -R.rake, v1 = R.Lr + R.rake;
-    if (R.type === 'gable') { planes.push([-R.eave, R.B / 2]); planes.push([R.B / 2, R.B + R.eave]); } else planes.push([-R.eave, R.B + R.eave]);
-    for (const [u0, u1] of planes) floors.push({ roof: true, pts3: [[...P3(u0, v0), zAt(u0)], [...P3(u1, v0), zAt(u1)], [...P3(u1, v1), zAt(u1)], [...P3(u0, v1), zAt(u0)]], color: ROOFC, th });
-  }
-  return { boxes, floors };
-}
 function draw3D(cv) {
-  if (cv && V3.M && V3.mode !== 'shell') { drawSolidsCanvas(cv, V3.M, V3.mode); return; }
+  if (cv && V3.M) { drawSolidsCanvas(cv, V3.M, V3.mode); return; }
   const sc = V3.scene; if (!cv || !sc) return;
   const wpx = cv.clientWidth || 900, hpx = Math.round(Math.max(320, Math.min(620, wpx * 0.62))), dpr = window.devicePixelRatio || 1;
   cv.style.height = hpx + 'px'; cv.width = Math.round(wpx * dpr); cv.height = Math.round(hpx * dpr);

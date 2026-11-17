@@ -139,6 +139,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 - 1.18.0 (building views): a Building views report per building with framing, finished shell and exploded framing sheets, four views each from the corners, wall names, width, depth and peak height, member colors like the elevations, vector drawing for print and PDF, on or off and ordered in Project properties; the 3D window switches between Shell, Framing and Exploded for buildings.
 
+- 1.18.1 (bug fix, building views): shell walls no longer show steps and seams where pieces met, and doors and windows line up in their openings. Each shell wall is one solid (`wallShellSolid`: bands at the opening edges, only outside faces, opening sides, head and sill, side wall ends hidden behind the front and back walls), its doors and glass are drawn right after it (`solid.after`), the floor goes first and the roof last. The 3D window's Shell mode for a building now uses the same drawing as the report (the old `buildingScene` is gone; Lower walls facing me stays for floor plan levels).
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -164,9 +166,9 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - Framing: header sizes are picked by hand and not checked against span tables; rafter sizes are only checked so the notch over the wall leaves two thirds of the rafter.
 - Framing: sheathing and panel counts do not subtract doors and windows. Peak height ignores the ridge board depth.
 - Make floor plan copies the building once; later changes to the building do not update that floor plan. Building from room needs a rectangular room drawn square to the page.
-- Building views: solids are sorted back to front by their centers (roof surfaces on top in the shell), so a few places where members cross can overlap in the wrong order. Gable and rake studs are drawn to their long point, not cut to the slope.
+- Building views: solids are sorted back to front by their centers (floor first, roof surfaces last, doors and glass right after their wall), so a few places in the framing view where members cross can overlap in the wrong order. The building's 3D window does not lower the walls facing you. Gable and rake studs are drawn to their long point, not cut to the slope.
 - 3D view: blocks get a height from their name or category; faces are sorted back to front, so a few views can show a face in the wrong order.
 
 ## Where we left off
 
-1.18.0 adds the Building views report and the Shell, Framing and Exploded modes of the 3D window. It is committed and pushed to `main` (commit e975e1c); GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.0-amd64.tar.gz` and `openschem-1.18.0-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.18.1 fixes the building views shell (steps and seams at wall pieces, doors and windows out of line) and makes the 3D window's Shell mode match the report. It is committed and pushed to `main`; GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.1-amd64.tar.gz` and `openschem-1.18.1-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.

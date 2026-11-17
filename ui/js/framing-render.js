@@ -35,13 +35,51 @@ function wallPlacer(M, fw, off) {
 }
 const wallOut = { front: [0, -1, 0], back: [0, 1, 0], right: [1, 0, 0], left: [-1, 0, 0], single: [0, -1, 0] };
 
+// one wall of the finished shell as a single solid with its doors and windows cut out. The wall is split into bands at
+// the opening edges; only faces that are really on the outside are made (the two wall faces, the top, the sides, head
+// and sill of each opening, and the wall ends at building corners), so touching pieces never show their joints.
+function wallShellSolid(M, fw, at) {
+  const WD = M.WD, H = fw.wallTop, L = fw.len;
+  const cuts = [...new Set([0, L, ...fw.ops.flatMap(o => [o.roL, o.roR])])].sort((a, b) => a - b);
+  const bands = [];
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const x0 = cuts[i], x1 = cuts[i + 1]; if (x1 - x0 < 0.5) continue;
+    const op = fw.ops.find(o => o.roL <= x0 + 0.5 && o.roR >= x1 - 0.5);
+    const iv = !op ? [[0, H]] : op.type === 'door' ? [[op.top, H]] : [[0, op.sill], [op.top, H]];
+    bands.push({ x0, x1, iv: iv.filter(([a, b]) => b - a > 0.5) });
+  }
+  // the side walls fit between the front and back walls, so their ends are hidden up to the height of those walls
+  const through = M.walls.filter(w => w.key === 'front' || w.key === 'back').map(w => w.wallTop);
+  const hidden = fw.key === 'left' || fw.key === 'right' ? Math.min(H, ...through) : 0;
+  const minus = (iv, cover) => { let out = [iv]; for (const [c0, c1] of cover) out = out.flatMap(([a, b]) => c1 <= a || c0 >= b ? [[a, b]] : [[a, Math.max(a, c0)], [Math.min(b, c1), b]].filter(([p, q]) => q - p > 0.5)); return out; };
+  const faces = [];
+  const quadX = (x, z0, z1) => [at(x, z0, 0), at(x, z0, WD), at(x, z1, WD), at(x, z1, 0)];
+  bands.forEach((b, i) => {
+    const prev = bands[i - 1], next = bands[i + 1];
+    for (const [z0, z1] of b.iv) {
+      // each face knows a point inside its piece, so it can tell which way is out
+      const ref = at((b.x0 + b.x1) / 2, (z0 + z1) / 2, WD / 2), add = f => { f.ref = ref; faces.push(f); };
+      add([at(b.x0, z0, 0), at(b.x1, z0, 0), at(b.x1, z1, 0), at(b.x0, z1, 0)]);
+      add([at(b.x0, z0, WD), at(b.x0, z1, WD), at(b.x1, z1, WD), at(b.x1, z0, WD)]);
+      add([at(b.x0, z1, 0), at(b.x1, z1, 0), at(b.x1, z1, WD), at(b.x0, z1, WD)]);
+      if (z0 > 0.5) add([at(b.x0, z0, 0), at(b.x0, z0, WD), at(b.x1, z0, WD), at(b.x1, z0, 0)]);
+      for (const [x, nb] of [[b.x0, prev], [b.x1, next]]) {
+        const cover = nb ? nb.iv : (hidden ? [[0, hidden]] : []);
+        for (const [a, c] of minus([z0, z1], cover)) add(quadX(x, a, c));
+      }
+    }
+  });
+  return solidOf(faces, MCOL.wall);
+}
+
 // ---------- the solids for one view kind ----------
 function frameSolids(M, kind) {
   M._solids = M._solids || {}; if (M._solids[kind]) return M._solids[kind];
   const S = [], T = M.T, WD = M.WD, W = M.W || M.L, D = M.D || WD, F = M.floor, R = M.roof;
   const ex = kind === 'exploded' ? Math.max(600, 0.3 * Math.max(W, D)) : 0, lift = kind === 'exploded' ? Math.max(900, 0.45 * M.wallTop) : 0;
   const labels = [];
-  // floor
+  // floor (drawn under everything else)
+  const n0 = S.length;
   if (F) {
     const dz = -F.deckT;
     if (kind === 'shell') S.push(boxSolid(0, 0, dz, W, D, 0, MCOL.deck));
@@ -55,20 +93,17 @@ function frameSolids(M, kind) {
       F.skidPos.forEach(p => S.push(boxSolid(p, 0, -F.height, p + F.skidW, D, dz - F.jd, MCOL.skid)));
     }
   }
+  for (let i = n0; i < S.length; i++) S[i].floor = true;
   // walls
   for (const fw of M.walls) {
     const out = wallOut[fw.key]; const off = [out[0] * ex, out[1] * ex, 0]; const at = wallPlacer(M, fw, off);
     const rect = (x0, x1, z0, z1, color, t0 = 0, t1 = WD, alpha) => { if (x1 - x0 > 0.5 && z1 - z0 > 0.5) S.push(prismSolid([[x0, z0], [x1, z0], [x1, z1], [x0, z1]], at, t0, t1, color, alpha)); };
     if (kind === 'shell') {
-      const H = fw.wallTop; let pos = 0;
-      const run = (a, b, z0, z1) => { const n = Math.max(1, Math.ceil((b - a) / 600)); for (let i = 0; i < n; i++) rect(a + (b - a) * i / n, a + (b - a) * (i + 1) / n, z0, z1, MCOL.wall); };
-      for (const op of fw.ops) {
-        run(pos, op.roL, 0, H);
-        if (op.type === 'window') { run(op.roL, op.roR, 0, op.sill); rect(op.roL, op.roR, op.sill, op.top, MCOL.glass, WD / 2 - 3, WD / 2 + 3, 0.55); }
-        else rect(op.roL + 12, op.roR - 12, 0, op.top - 12, MCOL.door, WD * 0.15, WD * 0.15 + 40);
-        run(op.roL, op.roR, op.top, H); pos = op.roR;
-      }
-      run(pos, fw.len, 0, H);
+      const H = fw.wallTop;
+      // each wall carries its doors and window glass, drawn right after it so they cover the opening sides behind them
+      const ws = wallShellSolid(M, fw, at); ws.after = []; S.push(ws);
+      for (const op of fw.ops) ws.after.push(op.type === 'window' ? prismSolid([[op.roL, op.sill], [op.roR, op.sill], [op.roR, op.top], [op.roL, op.top]], at, WD / 2 - 3, WD / 2 + 3, MCOL.glass, 0.55)
+        : prismSolid([[op.roL + 12, 0], [op.roR - 12, 0], [op.roR - 12, op.top - 12], [op.roL + 12, op.top - 12]], at, 6, 46, MCOL.door));
       if (R && fw.def.fill) {
         const n = 24, poly = [[0, H], [fw.len, H]];
         for (let i = n; i >= 0; i--) { const x = fw.len * i / n; poly.push([x, H + Math.max(0, R.f(fw.def.toPlan(x)))]); }
@@ -121,14 +156,16 @@ function shadeRGB(hex, k) { const n = parseInt(String(hex).replace('#', ''), 16)
 function projectSolids(solids, ax) {
   const L = (() => { const l = [ax.c[0] - ax.right[0] * 0.5, ax.c[1] - ax.right[1] * 0.5, ax.c[2] + 1.2]; const n = Math.hypot(...l); return l.map(v => v / n); })();
   // roof surfaces go last: every view looks down on them
-  const order = solids.map(s => ({ s, d: dot3(s.c, ax.fwd) })).sort((a, b) => (!!a.s.last - !!b.s.last) || b.d - a.d);
+  // the floor goes first and the roof last
+  const rank = x => x.last ? 1 : x.floor ? -1 : 0;
+  const order = solids.map(s => ({ s, d: dot3(s.c, ax.fwd) })).sort((a, b) => (rank(a.s) - rank(b.s)) || b.d - a.d);
   const out = [];
-  for (const { s } of order) for (const F of s.faces) {
+  for (const { s: s0 } of order) for (const s of [s0, ...(s0.after || [])]) for (const F of s.faces) {
     let n = [0, 0, 0];   // Newell's method: works when some corners are in line
     for (let i = 0; i < F.length; i++) { const p = F[i], q = F[(i + 1) % F.length]; n[0] += (p[1] - q[1]) * (p[2] + q[2]); n[1] += (p[2] - q[2]) * (p[0] + q[0]); n[2] += (p[0] - q[0]) * (p[1] + q[1]); }
     const ln = Math.hypot(...n); if (ln < 1e-9) continue; n = n.map(v => v / ln);
     const fc = [0, 0, 0]; F.forEach(p => { fc[0] += p[0] / F.length; fc[1] += p[1] / F.length; fc[2] += p[2] / F.length; });
-    if (dot3(n, [fc[0] - s.c[0], fc[1] - s.c[1], fc[2] - s.c[2]]) < 0) n = n.map(v => -v);
+    const ref = F.ref || s.c; if (dot3(n, [fc[0] - ref[0], fc[1] - ref[1], fc[2] - ref[2]]) < 0) n = n.map(v => -v);
     if (dot3(n, ax.c) <= 1e-6) continue;
     out.push({ pts: F.map(p => [dot3(p, ax.right), dot3(p, ax.up)]), fill: shadeRGB(s.color, 0.62 + 0.38 * Math.max(0, dot3(n, L))), alpha: s.alpha });
   }

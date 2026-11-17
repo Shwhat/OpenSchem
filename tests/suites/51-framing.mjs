@@ -113,7 +113,7 @@ export const tests = {
     await t.eval(() => view3D()); t.ok(await t.eval(() => $('#dlg').open && !!$('#v3canvas') && V3.scene.boxes.length >= 5), '3D view of the level');
     await t.eval(() => $('#dlg').close());
     await t.eval(() => { goPage(P.pages.find(p => isFrame(p) && p.view === 'plan').id); view3D(); });
-    t.ok(await t.eval(() => $('#dlg').open && V3.scene.floors.some(f => f.roof)), '3D view of the building with its roof');
+    t.ok(await t.eval(() => $('#dlg').open && V3.M && V3.mode === 'shell' && !$('#v3cut')), '3D view of the building, drawn like the report');
     await t.eval(() => $('#dlg').close());
   },
   'building views report: framing, shell and exploded sheets in four views, labels, dimensions, settings and the 3D window modes': async t => {
@@ -129,8 +129,20 @@ export const tests = {
     // member colors match the elevations: king studs, jack studs and headers are there
     t.ok(await t.eval(() => ['#d9b37a', '#c4914f', '#9b6a33'].every(c => frameSolids(frameModel(P.buildings[0]), 'framing').solids.some(s => s.color === c))), 'king, jack and header colors');
     // the shell sheet has glass and a door panel; the exploded sheet moves the walls out and lifts the roof
-    t.ok(await t.eval(() => { const sc = frameSolids(frameModel(P.buildings[0]), 'shell'); return sc.solids.some(s => s.color === MCOL.glass && s.alpha < 1) && sc.solids.some(s => s.color === MCOL.door) && sc.solids.some(s => s.last); }), 'shell surfaces');
+    t.ok(await t.eval(() => { const sc = frameSolids(frameModel(P.buildings[0]), 'shell'); const after = sc.solids.flatMap(s => s.after || []); return after.some(s => s.color === MCOL.glass && s.alpha < 1) && after.some(s => s.color === MCOL.door) && sc.solids.some(s => s.last) && sc.solids.some(s => s.floor); }), 'shell surfaces');
     t.ok(await t.eval(() => { const M = frameModel(P.buildings[0]); const a = frameSolids(M, 'framing'), e = frameSolids(M, 'exploded'); return e.ex > 0 && e.lift > 0 && e.bounds[0] < a.bounds[0] - 500 && e.bounds[5] > a.bounds[5] + 500; }), 'exploded apart');
+    // a shell wall is one piece: no faces where pieces meet, only the outside, the opening sides, head and sill
+    const sw = await t.eval(() => {
+      const M = frameModel(P.buildings[1]), fw = M.walls[0], op = fw.ops[0], sc = frameSolids(M, 'shell');
+      const walls = sc.solids.filter(s => s.color === MCOL.wall);
+      const at = (x, z) => Math.abs(x - op.roL) < 0.5 || Math.abs(x - op.roR) < 0.5;
+      const ends = walls[0].faces.filter(f => f.every(p => Math.abs(p[0] - f[0][0]) < 0.5) && at(f[0][0])).map(f => Math.max(...f.map(p => p[2])));
+      const head = walls[0].faces.filter(f => f.every(p => Math.abs(p[2] - op.top) < 0.5)).length;
+      return { n: walls.length, ends, top: op.top, head, door: walls[0].after.some(s => s.color === MCOL.door) };
+    });
+    t.eq(sw.n, 1, 'one solid for the wall'); t.eq(sw.ends.length, 2, 'two door sides'); t.ok(sw.ends.every(z => z <= sw.top + 0.5), 'door sides stop at the head: ' + sw.ends + ' / ' + sw.top);
+    t.eq(sw.head, 1, 'one head over the door'); t.ok(sw.door, 'door panel drawn right after its wall');
+    t.ok(await t.eval(() => frameSolids(frameModel(P.buildings[0]), 'shell').solids.filter(s => s.color === MCOL.wall && s.faces.length > 6).length === 4), 'four walls, one solid each');
     // printing uses the same drawing
     t.ok(await t.eval(() => pageSVG(REPORTS.find(r => r.report === 'bviews' && r.view3 === 'exploded'), { print: true }).includes('<polygon')), 'prints');
     // Project properties turn the report off
