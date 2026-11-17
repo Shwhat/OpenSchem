@@ -210,6 +210,7 @@ function wireLabelPos(w) {
 function pageSVG(pg, o = {}) { const prev = SH; useSheet(pg); try { return pageSVG0(pg, o); } finally { SH = prev; } }
 function pageSVG0(pg, o = {}) {
   if (pg.report === 'cover') return coverSVG(pg);
+  if (pg.report === 'bviews') return buildingViewsSVG(pg);
   if (pg.report) return reportSVG(pg);
   if (pg.kind === 'floor') return floorSVG(pg, o);
   if (pg.kind === 'layout') return layoutSVG(pg, o);

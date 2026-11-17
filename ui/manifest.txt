@@ -24,6 +24,7 @@ js/framing.js
 js/framing-draw.js
 js/framing-reports.js
 js/framing-floor.js
+js/framing-render.js
 js/demo-home.js
 js/ribbon.js
 js/framing-ui.js

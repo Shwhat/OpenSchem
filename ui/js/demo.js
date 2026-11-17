@@ -3,7 +3,7 @@
 // building blocks, plus pages for drives, PLC cards, boxes, graphics, a panel layout, a note card page, round and
 // oval rooms, layers, parts with prices, loads and voltage drop, cables, revisions and to-dos, the IEC or NFPA symbol
 // library, a single-line page, pneumatic pages with tubes and the tubing list, and framing: a garden shed, a wood store
-// with a single-slope panel roof and a framed partition wall with their lumber lists. The NFPA demo is the IEC demo converted
+// with a single-slope panel roof and a framed partition wall with their lumber lists and building views. The NFPA demo is the IEC demo converted
 // to NFPA symbols and device letters.
 // When a feature is added, add it here too and to the demo coverage test (tests/suites/05-demo.mjs).
 function buildDemo(std = 'IEC') {

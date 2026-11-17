@@ -54,6 +54,12 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - Hooks in existing files: page sorting and names (`core.js`), `pageSVG0` (`render.js`), page tree section `frm` and report kinds (`navigator.js`, `custom-reports.js`: `SECTION_DEFS`, `REPORT_DEFS`, `orderedPages`), canvas mouse handlers, delete, duplicate and delete page, Properties, the ribbon context logic in `renderToolbar`, menus and `ACTIONS`, the project check (`frameErrors`), Project properties (Lumber for framing).
 - Tests: `51-framing.mjs`; demo coverage in `05-demo.mjs` (garden shed, wood store with a single-slope panel roof, framed partition wall).
 
+### Code map for 1.18.0 additions (building views)
+
+- `ui/js/framing-render.js`: solids (`prismSolid`, `boxSolid`: faces in real mm, plan x and y, z up, z = 0 at the top of the deck), `frameSolids(M, kind)` for `framing`, `shell` and `exploded` (cached on the framing model as `M._solids`; walls placed by `wallPlacer`, exploded walls moved out by `ex` and the roof lifted by `lift`), parallel projection (`viewAxes`, `projectSolids` sorts solids back to front, roof surfaces marked `last` go on top, face direction by Newell's method), `bviewSVG` (one view in a sheet cell with wall names and dimensions), the report kind `bviews` (`buildBuildingViewReports`, one sheet per kind, `rp.view3`; single walls get framing and shell only; drawn by `buildingViewsSVG` from `pageSVG0`), and `drawSolidsCanvas` for the Framing and Exploded modes of the 3D window (`V3.mode`, `V3.M` in `framing-floor.js`).
+- Member colors are in `MCOL` and match the elevation styles in `style.css`.
+- Tests: the building views test in `51-framing.mjs`; demo coverage checks the `bviews` report.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -131,6 +137,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
   - North American or metric lumber in Project properties.
   - Make floor plan from a building, and a 3D view for floor plan levels and buildings.
 
+- 1.18.0 (building views): a Building views report per building with framing, finished shell and exploded framing sheets, four views each from the corners, wall names, width, depth and peak height, member colors like the elevations, vector drawing for print and PDF, on or off and ordered in Project properties; the 3D window switches between Shell, Framing and Exploded for buildings.
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -156,8 +164,9 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - Framing: header sizes are picked by hand and not checked against span tables; rafter sizes are only checked so the notch over the wall leaves two thirds of the rafter.
 - Framing: sheathing and panel counts do not subtract doors and windows. Peak height ignores the ridge board depth.
 - Make floor plan copies the building once; later changes to the building do not update that floor plan. Building from room needs a rectangular room drawn square to the page.
+- Building views: solids are sorted back to front by their centers (roof surfaces on top in the shell), so a few places where members cross can overlap in the wrong order. Gable and rake studs are drawn to their long point, not cut to the slope.
 - 3D view: blocks get a height from their name or category; faces are sorted back to front, so a few views can show a face in the wrong order.
 
 ## Where we left off
 
-1.17.0 is committed and pushed to `main` (commit 5525d21, on top of 6ae2b74 Remove licensing); GitHub Actions publishes the images. It adds framing (from the standalone OpenFrame planner, which is retired). 207 browser tests (6 new in `51-framing.mjs`) and the Go server tests pass. `48-ux.mjs` was updated for the two new kinds on the New page menu. Image archives `openschem-1.17.0-amd64.tar.gz` and `openschem-1.17.0-arm64.tar.gz` delivered (the amd64 image was started and answered, health check OK). Waiting for my testing. Manufacturer part library import is on hold.
+1.18.0 adds the Building views report and the Shell, Framing and Exploded modes of the 3D window. It is committed and pushed to `main`; GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.0-amd64.tar.gz` and `openschem-1.18.0-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.

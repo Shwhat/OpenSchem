@@ -249,6 +249,7 @@ function mkReport(list, base, rows, cols, extra) {
 function buildExtraReports(reps) {
   buildOpeningReport(reps);
   buildFramingReports(reps);
+  buildBuildingViewReports(reps);
   // connection list
   const cr = connectionRows();
   if (cr.length) mkReport(reps, { id: 'rep:conn', report: 'conn', num: 'CON', desc: 'Connection list', title: 'Connection list' }, cr, CONN_COLS());

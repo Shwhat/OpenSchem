@@ -60,7 +60,7 @@ export const tests = {
         framing: (() => { const B = P.buildings || []; const ops = B.flatMap(b => Object.values(b.walls).flatMap(w => w.ops || []));
           return [B.some(b => b.mode === 'wall'), B.some(b => b.roof.on && b.roof.type === 'gable'), B.some(b => b.roof.on && b.roof.type === 'shed'), B.some(b => b.floor.on && b.floor.skids), B.some(b => b.mode === 'building' && !b.floor.on),
             ops.some(o => o.type === 'door'), ops.some(o => o.type === 'window'), ops.some(o => o.hdr === 'flat'), ops.some(o => o.hdr !== 'flat'), B.some(b => b.cover.roof && b.cover.roofDir === 'down'),
-            ['lumber', 'cutlist', 'cutplan'].every(r => reps.has(r)), B.every(b => !frameModel(b).errs.length)]; })(),
+            ['lumber', 'cutlist', 'cutplan', 'bviews'].every(r => reps.has(r)), B.every(b => !frameModel(b).errs.length)]; })(),
         layoutPlaced: P.pages.some(p => p.kind === 'layout' && p.lay.some(o => o.t === 'dev') && p.lay.some(o => o.t === 'rail') && p.lay.some(o => o.t === 'duct')),
       };
     });

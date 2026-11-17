@@ -2,7 +2,7 @@
 // Branches are collapsed unless they hold the open page, so the tree shows one page open at a time.
 // Expanding or collapsing a branch by hand is remembered until another page is opened inside it.
 const NAV = { open: {}, filter: '', todo: false, lastCur: null };
-const REPORT_KINDS = { lumber: 'Lumber lists', cutlist: 'Framing cut lists', cutplan: 'Cutting plans', cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
+const REPORT_KINDS = { lumber: 'Lumber lists', cutlist: 'Framing cut lists', cutplan: 'Cutting plans', bviews: 'Building views', cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
 
 function navTree() {
   const sch = { key: 'sch', label: home() ? 'Circuits' : 'Schematic', kids: [] };

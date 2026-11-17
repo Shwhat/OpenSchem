@@ -63,15 +63,15 @@ function frameToFloor() {
 // ---------- 3D views ----------
 // The scene is a list of boxes (a footprint polygon in real mm, plan y pointing back, from height z0 to z1) and flat floor
 // polygons. Walls on the side facing the camera drop to a low height so the inside stays visible.
-const V3 = { yaw: -0.6, pitch: 0.6, zoom: 1, cut: true, scene: null, orbit: null };
+const V3 = { yaw: -0.6, pitch: 0.6, zoom: 1, cut: true, scene: null, orbit: null, mode: 'shell', M: null };
 function view3D() {
-  const pg = page(); let scene = null, title = '';
+  const pg = page(); let scene = null, title = ''; V3.M = null; V3.mode = 'shell';
   if (isFloor(pg) && levelOf(pg)) { scene = levelScene(levelOf(pg)); title = '3D view of ' + levelOf(pg).name; }
-  else if (isFrame(pg) && bldOf(pg)) { const M = frameModel(bldOf(pg)); if (M.errs && M.errs.length) { alert(M.errs.join('\n')); return; } scene = buildingScene(M); title = '3D view of ' + bldOf(pg).name; }
+  else if (isFrame(pg) && bldOf(pg)) { const M = frameModel(bldOf(pg)); if (M.errs && M.errs.length) { alert(M.errs.join('\n')); return; } scene = buildingScene(M); V3.M = M; title = '3D view of ' + bldOf(pg).name; }
   if (!scene) { flash('Open a floor plan or framing page for a 3D view'); return; }
   if (!scene.boxes.length && !scene.floors.length) { flash('Nothing to show yet: draw walls, rooms or blocks first'); return; }
   V3.scene = scene; V3.yaw = -0.6; V3.pitch = 0.6; V3.zoom = 1;
-  dialog(title, [], null, 'Close', `<div class="v3wrap"><canvas id="v3canvas" class="v3canvas"></canvas><div class="v3bar"><span class="note">Drag to turn, scroll to zoom.</span><span><label class="v3cut"><input type="checkbox" id="v3cut" ${V3.cut ? 'checked' : ''}> Lower walls facing me</label> <button type="button" class="btn small" id="v3top">Top</button> <button type="button" class="btn small" id="v3reset">Reset view</button></span></div></div>`);
+  dialog(title, [], null, 'Close', `<div class="v3wrap"><canvas id="v3canvas" class="v3canvas"></canvas><div class="v3bar"><span class="note">Drag to turn, scroll to zoom.</span><span class="v3ctl">${V3.M ? '<span class="seg v3mode"><button type="button" class="on" data-v3mode="shell">Shell</button><button type="button" data-v3mode="framing">Framing</button><button type="button" data-v3mode="exploded">Exploded</button></span>' : ''}<label class="v3cut"><input type="checkbox" id="v3cut" ${V3.cut ? 'checked' : ''}> Lower walls facing me</label> <button type="button" class="btn small" id="v3top">Top</button> <button type="button" class="btn small" id="v3reset">Reset view</button></span></div></div>`);
   const dlg = $('#dlg'); dlg.style.width = '1000px'; dlg.style.maxWidth = '94vw';
   const cv = $('#v3canvas');
   cv.addEventListener('pointerdown', e => { V3.orbit = { x: e.clientX, y: e.clientY, yaw: V3.yaw, pitch: V3.pitch }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); });
@@ -79,6 +79,7 @@ function view3D() {
   const end = () => { V3.orbit = null; }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
   cv.addEventListener('wheel', e => { e.preventDefault(); V3.zoom = Math.max(0.3, Math.min(4, V3.zoom * Math.exp(-e.deltaY * 0.0012))); draw3D(cv); }, { passive: false });
   $('#v3cut').addEventListener('change', e => { V3.cut = e.target.checked; draw3D(cv); });
+  document.querySelectorAll('[data-v3mode]').forEach(bt => bt.addEventListener('click', () => { V3.mode = bt.dataset.v3mode; document.querySelectorAll('[data-v3mode]').forEach(x => x.classList.toggle('on', x === bt)); $('.v3cut').style.visibility = V3.mode === 'shell' ? '' : 'hidden'; draw3D(cv); }));
   $('#v3top').addEventListener('click', () => { V3.pitch = 1.5; V3.yaw = 0; draw3D(cv); });
   $('#v3reset').addEventListener('click', () => { V3.yaw = -0.6; V3.pitch = 0.6; V3.zoom = 1; draw3D(cv); });
   requestAnimationFrame(() => draw3D(cv));
@@ -155,6 +156,7 @@ function buildingScene(M) {
   return { boxes, floors };
 }
 function draw3D(cv) {
+  if (cv && V3.M && V3.mode !== 'shell') { drawSolidsCanvas(cv, V3.M, V3.mode); return; }
   const sc = V3.scene; if (!cv || !sc) return;
   const wpx = cv.clientWidth || 900, hpx = Math.round(Math.max(320, Math.min(620, wpx * 0.62))), dpr = window.devicePixelRatio || 1;
   cv.style.height = hpx + 'px'; cv.width = Math.round(wpx * dpr); cv.height = Math.round(hpx * dpr);

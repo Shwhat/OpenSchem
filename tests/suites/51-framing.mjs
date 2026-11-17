@@ -116,6 +116,41 @@ export const tests = {
     t.ok(await t.eval(() => $('#dlg').open && V3.scene.floors.some(f => f.roof)), '3D view of the building with its roof');
     await t.eval(() => $('#dlg').close());
   },
+  'building views report: framing, shell and exploded sheets in four views, labels, dimensions, settings and the 3D window modes': async t => {
+    await t.open('#ind');
+    await t.eval(() => { const b = newBuilding('building'); b.walls.right.ops.push(newFrameOpening('window', 2000)); const w = newBuilding('wall', { name: 'Partition' }); P.buildings.push(b, w); [b, w].forEach(syncFramePages); sortPages(); render(); });
+    const reps = await t.eval(() => REPORTS.filter(r => r.report === 'bviews').map(r => [r.bld === P.buildings[0].id ? 'shed' : 'wall', r.view3, r.sheet, r.sheets]));
+    t.eq(reps, [['shed', 'framing', 1, 3], ['shed', 'shell', 2, 3], ['shed', 'exploded', 3, 3], ['wall', 'framing', 1, 2], ['wall', 'shell', 2, 2]]);
+    t.ok(await t.eval(() => $('#tab-pages').textContent.includes('Building views')), 'in the page tree under Reports');
+    // the framing sheet: four views of member polygons, wall names, width, depth and peak on the first view, a legend
+    await t.eval(() => goPage(REPORTS.find(r => r.report === 'bviews').id));
+    const f = await t.eval(() => { const txt = $('#content').textContent; return { polys: $('#content').querySelectorAll('polygon').length, front: (txt.match(/FRONT/g) || []).length, width: (txt.match(/Width 10'/g) || []).length, peak: /Peak 11'-9 1\/4"/.test(txt), legend: txt.includes('King studs') && txt.includes('Rafters') }; });
+    t.ok(f.polys > 800, 'member faces drawn: ' + f.polys); t.eq(f.front, 2, 'front wall named in the two views that show it'); t.eq(f.width, 1, 'dimensions on the first view only'); t.ok(f.peak && f.legend, 'peak height and legend');
+    // member colors match the elevations: king studs, jack studs and headers are there
+    t.ok(await t.eval(() => ['#d9b37a', '#c4914f', '#9b6a33'].every(c => frameSolids(frameModel(P.buildings[0]), 'framing').solids.some(s => s.color === c))), 'king, jack and header colors');
+    // the shell sheet has glass and a door panel; the exploded sheet moves the walls out and lifts the roof
+    t.ok(await t.eval(() => { const sc = frameSolids(frameModel(P.buildings[0]), 'shell'); return sc.solids.some(s => s.color === MCOL.glass && s.alpha < 1) && sc.solids.some(s => s.color === MCOL.door) && sc.solids.some(s => s.last); }), 'shell surfaces');
+    t.ok(await t.eval(() => { const M = frameModel(P.buildings[0]); const a = frameSolids(M, 'framing'), e = frameSolids(M, 'exploded'); return e.ex > 0 && e.lift > 0 && e.bounds[0] < a.bounds[0] - 500 && e.bounds[5] > a.bounds[5] + 500; }), 'exploded apart');
+    // printing uses the same drawing
+    t.ok(await t.eval(() => pageSVG(REPORTS.find(r => r.report === 'bviews' && r.view3 === 'exploded'), { print: true }).includes('<polygon')), 'prints');
+    // Project properties turn the report off
+    await t.eval(() => projectProps());
+    t.ok(await t.eval(() => $('#dlgbody').textContent.includes('Building views')), 'listed in the report settings');
+    await t.page.uncheck('[data-repon="bviews"]'); await t.confirm();
+    t.eq(await t.eval(() => REPORTS.filter(r => r.report === 'bviews').length), 0);
+    await t.eval(() => projectProps()); await t.page.check('[data-repon="bviews"]'); await t.confirm();
+    t.eq(await t.eval(() => REPORTS.filter(r => r.report === 'bviews').length), 5);
+    // the 3D window switches between shell, framing and exploded
+    await t.eval(() => { goPage(P.pages.find(p => isFrame(p) && p.bld === P.buildings[0].id).id); view3D(); });
+    t.eq(await t.eval(() => [...document.querySelectorAll('[data-v3mode]')].map(b => b.textContent)), ['Shell', 'Framing', 'Exploded']);
+    await t.page.click('[data-v3mode="exploded"]'); t.eq(await t.eval(() => V3.mode), 'exploded');
+    await t.page.click('[data-v3mode="framing"]'); t.eq(await t.eval(() => V3.mode), 'framing');
+    await t.eval(() => $('#dlg').close());
+    // floor plan 3D views have no mode switch
+    await t.eval(() => { const lv = { id: uid(), name: 'L', rooms: [{ id: 'r', name: 'R', pts: [[50, 50], [100, 50], [100, 100], [50, 100]] }], places: [], image: null, scale: 48, shapes: [] }; P.levels.push(lv); const np = newFloorPage(lv.id, 1, 'L'); P.pages.push(np); sortPages(); goPage(np.id); view3D(); });
+    t.eq(await t.eval(() => document.querySelectorAll('[data-v3mode]').length), 0);
+    await t.eval(() => $('#dlg').close());
+  },
   'framing: duplicate and delete a building, Excel export, PDF includes framing pages': async t => {
     await t.open('#ind');
     await t.eval(() => { const b = newBuilding('building'); P.buildings.push(b); syncFramePages(b); sortPages(); goPage(P.pages.find(p => p.bld === b.id && p.view === 'front').id); });
