@@ -218,4 +218,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.22.0 (About guide) is committed and pushed to `main`; GitHub Actions publishes the images. Waiting for my testing. Manufacturer part library import is on hold.
+1.22.0 (About guide) is committed (dafe7e8) and pushed to `main`; GitHub Actions publishes the images. Waiting for my testing. Manufacturer part library import is on hold.
