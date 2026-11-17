@@ -187,4 +187,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.19.0 (splicing) is committed and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.20.0 tile layouts and 1.21.0 decks (specs settled, see Open ideas). Manufacturer part library import is on hold.
+1.19.0 (splicing) is committed (1984636) and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.20.0 tile layouts and 1.21.0 decks (specs settled, see Open ideas). Manufacturer part library import is on hold.
