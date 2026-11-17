@@ -20,8 +20,13 @@ js/find.js
 js/floor.js
 js/shapes.js
 js/layout.js
+js/framing.js
+js/framing-draw.js
+js/framing-reports.js
+js/framing-floor.js
 js/demo-home.js
 js/ribbon.js
+js/framing-ui.js
 js/symbol-editor.js
 js/theme.js
 js/macros.js

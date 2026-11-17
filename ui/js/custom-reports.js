@@ -6,8 +6,8 @@
 // filters, hide or rename columns, edit any cell, add rows and notes. Live reports follow the project: an edited
 // cell keeps your value and gets a marker when the project value under it changes. Locked reports keep a frozen
 // copy of the project data; unlocking keeps the frozen copy until you press Refresh.
-const SECTION_DEFS = [['cover', 'Cover sheet'], ['toc', 'Table of contents'], ['sch', 'Schematic'], ['lay', 'Panel layouts'], ['fp', 'Floor plans'], ['custom', 'Custom reports'], ['rep', 'Reports']];
-const REPORT_DEFS = [['panel', 'Panel schedules'], ['bom', 'Bill of materials'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['tubes', 'Tubing list'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview']];
+const SECTION_DEFS = [['cover', 'Cover sheet'], ['toc', 'Table of contents'], ['sch', 'Schematic'], ['lay', 'Panel layouts'], ['fp', 'Floor plans'], ['frm', 'Framing'], ['custom', 'Custom reports'], ['rep', 'Reports']];
+const REPORT_DEFS = [['panel', 'Panel schedules'], ['bom', 'Bill of materials'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['tubes', 'Tubing list'], ['doors', 'Door and window schedule'], ['lumber', 'Lumber lists'], ['cutlist', 'Framing cut lists'], ['cutplan', 'Cutting plans'], ['rev', 'Revision overview']];
 const CUSTOM_KINDS = [['bom', 'Bill of materials'], ['panel', 'Panel schedule'], ['term', 'Terminal diagrams'], ['conn', 'Connection list'], ['cables', 'Cable overview'], ['cabdiag', 'Cable diagrams'], ['tubes', 'Tubing list'], ['doors', 'Door and window schedule'], ['rev', 'Revision overview'], ['toc', 'Table of contents'], ['cover', 'Cover sheet']];
 const sectionLabel = k => k === 'sch' ? (home() ? 'Circuits' : 'Schematic') : (SECTION_DEFS.find(s => s[0] === k) || [k, k])[1];
 const reportLabel = k => (REPORT_DEFS.find(s => s[0] === k) || CUSTOM_KINDS.find(s => s[0] === k) || [k, k])[1];
@@ -23,7 +23,7 @@ const customOf = pg => pg && pg.custom ? customs().find(c => c.id === pg.custom)
 function orderedPages(reports) {
   const by = {
     cover: reports.filter(r => r.report === 'cover' && !r.custom), toc: reports.filter(r => r.report === 'toc' && !r.custom),
-    sch: P.pages.filter(p => !p.kind), lay: P.pages.filter(p => p.kind === 'layout'), fp: P.pages.filter(p => p.kind === 'floor'),
+    sch: P.pages.filter(p => !p.kind), lay: P.pages.filter(p => p.kind === 'layout'), fp: P.pages.filter(p => p.kind === 'floor'), frm: P.pages.filter(p => p.kind === 'frame'),
     custom: reports.filter(r => r.custom), rep: reportOrder().flatMap(k => reports.filter(r => !r.custom && r.report === k)),
   };
   return sectionOrder().flatMap(k => by[k] || []);
@@ -78,7 +78,7 @@ function customSource(kind, ctx = {}) {
 }
 function tocRowFor(p) {
   if (p.report === 'toc' && p.stub) return { cells: [`Contents ${p.sheet}`, 'Table of contents', '', '', '', 'Report'] };
-  return { cells: [pageName(p), p.report === 'cover' ? (p.coverTitle != null ? p.coverTitle : P.name || '') : p.desc || '', p.report || isFloor(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? (p.custom ? 'Custom report' : 'Report') : isFloor(p) ? 'Floor plan' : isLayout(p) ? 'Panel layout' : 'Schematic'], goto: 'page:' + p.id, link: p.id };
+  return { cells: [pageName(p), p.report === 'cover' ? (p.coverTitle != null ? p.coverTitle : P.name || '') : p.desc || '', p.report || isFloor(p) || isFrame(p) ? '' : dispCkt(p.fn), p.report || isFloor(p) || isFrame(p) ? '' : (home() ? niceRoom(p.loc) : (p.loc ? '+' + p.loc : '')), lastRev(p), p.report ? (p.custom ? 'Custom report' : 'Report') : isFloor(p) ? 'Floor plan' : isLayout(p) ? 'Panel layout' : isFrame(p) ? 'Framing' : 'Schematic'], goto: 'page:' + p.id, link: p.id };
 }
 
 // ---------- what a custom report shows ----------

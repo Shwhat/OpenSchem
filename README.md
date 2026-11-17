@@ -79,6 +79,17 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 **Panel layout**
 - Panel layout pages drawn to scale, with the enclosure, DIN rails, wire ducts and device footprints sized from the parts database
 
+**Framing (buildings and walls)**
+- Framing pages for small buildings (sheds, greenhouses, workshops) and single framed walls: New page > Building or Framed wall, or Building from room on a floor plan, which takes the size, doors and windows of a rectangular room
+- Each building gets a framing plan, an elevation of each wall seen from outside, floor framing and roof framing, drawn to a standard scale on the project's paper with the title block, and grouped under Framing in the page tree
+- Walls with studs on a layout from the left end, end, king and jack studs, headers (flat or doubled), cripples over headers and under sills, sill plates, double top plates that lap at the corners, bottom plates cut out at doors, layout marks and dimensions
+- Doors and windows added from the Framing tab, dragged along the wall on an elevation, or typed in Properties (rough opening width, height, sill, position, header); problems such as an opening too close to the end are explained in plain words and listed by the project check
+- Floors on skids with rim and floor joists and decking; gable roofs (ridge board, rafter ties, gable studs) and single-slope roofs (taller high wall, rake wall studs), with rafter length, plumb cut, notch over the wall, overhangs and peak height
+- Sheathing or panel counts for walls and roof (sheet size and direction, so clear roof panels can run down the slope)
+- Lumber list with the fewest boards from the lengths you can buy (precut studs, 8' to 20' or 2.4 m to 6.0 m), a cut list by wall, floor and roof, and a cutting plan for every board; all three are report pages and export to Excel and PDF
+- North American (2x4, 2x6...) or metric (45x95, 45x145...) lumber, set in Project properties, in feet and inches or millimetres
+- Make floor plan turns a building into a floor plan level with its walls, doors, windows and a room for furniture from the block library; 3D view shows a floor plan level (walls, doors, windows, rooms and blocks) or a building with its roof, and lowers the walls facing you
+
 **Parts and loads**
 - Parts database in the data folder (part number, manufacturer, order number, type number, description, category, technical data, price, watts, datasheet, size) with search, CSV import and export, and a picker in device properties
 - Part numbers follow the convention manufacturer code plus order number (PXC.3031212, SIE.3RT2015-1BB41). The part number is built from the two and is the unique key: saving a part that already exists offers to open the existing one, and a CSV import that contains existing parts asks once whether to skip or replace them
@@ -103,7 +114,7 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 
 ## Demo projects
 
-Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
+Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page, a framed garden shed, wood store and partition wall, and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
 
 ## Running with Docker
 
@@ -171,7 +182,7 @@ docker-compose.yml   Example deployment
 ui/index.html        Page skeleton
 ui/style.css         All styles, including dark theme
 ui/manifest.txt      Script load order (used by the server, the tests and tools/assemble.py)
-ui/js/               Application code, one file per area (standards.js: IEC and NFPA symbols, single-line symbols and converting between standards; pneumatic.js: pneumatic symbols, tubes and the tubing list; parts.js: parts database and manufacturers; host.js: server connection, project list, sharing and account; navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dynin.js: dynamic input, dock.js: panels and workspaces)
+ui/js/               Application code, one file per area (standards.js: IEC and NFPA symbols, single-line symbols and converting between standards; pneumatic.js: pneumatic symbols, tubes and the tubing list; parts.js: parts database and manufacturers; host.js: server connection, project list, sharing and account; navigator.js: page tree and thumbnails, layers.js: layers, units.js: lengths and scale, osnap.js: snaps, shapes.js and draw.js: floor plan shapes and draw tools, grips.js: grips, curves.js and edit.js: edit tools, walls.js: walls, doors and windows, sheets.js: view sheets, annotate.js: dimensions, leaders and hatches, blocks.js: blocks, dxf.js: DXF, SVG and PNG, cmdline.js: command line, dynin.js: dynamic input, dock.js: panels and workspaces, framing.js: framing of buildings and walls, framing-draw.js: framing pages, framing-ui.js: framing dialogs, properties and commands, framing-reports.js: lumber list, cut list and cutting plan, framing-floor.js: buildings from rooms, floor plans from buildings and 3D views)
 ui/vendor/           Third-party libraries (PDF export)
 tests/               Automated tests (tests/fixtures holds DXF files made by make_dxf.py)
 tools/assemble.py    Builds ui/ into a single HTML page for testing in a browser

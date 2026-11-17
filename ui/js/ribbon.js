@@ -221,6 +221,7 @@ const DEFAULT_RIBBON = [
     { name: 'Legend', items: ['insertLegend'] },
     { name: 'Modify', items: ['rotateSel', 'delSel', 'toggleSnap', 'alignToGrid'] },
     { name: 'Sheets', items: ['newViewSheet', 'addView'] },
+    { name: 'Building', items: ['frameFromRoom', 'view3D'] },
     { name: 'Exchange', items: ['importDXF', 'exportDXF', 'exportSVG', 'exportPNG'] },
     { name: 'Precision', items: ['toggleOsnap', 'toggleOrtho', 'togglePolar', 'toggleDyn', 'osnapDlg', 'scaleDlg', 'toggleCmdline'] },
   ] },
@@ -238,6 +239,14 @@ const DEFAULT_RIBBON = [
     { name: 'Hatch', items: ['dHatch', 'hatchSettingsDlg'] },
     { name: 'Blocks', items: ['insertDlg', 'dBlock'] },
   ] },
+  { id: 'framing', name: 'Framing', contextual: true, ctx: 'frame', groups: [
+    { name: 'Building', items: ['frameSizeDlg', 'frameFloorDlg', 'frameRoofDlg', 'frameCoverDlg', 'frameLumberDlg'] },
+    { name: 'Openings', items: ['selectMode', 'frameAddDoor', 'frameAddWindow', 'delSel'] },
+    { name: 'New', items: ['newBuilding', 'newFramedWall', 'dupPage'] },
+    { name: 'Floor plan', items: ['frameToFloor', 'view3D'] },
+    { name: 'Output', items: ['frameGoLumber', 'frameExportXlsx', 'exportPDF'] },
+    { name: 'History', items: ['undo', 'redo'] },
+  ] },
   { id: 'view', name: 'View', groups: [
     { name: 'Zoom', items: ['zoomFit', 'zoomWindow', 'zoomPrev', 'zoomIn', 'zoomOut'] },
     { name: 'Show', items: ['layersDlg', 'toggleGrid', 'toggleSnap', 'toggleCl'] },
@@ -246,7 +255,7 @@ const DEFAULT_RIBBON = [
     { name: 'Options', items: ['settingsDlg', 'customizeRibbon'] },
   ] },
   { id: 'project', name: 'Project', groups: [
-    { name: 'Pages', items: ['addPage', 'addFloorPage', 'newLayoutPage', 'pageProps', 'dupPage', 'copyPage', 'pastePage', 'delPage'] },
+    { name: 'Pages', items: ['addPage', 'addFloorPage', 'newLayoutPage', 'newBuilding', 'pageProps', 'dupPage', 'copyPage', 'pastePage', 'delPage'] },
     { name: 'Numbering', items: ['renumberDlg', 'wireDlg', 'lockWires', 'terminalEditor'] },
     { name: 'Reports', items: ['goToc', 'goPanel', 'goBOM', 'goConn', 'goCables', 'goTubes', 'goTerms'] },
     { name: 'Revisions', items: ['revisionsDlg'] },
@@ -272,14 +281,14 @@ function cmdInfo(id) {
 }
 function renderToolbar() {
   const el = $('#toolbar'); if (!P) return;
-  const fp = isFloor(page()); const kind = fp ? 'floor' : 'sch';
-  const def = ribbonDef();
+  const fp = isFloor(page()), frp = isFrame(page()); const kind = fp ? 'floor' : frp ? 'frame' : 'sch';
+  const def = ribbonDef(); const ctxOf = t => t.ctx || 'floor';
   if (kind !== lastPageKind) {
-    if (fp && def.some(t => t.id === 'floor')) ribbonTab = 'floor';
-    else if (!fp && ribbonTab === 'floor') ribbonTab = 'home';
+    const first = def.find(t => t.contextual && ctxOf(t) === kind);
+    if (first) ribbonTab = first.id; else if (def.some(t => t.id === ribbonTab && t.contextual)) ribbonTab = 'home';
     lastPageKind = kind;
   }
-  const tabs = def.filter(t => (!t.contextual || fp) && !(t.id === 'pneu' && !S().industrial));
+  const tabs = def.filter(t => (!t.contextual || ctxOf(t) === kind) && !(t.id === 'pneu' && !S().industrial));
   if (!tabs.some(t => t.id === ribbonTab)) ribbonTab = (tabs[0] || {}).id;
   const tab = tabs.find(t => t.id === ribbonTab);
   let s = '<div class="rtabs">' + tabs.map(t => `<div class="rtab${t.id === ribbonTab ? ' active' : ''}${t.contextual ? ' ctx' : ''}" data-rtab="${esc(t.id)}">${esc(t.name)}</div>`).join('') + (typeof workspaceSelectHTML === 'function' ? workspaceSelectHTML() : '') + '</div><div class="rpanel">';
@@ -335,7 +344,7 @@ function customizeRibbon() {
     const btns = kind => `<div class="cz-btns"><button type="button" class="btn small" data-czb="${kind}:add">Add</button><button type="button" class="btn small" data-czb="${kind}:ren">Rename</button><button type="button" class="btn small" data-czb="${kind}:del">Remove</button><button type="button" class="btn small" data-czb="${kind}:up">▲</button><button type="button" class="btn small" data-czb="${kind}:dn">▼</button></div>`;
     const avail = allCmds().filter(([id, l]) => !q || (l + ' ' + id).toLowerCase().includes(q.toLowerCase()));
     $('#dlgbody').innerHTML = `<div class="cz">
-      <div><h4>Tabs</h4>${list(W.map(x => x.name + (x.contextual ? ' (floor plans)' : '')), ti, 't')}${btns('t')}</div>
+      <div><h4>Tabs</h4>${list(W.map(x => x.name + (x.contextual ? (x.ctx === 'frame' ? ' (framing pages)' : ' (floor plans)') : '')), ti, 't')}${btns('t')}</div>
       <div><h4>Groups in ${esc(t.name || '')}</h4>${list(t.groups.map(x => x.name), gi, 'g')}${btns('g')}</div>
       <div><h4>Buttons in ${esc(g.name || '')}</h4>${list(g.items.map(id => (cmdInfo(id) || { label: id }).label), ii, 'i')}<div class="cz-btns"><button type="button" class="btn small" data-czb="i:del">Remove</button><button type="button" class="btn small" data-czb="i:up">▲</button><button type="button" class="btn small" data-czb="i:dn">▼</button></div></div>
       <div><h4>Available commands</h4><input class="search" id="czq" placeholder="Search commands and symbols" value="${esc(q)}" style="margin:0 0 6px;width:100%"><div class="cz-list">${avail.map(([id, l]) => `<div class="cz-row" data-czadd="${esc(id)}" title="Add to the selected group">${esc(l)}</div>`).join('')}</div><div class="note">Click a command to add it to the selected group.</div></div>

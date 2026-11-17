@@ -43,6 +43,17 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - `ui/js/core.js`: `PREFS.ortho` now false by default, `PREFS.dyn` true.
 - Tests: `49-dyn.mjs`.
 
+### Code map for 1.17.0 additions (framing, formerly the separate OpenFrame planner)
+
+- `ui/js/framing.js`: lumber catalogs (`LUMBER.na`, `LUMBER.metric`; `P.lumber` picks one, default by units), buildings in `P.buildings` (`newBuilding(mode)`, mode `building` or `wall`; lengths in real mm; lumber sizes stored as catalog indexes), openings (`newFrameOpening`), `syncFramePages(b)` (keeps a building's pages in step with its views), the framing engine `frameModel(b)` (cached in `FRAMECACHE`; walls, floor, roof, pieces, sheets and packed boards), `packBoards()` (fewest boards, tries each stock length as the preferred one), `convertBuildingsLumber()` when the catalog changes, `fmtCut()` for cut lengths.
+- Walls are seen from outside. The front and back walls run the full width; the side walls fit between them (`len = depth - 2 x stud depth`). The right wall starts at the front, the back wall at the right, the left wall at the back (`toPlan`, `toLocal` on each wall definition). Cap plates lap at corners of equal height.
+- `ui/js/framing-draw.js`: page kind `frame` (`pg.bld`, `pg.view`: plan, front, right, back, left, floor, roof, or wall for a single wall). `framingPageSVG()` draws in real mm at a standard scale (`FSCALES`) inside the title block; `FRAME_XF` keeps the placement per page for the mouse. Opening hit areas are `<g data-id>` groups with class `frop`.
+- `ui/js/framing-ui.js`: ribbon icons and commands (contextual tab `framing` with `ctx: 'frame'`; contextual tabs without `ctx` are floor plan tabs), the field lists shared by the section dialogs and Properties (`frameFields`), `newBuildingDlg`, adding, deleting and dragging openings (`frdrag`), Properties (`renderFrameProps`, `framePropChange` with scopes `fb` and `fo`).
+- `ui/js/framing-reports.js`: report kinds `lumber`, `cutlist`, `cutplan` per building (`pg.bld`), and `frameExportXlsx()`.
+- `ui/js/framing-floor.js`: `frameFromRoom()` (rectangular room and the doors and windows on its edges), `frameToFloor()` (a level with 4 walls, the openings and a room), `view3D()` (dialog with a canvas; `levelScene`, `buildingScene`, `draw3D` with painter's sorting and lowered walls on the camera side).
+- Hooks in existing files: page sorting and names (`core.js`), `pageSVG0` (`render.js`), page tree section `frm` and report kinds (`navigator.js`, `custom-reports.js`: `SECTION_DEFS`, `REPORT_DEFS`, `orderedPages`), canvas mouse handlers, delete, duplicate and delete page, Properties, the ribbon context logic in `renderToolbar`, menus and `ACTIONS`, the project check (`frameErrors`), Project properties (Lumber for framing).
+- Tests: `51-framing.mjs`; demo coverage in `05-demo.mjs` (garden shed, wood store with a single-slope panel roof, framed partition wall).
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -112,6 +123,14 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
   - IEC and NFPA demos with new pages: supply and auxiliary pump, heater, fans, alarm and timers, PLC inputs and valve solenoids, single-line diagram, two pneumatic pages.
   - 188 browser tests and the Go server tests pass. Image archives for amd64 and arm64 delivered.
 
+- 1.17.0 (framing, from the standalone OpenFrame planner, which is retired):
+  - New page > Building or Framed wall, and Building from room on a floor plan (size, doors and windows of a rectangular room).
+  - Framing pages per building: framing plan, one elevation per wall (seen from outside, studs, kings, jacks, headers, cripples, sills, plates, gable or rake studs, layout marks, dimensions), floor framing on skids, roof framing (gable or single slope) with the rafter in detail.
+  - Doors and windows: add from the Framing tab, drag along the wall on an elevation, edit in Properties; framing problems in plain words on the page, in Properties and in the project check.
+  - Lumber list (fewest boards), cut list and cutting plan as report pages, Excel export, sheathing and panel counts.
+  - North American or metric lumber in Project properties.
+  - Make floor plan from a building, and a 3D view for floor plan levels and buildings.
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -133,6 +152,12 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - Converting between standards maps each symbol to its counterpart and renames a device only when its tag uses the standard letter (K1 to CR1); custom tags are kept.
 - A valve's solenoid must be given the valve's function and location (=, +) to be the same device; it takes the valve's tag automatically when placed after the valve.
 
+- Framing: only rectangular buildings with gable or single-slope roofs (no hips, no dormers). Studs are laid out from the left end of each wall, not on one layout around the building. No blocking, lookouts for rake overhangs, fascia or trim.
+- Framing: header sizes are picked by hand and not checked against span tables; rafter sizes are only checked so the notch over the wall leaves two thirds of the rafter.
+- Framing: sheathing and panel counts do not subtract doors and windows. Peak height ignores the ridge board depth.
+- Make floor plan copies the building once; later changes to the building do not update that floor plan. Building from room needs a rectangular room drawn square to the page.
+- 3D view: blocks get a height from their name or category; faces are sorted back to front, so a few views can show a face in the wrong order.
+
 ## Where we left off
 
-1.16.0 is committed and pushed to `main` (commit ab25fe7); GitHub Actions publishes the images. It covers the floor plan drawing fixes (rectangle bug, Ortho off by default, press-drag-release, rectangle and polygon shapes, dynamic input). 201 browser tests and the Go server tests pass. Image archives `openschem-1.16.0-amd64.tar.gz` and `openschem-1.16.0-arm64.tar.gz` delivered. Two existing tests were fixed along the way: `40-floor.mjs` room snapping now turns Ortho on itself, and `91-server.mjs` waits for the new project after the New project dialog closes (it raced the dialog's close handler). Waiting for my testing. Manufacturer part library import is on hold.
+1.17.0 is built locally and not committed (framing, from the standalone OpenFrame planner, which is retired). 207 browser tests (6 new in `51-framing.mjs`) and the Go server tests pass. `48-ux.mjs` was updated for the two new kinds on the New page menu. Image archives `openschem-1.17.0-amd64.tar.gz` and `openschem-1.17.0-arm64.tar.gz` delivered (the amd64 image was started and answered, health check OK). Waiting for my testing. Manufacturer part library import is on hold.

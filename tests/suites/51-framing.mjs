@@ -1,0 +1,132 @@
+// Framing pages: buildings and single walls with their framing, openings, floors, roofs, reports and floor plan links.
+const IN = 25.4;
+export const tests = {
+  'framing: new building gets framing pages, a Framing section and lumber reports': async t => {
+    await t.open('#ind');
+    await t.eval(() => newBuildingDlg('building'));
+    await t.page.fill('input[name="name"]', 'Garden shed'); await t.page.fill('input[name="w"]', "10'"); await t.page.fill('input[name="d"]', "8'");
+    await t.confirm();
+    t.eq(await t.eval(() => [page().kind, page().view, pageName(page())]), ['frame', 'plan', 'Garden shed/1']);
+    t.eq(await t.eval(() => P.pages.filter(isFrame).map(p => p.view)), ['plan', 'front', 'right', 'back', 'left', 'floor', 'roof']);
+    t.ok(await t.eval(() => $('#tab-pages').textContent.includes('Framing') && $('#tab-pages').textContent.includes('Garden shed')), 'Framing section in the page tree');
+    t.ok(await t.eval(() => allPages().indexOf(page()) > allPages().findIndex(p => isFloor(p))), 'after the floor plans');
+    t.eq(await t.eval(() => ['lumber', 'cutlist', 'cutplan'].map(k => REPORTS.some(r => r.report === k && r.bld === P.buildings[0].id))), [true, true, true]);
+    t.ok(await t.eval(() => $('#toolbar').textContent.includes('Framing') && ribbonTab === 'framing'), 'Framing ribbon tab selected');
+    // the front wall: a 38" rough opening centered in 10', double 2x6 header, gable studs above
+    await t.eval(() => goPage(P.pages.find(p => isFrame(p) && p.view === 'front').id));
+    const fw = await t.eval(() => { const M = frameModel(P.buildings[0]); const w = M.walls.find(x => x.key === 'front'); return { roL: Math.round(w.ops[0].roL / 25.4 * 100) / 100, kinds: w.members.map(m => m.kind + '@' + Math.round(m.x / 25.4 * 100) / 100), fill: w.fill.length, cap: w.cap.pieces[0].len / 25.4, hdr: w.ops[0].hd.name }; });
+    t.eq(fw.roL, 41); t.eq(fw.hdr, 'Double 2x6'); t.eq(fw.cap, 113);
+    t.ok(fw.kinds.includes('king@38') && fw.kinds.includes('jack@39.5') && fw.kinds.includes('cripple@47.25'), fw.kinds.join(' '));
+    t.ok(fw.fill >= 5, 'gable studs above the plates');
+    t.ok(await t.eval(() => $('#content').textContent.includes('RO 38"') && $('#content').textContent.includes('viewed from outside')), 'elevation drawn with dimensions');
+    // side walls fit between the front and back walls; the roof is a 6/12 gable with 2x6 rafters
+    const r = await t.eval(() => { const M = frameModel(P.buildings[0]); return { right: Math.round(M.walls.find(x => x.key === 'right').len / 25.4 * 100) / 100, raf: Math.round(M.roof.rafterLen / 25.4 * 100) / 100, n: M.roof.n, boards: M.boards.length, sheets: M.sheets.map(s => s.sec + ':' + s.count) }; });
+    t.eq(r.right, 89); t.eq(r.raf, 79.66); t.eq(r.n, 5); t.ok(r.boards > 50 && r.boards < 80, 'boards ' + r.boards);
+    t.eq(r.sheets[0], 'Floor:4');
+    // lumber list page and its rows
+    await t.eval(() => frameGoLumber());
+    t.eq(await t.eval(() => [page().report, page().title]), ['lumber', 'Lumber list Garden shed']);
+    t.ok(await t.eval(() => $('#content').textContent.includes('Boards to buy') && $('#content').textContent.includes('precut stud 92 5/8"')), 'lumber list content');
+  },
+  'framing: openings are added, dragged along the wall, edited in Properties and undone': async t => {
+    await t.open('#ind');
+    await t.eval(() => { const b = newBuilding('building'); P.buildings.push(b); syncFramePages(b); sortPages(); goPage(P.pages.find(p => p.bld === b.id && p.view === 'right').id); zoomFit(); });
+    await t.eval(() => frameAddOpening('window'));
+    const id = await t.eval(() => [...sel][0]);
+    t.eq(await t.eval(() => { const f = frameOpFind([...sel][0]); return [f.k, f.o.type, f.o.ctr]; }), ['right', 'window', true]);
+    t.ok(await t.eval(() => $('#props').textContent.includes('Window 1') && $('#props').textContent.includes('Sill height')), 'opening properties');
+    // drag it 10" to the right (sheet distance = real / scale)
+    const before = await t.eval(() => { const M = frameModel(P.buildings[0]); return M.walls.find(w => w.key === 'right').ops[0].roL; });
+    const pos = await t.eval(id => { const xf = FRAME_XF.get(page().id); const M = frameModel(P.buildings[0]); const o = M.walls.find(w => w.key === 'right').ops[0]; return [xf.X(o.roL + o.w / 2), xf.Y((o.sill + o.top) / 2), xf.k]; }, id);
+    await t.drag(pos[0], pos[1], pos[0] + 10 * IN / pos[2], pos[1]);
+    const after = await t.eval(() => P.buildings[0].walls.right.ops[0]);
+    t.eq(after.ctr, false); t.ok(Math.abs(after.x - before - 10 * IN) < 13, 'moved about 10": ' + (after.x - before) / IN);
+    // type a new width in Properties
+    await t.page.fill('[data-k="fo.w"]', '30'); await t.page.press('[data-k="fo.w"]', 'Tab');
+    t.eq(await t.eval(() => P.buildings[0].walls.right.ops[0].w / 25.4), 30);
+    await t.eval(() => document.activeElement.blur());
+    await t.key('Control+z'); t.eq(await t.eval(() => Math.round(P.buildings[0].walls.right.ops[0].w / 25.4 * 10) / 10), 36.5);
+    await t.key('Control+z'); t.eq(await t.eval(() => P.buildings[0].walls.right.ops[0].ctr), true);
+    // delete with the Delete key
+    await t.eval(() => { sel = new Set([P.buildings[0].walls.right.ops[0].id]); render(); }); await t.key('Delete');
+    t.eq(await t.eval(() => P.buildings[0].walls.right.ops.length), 0);
+    // an opening too close to the end is reported in plain words
+    await t.eval(() => commit(() => { const o = newFrameOpening('door', 2000); o.ctr = false; o.x = 10; P.buildings[0].walls.right.ops.push(o); }));
+    t.ok(await t.eval(() => frameModel(P.buildings[0]).errs[0].includes('from the left end')), 'error message');
+    t.ok(await t.eval(() => $('#content').textContent.includes('cannot be drawn yet')), 'error shown on the page');
+  },
+  'framing: a single framed wall matches the hand layout and buys the fewest boards': async t => {
+    await t.open('#ind');
+    await t.eval(() => newBuildingDlg('wall'));
+    await t.page.fill('input[name="name"]', 'Partition'); await t.page.fill('input[name="len"]', '113 1/2');
+    await t.confirm();
+    t.eq(await t.eval(() => P.pages.filter(isFrame).map(p => p.view)), ['wall']);
+    await t.eval(() => commit(() => { const o = P.buildings[0].walls.single.ops[0]; o.w = 32 * 25.4; o.hdr = 'flat'; }));
+    const m = await t.eval(() => { const M = frameModel(P.buildings[0]); const w = M.walls[0]; return { marks: w.members.map(q => q.kind + '@' + Math.round(q.x / 25.4 * 100) / 100), crip: w.members.find(q => q.kind === 'cripple').y1 - w.members.find(q => q.kind === 'cripple').y0, boards: M.boards.length, jack: Math.round((w.members.find(q => q.kind === 'jack').y1 - w.members.find(q => q.kind === 'jack').y0) / 25.4 * 100) / 100 }; });
+    t.eq(m.marks.filter(x => !x.startsWith('cripple')), ['end@0', 'common@15.25', 'common@31.25', 'king@37.75', 'jack@39.25', 'jack@72.75', 'king@74.25', 'common@79.25', 'common@95.25', 'end@112']);
+    t.eq(await t.eval(c => fmtCut(c), m.crip), '10 1/8"'); t.eq(m.jack, 81); t.eq(m.boards, 12);
+    // floor and roof dialogs are not offered for a single wall
+    await t.eval(() => frameSectionDlg('roof')); t.ok(await t.eval(() => !$('#dlg').open), 'no roof dialog');
+  },
+  'framing: shed roof, metric lumber catalog and the section dialogs': async t => {
+    await t.open('#ind');
+    await t.eval(() => { const b = newBuilding('building'); P.buildings.push(b); syncFramePages(b); sortPages(); goPage(P.pages.find(p => p.bld === b.id).id); });
+    await t.eval(() => frameSectionDlg('roof'));
+    await t.page.selectOption('select[name="roof.type"]', 'shed'); await t.page.fill('input[name="roof.pitch"]', '2');
+    await t.confirm();
+    // the shed roof dialog shows the low side next time
+    const sh = await t.eval(() => { const M = frameModel(P.buildings[0]); return { type: M.roof.type, high: M.roof.high, front: M.walls.find(w => w.key === 'front').S / 25.4, back: M.walls.find(w => w.key === 'back').S / 25.4, rake: M.walls.find(w => w.key === 'left').fill.length }; });
+    t.eq([sh.type, sh.high], ['shed', 'front']); t.ok(sh.front > sh.back + 15, 'high wall taller: ' + sh.front); t.ok(sh.rake > 3, 'rake wall studs');
+    // switch the project to metric lumber
+    await t.eval(() => projectProps()); await t.page.selectOption('select[name="units"]', 'metric'); await t.page.selectOption('select[name="lumber"]', 'metric'); await t.confirm();
+    const mt = await t.eval(() => { const b = P.buildings[0], M = frameModel(b); return { stud: sizeName(b.stud), sp: b.sp, cut: fmtCut(1234.4), sizes: [...new Set(M.pieces.map(p => p.size))].sort() }; });
+    t.eq(mt.stud, '45x95'); t.eq(mt.sp, 400); t.eq(mt.cut, '1234 mm'); t.ok(mt.sizes.includes('45x145'), mt.sizes.join(','));
+    // the lumber dialog turns board lengths off and on
+    await t.eval(() => frameSectionDlg('lumber')); await t.page.uncheck('input[name="len:4"]'); await t.page.uncheck('input[name="len:3"]'); await t.confirm();
+    t.eq(await t.eval(() => P.buildings[0].stock.lens), [0, 1, 2]);
+    t.ok(await t.eval(() => frameModel(P.buildings[0]).boards.every(b => b.stock.len <= 3600)), 'only lengths turned on');
+  },
+  'framing: building from a floor plan room, floor plan from a building, 3D views': async t => {
+    await t.open('#ind');
+    // a level with a 12' x 10' room and a door in the bottom wall
+    await t.eval(() => {
+      commit(() => {
+        const lv = { id: uid(), name: 'Main', rooms: [], places: [], image: null, scale: 48, shapes: [] }; P.levels.push(lv);
+        const s = 48, ox = 60, oy = 200, w = 144 * 25.4 / s, d = 120 * 25.4 / s;
+        const pts = [[ox, oy - d], [ox + w, oy - d], [ox + w, oy], [ox, oy]];
+        lv.rooms.push({ id: 'room1', name: 'Workshop', pts });
+        const wall = { id: 'w1', t: 'wall', a: [ox, oy + 1], b: [ox + w, oy + 1], th: 2, just: 'c', h: 96 * 25.4, kind: 'x' }; lv.shapes.push(wall);
+        lv.shapes.push({ id: 'd1', t: 'opening', wall: 'w1', c: [ox + w / 2, oy + 1], w: 36 * 25.4 / s, kind: 'door', style: 'single', side: 1, hinge: 'a', h: 80 * 25.4, tag: 'D1' });
+        const np = newFloorPage(lv.id, 1, 'Main'); P.pages.push(np); sortPages(); curId = np.id; sel = new Set(['room1']);
+      });
+    });
+    await t.eval(() => frameFromRoom());
+    t.eq(await t.eval(() => $('input[name="name"]').value), 'Workshop');
+    await t.confirm();
+    const b = await t.eval(() => { const b = P.buildings[0]; return { w: Math.round(b.w / 25.4 * 10) / 10, d: Math.round(b.d / 25.4 * 10) / 10, ops: b.walls.front.ops.map(o => [o.type, Math.round(o.w / 25.4), Math.round((o.x + o.w / 2) / 25.4 * 10) / 10]) }; });
+    t.eq(b.w, 151); t.eq(b.d, 127); t.eq(b.ops, [['door', 38, 75.5]]);
+    // floor plan from the building: 4 walls, the door, a room
+    await t.eval(() => frameToFloor());
+    const lv = await t.eval(() => { const lv = levelOf(page()); return { name: lv.name, walls: lvWalls(lv).length, ops: lvShapes(lv).filter(s => s.t === 'opening').map(o => o.kind), rooms: lv.rooms.length, real: Math.round(roomPoly(lv.rooms[0])[1][0] - roomPoly(lv.rooms[0])[0][0]) }; });
+    t.eq([lv.name, lv.walls, lv.ops, lv.rooms], ['Workshop', 4, ['door'], 1]);
+    // 3D view of the level and of the building
+    await t.eval(() => view3D()); t.ok(await t.eval(() => $('#dlg').open && !!$('#v3canvas') && V3.scene.boxes.length >= 5), '3D view of the level');
+    await t.eval(() => $('#dlg').close());
+    await t.eval(() => { goPage(P.pages.find(p => isFrame(p) && p.view === 'plan').id); view3D(); });
+    t.ok(await t.eval(() => $('#dlg').open && V3.scene.floors.some(f => f.roof)), '3D view of the building with its roof');
+    await t.eval(() => $('#dlg').close());
+  },
+  'framing: duplicate and delete a building, Excel export, PDF includes framing pages': async t => {
+    await t.open('#ind');
+    await t.eval(() => { const b = newBuilding('building'); P.buildings.push(b); syncFramePages(b); sortPages(); goPage(P.pages.find(p => p.bld === b.id && p.view === 'front').id); });
+    await t.eval(() => dupPage());
+    t.eq(await t.eval(() => [P.buildings.length, P.buildings[1].name, page().view, P.pages.filter(isFrame).length]), [2, 'Shed copy', 'front', 14]);
+    t.ok(await t.eval(() => P.buildings[1].walls.front.ops[0].id !== P.buildings[0].walls.front.ops[0].id), 'new opening ids');
+    await t.eval(() => delPage());
+    t.eq(await t.eval(() => [P.buildings.length, P.pages.filter(isFrame).length]), [1, 7]);
+    const saved = await t.eval(async () => { let got = null; const keep = host.saveBinary; host.saveBinary = async (b64, name) => { got = name; return name; }; await frameExportXlsx(); host.saveBinary = keep; return got; });
+    t.ok(/framing materials\.xlsx$/.test(saved), saved);
+    const pdf = await t.eval(async () => { let got = null; const keep = host.saveBinary; host.saveBinary = async (b64, name) => { got = b64.length; return name; }; await exportPDF(P.pages.filter(isFrame).map(p => p.id).concat(REPORTS.filter(r => r.report === 'lumber').map(r => r.id))); host.saveBinary = keep; return got; });
+    t.ok(pdf > 1000, 'PDF made');
+  },
+};

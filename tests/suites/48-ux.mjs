@@ -99,7 +99,7 @@ export const tests = {
     await t.eval(() => goPage(P.pages.find(p => !p.kind && !p.report).id));
     t.eq(await t.eval(() => $('#tab-pages .splitbtn [data-act]').dataset.act), 'addPage');
     await t.page.click('[data-newpagemenu]');
-    t.eq(await t.eval(() => [...document.querySelectorAll('#dropdown .dd')].map(d => [d.textContent, d.dataset.act])), [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Custom report', 'newCustomReport']]);
+    t.eq(await t.eval(() => [...document.querySelectorAll('#dropdown .dd')].map(d => [d.textContent, d.dataset.act])), [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Building (framing)', 'newBuilding'], ['Framed wall', 'newFramedWall'], ['Custom report', 'newCustomReport']]);
     await t.page.click('#dropdown [data-act="addFloorPage"]');
     t.eq(await t.eval(() => [$('#dlg').open, $('#dlgtitle').textContent]), [true, 'New floor plan page']);
   },

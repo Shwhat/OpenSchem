@@ -2,7 +2,8 @@
 // Two projects, IEC and NFPA, that each show every feature: the pump station control panel and the home wiring
 // building blocks, plus pages for drives, PLC cards, boxes, graphics, a panel layout, a note card page, round and
 // oval rooms, layers, parts with prices, loads and voltage drop, cables, revisions and to-dos, the IEC or NFPA symbol
-// library, a single-line page, pneumatic pages with tubes and the tubing list. The NFPA demo is the IEC demo converted
+// library, a single-line page, pneumatic pages with tubes and the tubing list, and framing: a garden shed, a wood store
+// with a single-slope panel roof and a framed partition wall with their lumber lists. The NFPA demo is the IEC demo converted
 // to NFPA symbols and device letters.
 // When a feature is added, add it here too and to the demo coverage test (tests/suites/05-demo.mjs).
 function buildDemo(std = 'IEC') {
@@ -158,6 +159,19 @@ function buildDemo(std = 'IEC') {
     applyStdConversions(stdConversions(items, 'NFPA', it => it === k1 ? 'n_mcoil' : null));
     retagLetters(items, 'NFPA');
   }
+  // ---- framing: a garden shed on skids with a gable roof, a door and two windows, a wood store with a single-slope
+  // panel roof and no floor, and a framed workshop partition wall with a flat header ----
+  const shed = newBuilding('building', { name: 'Garden shed', bare: true });
+  shed.walls.front.ops.push(newFrameOpening('door', shed.w));
+  const sideLen = shed.d - 2 * sizeDepth(0);
+  shed.walls.right.ops.push(newFrameOpening('window', sideLen));
+  const w2 = newFrameOpening('window', sideLen); w2.hdr = 0; shed.walls.left.ops.push(w2);
+  const store = newBuilding('building', { name: 'Wood store', w: 96 * IN_MM, d: 48 * IN_MM, bare: true });
+  store.floor.on = false; store.roof.type = 'shed'; store.roof.pitch = 2; store.roof.low = 'back'; store.cover.wall = false;
+  store.cover.roofMat = 'Clear polycarbonate'; store.cover.roofDir = 'down'; store.cover.roofSheet = 2;
+  const part = newBuilding('wall', { name: 'Workshop partition', len: 113.5 * IN_MM, bare: true });
+  const pd = newFrameOpening('door', part.len); pd.w = 32 * IN_MM; pd.hdr = 'flat'; part.walls.single.ops.push(pd); part.cover.wall = false;
+  p.buildings = [shed, store, part]; p.buildings.forEach(syncFramePages);
   sortPages();
   return p;
 }

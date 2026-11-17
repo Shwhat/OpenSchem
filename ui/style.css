@@ -529,3 +529,50 @@ table.pb a:hover{text-decoration:underline}
 .pb-empty{color:var(--muted);text-align:center;padding:18px!important}
 tr.pb-share td{background:var(--panel)}
 .pb-sharebtns{text-align:right;margin-top:6px}
+
+/* ---------- framing pages (drawn in sheet millimetres; print and PDF use these light colors) ---------- */
+.frstud{fill:#ecd3a6;stroke:#7a5a2e;stroke-width:.14}
+.frking{fill:#d9b37a;stroke:#7a5a2e;stroke-width:.14}
+.frjack{fill:#c4914f;stroke:#7a5a2e;stroke-width:.14}
+.frhdr{fill:#9b6a33;stroke:#5c3d17;stroke-width:.14}
+.frplate{fill:#e2c48f;stroke:#7a5a2e;stroke-width:.14}
+.frcut{fill:none;stroke:#b3261e;stroke-width:.2;stroke-dasharray:1,.7}
+.frraf{fill:#dce8fb;fill-opacity:.55;stroke:#1f5fbf;stroke-width:.2}
+.frdeck{fill:#d5d9df;stroke:#5d6775;stroke-width:.12}
+.frrim{fill:#d9b37a;stroke:#7a5a2e;stroke-width:.14}
+.frskid{fill:#8a6a44;stroke:#5c3d17;stroke-width:.14}
+.frskidp{fill:none;stroke:#8a6a44;stroke-width:.25;stroke-dasharray:1.6,1}
+.frground{stroke:#1d232c;stroke-width:.4}
+.frop rect{fill:transparent;stroke:none;pointer-events:all;cursor:ew-resize}
+.frop.on rect{fill:rgba(31,111,255,.08);stroke:#1f6fff;stroke-width:.35;stroke-dasharray:1.2,.8}
+.frhl{fill:#fff7ea}
+.frta{fill:#1f5fbf}
+.frdim{fill:none;stroke:#5d6775;stroke-width:.15}
+.frdima{stroke:#1f5fbf}
+.frext{fill:none;stroke:#c9ced6;stroke-width:.12}
+.froof{fill:none;stroke:#5d6775;stroke-width:.2;stroke-dasharray:1.6,1}
+.frwall{fill:#d9b37a;stroke:#7a5a2e;stroke-width:.14}
+.frgap{fill:#fff;stroke:none}
+.frdoor{stroke:#1f5fbf;stroke-width:.6}
+.frwin{stroke:#1f5fbf;stroke-width:.3}
+.frridge{stroke:#1f5fbf;stroke-width:.3;stroke-dasharray:2.4,1.2}
+.frarrow{stroke:#1f5fbf;stroke-width:.45}
+.frarrowh{fill:#1f5fbf}
+:root[data-sheet=dark] #canvas .frstud,:root[data-sheet=dark] #canvas .frplate,:root[data-sheet=dark] #canvas .frrim,:root[data-sheet=dark] #canvas .frwall{fill:#5a4a33;stroke:#c9a46a}
+:root[data-sheet=dark] #canvas .frking{fill:#6e5636;stroke:#c9a46a}
+:root[data-sheet=dark] #canvas .frjack{fill:#7e5f35;stroke:#c9a46a}
+:root[data-sheet=dark] #canvas .frhdr{fill:#8a5f2c;stroke:#e0b67a}
+:root[data-sheet=dark] #canvas .frraf{fill:#25395a;stroke:#8fb3ff}
+:root[data-sheet=dark] #canvas .frdeck{fill:#3a424d;stroke:#9aa5b3}
+:root[data-sheet=dark] #canvas .frground{stroke:#e2e6eb}
+:root[data-sheet=dark] #canvas .frta{fill:#8fb3ff}
+:root[data-sheet=dark] #canvas .frdim{stroke:#9aa5b3}
+:root[data-sheet=dark] #canvas .frdima,:root[data-sheet=dark] #canvas .frdoor,:root[data-sheet=dark] #canvas .frwin,:root[data-sheet=dark] #canvas .frridge,:root[data-sheet=dark] #canvas .frarrow{stroke:#8fb3ff}
+:root[data-sheet=dark] #canvas .frarrowh{fill:#8fb3ff}
+:root[data-sheet=dark] #canvas .frext{stroke:#3a424d}
+:root[data-sheet=dark] #canvas .frgap{fill:#1e2228}
+:root[data-sheet=dark] #canvas .froof{stroke:#9aa5b3}
+.v3canvas{display:block;width:100%;border:1px solid var(--line);border-radius:4px;cursor:grab;touch-action:none;background:var(--panel2)}
+.v3canvas:active{cursor:grabbing}
+.v3bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.v3cut{display:inline-flex;gap:4px;align-items:center}

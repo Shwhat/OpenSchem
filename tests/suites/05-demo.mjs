@@ -57,12 +57,16 @@ export const tests = {
         sheet: P.pages.some(p => p.view === 'sheet' && p.vps.length >= 2 && p.vps.some(v => v.scale > 0)),
         legend: P.pages.some(p => isFloor(p) && p.legend),
         customs: (P.customs || []).length >= 2 && P.customs.some(c => c.filters.length && c.notes) && REPORTS.filter(r => r.custom).every(r => r.rows.length > 0),
+        framing: (() => { const B = P.buildings || []; const ops = B.flatMap(b => Object.values(b.walls).flatMap(w => w.ops || []));
+          return [B.some(b => b.mode === 'wall'), B.some(b => b.roof.on && b.roof.type === 'gable'), B.some(b => b.roof.on && b.roof.type === 'shed'), B.some(b => b.floor.on && b.floor.skids), B.some(b => b.mode === 'building' && !b.floor.on),
+            ops.some(o => o.type === 'door'), ops.some(o => o.type === 'window'), ops.some(o => o.hdr === 'flat'), ops.some(o => o.hdr !== 'flat'), B.some(b => b.cover.roof && b.cover.roofDir === 'down'),
+            ['lumber', 'cutlist', 'cutplan'].every(r => reps.has(r)), B.every(b => !frameModel(b).errs.length)]; })(),
         layoutPlaced: P.pages.some(p => p.kind === 'layout' && p.lay.some(o => o.t === 'dev') && p.lay.some(o => o.t === 'rail') && p.lay.some(o => o.t === 'duct')),
       };
     });
     t.eq(f.industrial, [], 'industrial symbols missing'); t.eq(f.home, [], 'home symbols missing'); t.eq(f.boxes, [], 'boxes missing');
     t.ok(f.mixedCard, 'PLC card with inputs and outputs'); t.ok(f.insideBox, 'symbols inside a device box');
-    t.eq(f.pageKinds, ['floor', 'layout', 'sch'], hash); t.ok(f.card, 'note card page');
+    t.eq(f.pageKinds, ['floor', 'frame', 'layout', 'sch'], hash); t.eq(f.framing, Array(12).fill(true), 'framing: wall, gable and shed roofs, floor on skids and none, doors, windows, flat and double headers, roof panels, framing reports, no problems'); t.ok(f.card, 'note card page');
     t.eq(f.gfx, [], 'graphics missing'); t.ok(f.text && f.cables, 'text and cables');
     t.eq(f.rooms, ['circle', 'ellipse', 'rect'], 'room shapes'); t.ok(f.floorOnly && f.legs, 'floor-only device and switch legs');
     t.ok(f.layer, 'user layer in use'); t.ok(f.parts && f.partSize, 'parts with prices and sizes');

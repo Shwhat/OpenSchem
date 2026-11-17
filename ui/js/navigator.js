@@ -2,13 +2,13 @@
 // Branches are collapsed unless they hold the open page, so the tree shows one page open at a time.
 // Expanding or collapsing a branch by hand is remembered until another page is opened inside it.
 const NAV = { open: {}, filter: '', todo: false, lastCur: null };
-const REPORT_KINDS = { cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
+const REPORT_KINDS = { lumber: 'Lumber lists', cutlist: 'Framing cut lists', cutplan: 'Cutting plans', cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
 
 function navTree() {
   const sch = { key: 'sch', label: home() ? 'Circuits' : 'Schematic', kids: [] };
   const fnNode = new Map();
   for (const p of P.pages) {
-    if (isFloor(p) || isLayout(p)) continue;
+    if (isFloor(p) || isLayout(p) || isFrame(p)) continue;
     const fk = 'sch/f:' + (p.fn || '');
     let f = fnNode.get(fk);
     if (!f) { f = { key: fk, label: p.fn ? dispCkt(p.fn) : L('nofl'), kids: [], locs: new Map() }; fnNode.set(fk, f); sch.kids.push(f); }
@@ -29,6 +29,7 @@ function navTree() {
     n.kids.push({ page: p });
   }
   const lay = { key: 'lay', label: 'Panel layouts', kids: P.pages.filter(isLayout).map(p => ({ page: p })) };
+  const frm = { key: 'frm', label: 'Framing', kids: (P.buildings || []).map(b => ({ key: 'frm/' + b.id, label: b.name, kids: P.pages.filter(p => isFrame(p) && p.bld === b.id).map(p => ({ page: p })) })).filter(n => n.kids.length) };
   const rep = { key: 'rep', label: 'Reports', kids: [] };
   const gen = REPORTS.filter(r => !r.front && !r.custom);
   for (const k of reportOrder()) {
@@ -42,20 +43,21 @@ function navTree() {
     if (list.length === 1) cus.kids.push({ page: list[0] }); else cus.kids.push({ key: 'cus/' + cr.id, label: cr.title, kids: list.map(r => ({ page: r })) });
   }
   const one = (k, label) => { const list = REPORTS.filter(r => r.report === k && r.front); return !list.length ? [] : list.length === 1 ? [{ page: list[0] }] : [{ key: k, label, kids: list.map(r => ({ page: r })) }]; };
-  const by = { cover: one('cover', 'Cover sheet'), toc: one('toc', 'Table of contents'), sch: [sch], lay: lay.kids.length ? [lay] : [], fp: [fp], custom: cus.kids.length ? [cus] : [], rep: rep.kids.length ? [rep] : [] };
+  const by = { cover: one('cover', 'Cover sheet'), toc: one('toc', 'Table of contents'), sch: [sch], lay: lay.kids.length ? [lay] : [], fp: [fp], frm: frm.kids.length ? [frm] : [], custom: cus.kids.length ? [cus] : [], rep: rep.kids.length ? [rep] : [] };
   return sectionOrder().flatMap(k => by[k] || []);
 }
 const navHas = (n, pg) => n.page ? n.page === pg : n.kids.some(k => navHas(k, pg));
-const navLeafText = p => isLayout(p) ? (p.desc || '') + (p.loc ? '  ' + (home() ? niceRoom(p.loc) : '+' + p.loc) : '') : p.report ? p.desc + (p.sheets > 1 ? ` (${p.sheet}/${p.sheets})` : '') : (p.desc || '');
+const navLeafText = p => isFrame(p) ? (p.desc || '') : isLayout(p) ? (p.desc || '') + (p.loc ? '  ' + (home() ? niceRoom(p.loc) : '+' + p.loc) : '') : p.report ? p.desc + (p.sheets > 1 ? ` (${p.sheet}/${p.sheets})` : '') : (p.desc || '');
 const navLeafNum = p => p.num;
 const NAVICON = {
   sch: '<path d="M2 1.5h8l2 2v9H2z" fill="#fff" stroke="#556"/><path d="M4 6h3v4h3M7 6V4" fill="none" stroke="#0b2e8f" stroke-width=".9"/>',
   floor: '<path d="M1.5 2.5h11v9h-11z" fill="#fff" stroke="#556"/><path d="M1.5 7h5V2.5M9 7v4.5" fill="none" stroke="#556" stroke-width=".9"/>',
   report: '<path d="M2.5 1.5h9v11h-9z" fill="#fff" stroke="#556"/><path d="M4.5 4.5h5M4.5 6.5h5M4.5 8.5h5M4.5 10.5h3" stroke="#556" stroke-width=".8"/>',
   front: '<path d="M2.5 1.5h9v11h-9z" fill="#eef3fb" stroke="#2b4f91"/><path d="M4.5 5h5" stroke="#2b4f91" stroke-width="1.4"/><path d="M4.5 8h5M4.5 10h3" stroke="#2b4f91" stroke-width=".8"/>',
+  frame: '<path d="M1.5 12.5V5.5L7 1.5l5.5 4v7z" fill="#fff" stroke="#556"/><path d="M4 12.5V7M7 12.5V7M10 12.5V7M3 7h8" stroke="#8a6d1d" stroke-width=".8"/>',
   layout: '<path d="M1.5 1.5h11v11h-11z" fill="#fff" stroke="#556"/><path d="M3 4h8M3 9h8" stroke="#888" stroke-width="1.2"/><rect x="3.5" y="5" width="2" height="3" fill="#7a8899"/><rect x="7" y="5" width="3" height="3" fill="#7a8899"/>',
 };
-const navIconKind = p => p.report ? (p.front || (p.custom && p.report === 'cover') ? 'front' : 'report') : isFloor(p) ? 'floor' : p.kind === 'layout' ? 'layout' : 'sch';
+const navIconKind = p => p.report ? (p.front || (p.custom && p.report === 'cover') ? 'front' : 'report') : isFloor(p) ? 'floor' : p.kind === 'layout' ? 'layout' : isFrame(p) ? 'frame' : 'sch';
 const navIcon = p => `<svg class="nicon" viewBox="0 0 14 14">${NAVICON[navIconKind(p)]}</svg>`;
 // pages that have an open to-do: linked to the page itself, to something drawn on it, or to a device placed on a
 // floor plan the page shows
@@ -220,8 +222,8 @@ function renderPageTabs() {
 
 // ---------- right-click menu on the navigator ----------
 // New page makes the kind of page you are looking at; the arrow next to it picks another kind
-const NEW_PAGE_KINDS = [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Custom report', 'newCustomReport']];
-function newPageAct(pg = page()) { return pg && pg.custom ? 'newCustomReport' : pg && !pg.report ? (isFloor(pg) ? 'addFloorPage' : isLayout(pg) ? 'newLayoutPage' : 'addPage') : 'addPage'; }
+const NEW_PAGE_KINDS = [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Building (framing)', 'newBuilding'], ['Framed wall', 'newFramedWall'], ['Custom report', 'newCustomReport']];
+function newPageAct(pg = page()) { return pg && pg.custom ? 'newCustomReport' : pg && !pg.report ? (isFloor(pg) ? 'addFloorPage' : isLayout(pg) ? 'newLayoutPage' : isFrame(pg) ? 'newBuilding' : 'addPage') : 'addPage'; }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-newpagemenu]'); if (!b) return;
   e.stopPropagation(); const r = b.getBoundingClientRect(), cur = newPageAct(), dd = $('#dropdown');

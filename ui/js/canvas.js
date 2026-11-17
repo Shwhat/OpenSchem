@@ -82,6 +82,7 @@ svg.addEventListener('mousedown', e => {
   const pg = page();
   if (pg.report) { if (mode !== 'select') setMode('select'); return; }
   if (isLayout(pg)) { if (mode.startsWith('g:')) gfxDown(pg, sx, sy); else layDown(e, pg, mx, my); return; }
+  if (isFrame(pg)) { if (mode !== 'select') setMode('select'); frameDown(e, pg, mx); return; }
   if (isFloor(pg)) { fpDown(e, pg, mx, my); return; }
   lastSchemId = pg.id;
   if (mode === 'macro') { placeMacroAt(pg, mx, my); return; }
@@ -147,9 +148,10 @@ window.addEventListener('mousemove', e => {
     zwin.cur = toMM(e); const [a, b] = zwin.start, [c, d] = zwin.cur;
     $('#overlay').innerHTML = `<rect class="zoombox" x="${Math.min(a, c)}" y="${Math.min(b, d)}" width="${Math.abs(c - a)}" height="${Math.abs(d - b)}"/>`; return;
   }
-  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox && !gripOp && !(DRAW && DRAW.press)) return;
+  if (e.target !== svg && !svg.contains(e.target) && !drag && !box && !fdrag && !fbox && !ldrag && !lbox && !frdrag && !gripOp && !(DRAW && DRAW.press)) return;
   const [mx, my] = toMM(e);
   if (isLayout(page())) { if (mode.startsWith('g:')) gfxPreview(snap(mx), snap(my)); else layMove(page(), mx, my); return; }
+  if (isFrame(page())) { if (!frameMove(page(), mx)) $('#st-pos').textContent = 'Page ' + pageName(page()); return; }
   if (isFloor(page())) { if (svg.contains(e.target) || fdrag || fbox || gripOp || (DRAW && DRAW.press)) fpMove(page(), mx, my); dynUpdate(); return; }
   $('#st-pos').textContent = `X ${snap(mx)}  Y ${snap(my)}  |  Column ${colOf(mx)}  |  Page ${pageName(page())}`;
   if (mode === 'macro') { drawMacroGhost(mx, my); return; }
@@ -185,6 +187,7 @@ window.addEventListener('mouseup', e => {
     setMode(zwPrev); return;
   }
   if (isLayout(page()) && (ldrag || lbox)) { layUp(page()); return; }
+  if (frameUp()) return;
   if (isFloor(page()) && DRAW && DRAW.press && !isSheet(page())) { const pg = page(), lv = levelOf(pg); const [mx, my] = toMM(e); if (lv) drawUp(pg, lv, toPlan(pg, mx, my), e.clientX, e.clientY); return; }
   if (isFloor(page()) && (fdrag || fbox || gripOp)) { fpUp(page()); return; }
   if (cdrag) {
@@ -390,8 +393,8 @@ window.addEventListener('keydown', e => {
   else if (k === 'm') { if (mode === 'place') { placeMir = !placeMir; drawGhost(...toMM({ clientX: lastMouse[0], clientY: lastMouse[1] })); } else mirrorSel(); }
   else if (k === 'g') { if (e.shiftKey) alignToGrid(); else toggleSnap(); }
   else if (k === 'c') ACTIONS.cableMode();
-  else if (k === 'w') { if (!isFloor(page()) && !isLayout(page())) setMode('wire'); }
-  else if (k === 't') { if (!isFloor(page()) && !isLayout(page())) setMode('text'); }
+  else if (k === 'w') { if (!isFloor(page()) && !isLayout(page()) && !isFrame(page())) setMode('wire'); }
+  else if (k === 't') { if (!isFloor(page()) && !isLayout(page()) && !isFrame(page())) setMode('text'); }
   else if (k === 'f') zoomFit();
   else if (k === 'z') { if (e.shiftKey) zoomPrev(); else zoomWindow(); }
   else if (k === '+' || k === '=') zoomAt(1.25);
