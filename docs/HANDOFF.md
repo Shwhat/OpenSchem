@@ -211,4 +211,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.19.0 (splicing), 1.20.0 (tile layouts) and 1.21.0 (decks) are committed and pushed to `main`; GitHub Actions publishes the images. 218 browser tests and the Go server tests pass. Image archives for 1.21.0 delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.19.0 (splicing, 1984636), 1.20.0 (tile layouts, acad0f9) and 1.21.0 (decks, 3a94fb9) are committed and pushed to `main`; GitHub Actions publishes the images. 218 browser tests and the Go server tests pass. Image archives for 1.21.0 delivered. Waiting for my testing. Manufacturer part library import is on hold.
