@@ -68,6 +68,34 @@ export const tests = {
     // floor and roof dialogs are not offered for a single wall
     await t.eval(() => frameSectionDlg('roof')); t.ok(await t.eval(() => !$('#dlg').open), 'no roof dialog');
   },
+  'splicing: plates, rims and ridge join over supports, rafter ties lap or get a scab, settings, marks, and a new building is not blocked': async t => {
+    await t.open('#ind');
+    // a 20' x 12' building with 8' to 16' boards: the 20' rafter ties and plates are longer than any board
+    await t.eval(() => newBuildingDlg('building'));
+    await t.page.fill('input[name="w"]', "20'"); await t.page.fill('input[name="d"]', "12'"); await t.confirm();
+    t.eq(await t.eval(() => P.buildings.length), 1, 'created without a blocking message');
+    const m = await t.eval(() => { const M = frameModel(P.buildings[0]); const T = M.T; const fw = M.walls.find(w => w.key === 'front');
+      const studX = fw.members.filter(q => q.kind !== 'cripple' && q.kind !== 'lcripple').map(q => q.x + T / 2);
+      return { errs: M.errs.length, tie: M.roof.tieSplice, ties: M.pieces.filter(p => p.name === 'Rafter tie').map(p => Math.round(p.len / 25.4 * 100) / 100), note: M.pieces.find(p => p.name === 'Rafter tie').note,
+        top: fw.topP.splices, overStud: fw.topP.splices.every(x => studX.some(c => Math.abs(c - x) < 0.5)), capGap: fw.cap.splices.every(c => fw.topP.splices.every(x => Math.abs(c - x) >= 609)),
+        rimNote: M.pieces.filter(p => p.name === 'Rim joist').map(p => p.note), plateNote: M.pieces.find(p => p.name === 'Top plate').note }; });
+    t.eq(m.errs, 0); t.eq(m.tie.how, 'lap'); t.eq(m.ties.slice(0, 2), [132, 132], '10\' halves plus half the 24" lap');
+    t.ok(/^part 1 of 2, lapped 24" at the middle/.test(m.note), m.note);
+    t.ok(m.top.length === 1 && m.overStud && m.capGap, 'plate joint over a stud, cap joint 24" away');
+    t.ok(m.plateNote.startsWith('part 1 of 2, joint over a stud'), m.plateNote); t.ok(m.rimNote.every(n => /joint over a joist/.test(n)), 'rim notes');
+    t.ok(await t.eval(() => { goPage(P.pages.find(p => isFrame(p) && p.view === 'front').id); return $('#content').querySelectorAll('.frsplice').length >= 2; }), 'splice marks on the elevation');
+    t.ok(await t.eval(() => { goPage(P.pages.find(p => isFrame(p) && p.view === 'roof').id); return $('#content').textContent.includes('2 pieces lapped 24"'); }), 'roof page notes the tie splice');
+    // scab instead of a lap, and a longer shortest piece
+    await t.eval(() => frameSectionDlg('lumber')); await t.page.selectOption('select[name="splice.tie"]', 'scab'); await t.page.fill('input[name="splice.len"]', '36'); await t.confirm();
+    const sc = await t.eval(() => { const M = frameModel(P.buildings[0]); return { how: M.roof.tieSplice.how, ties: M.pieces.filter(p => p.name === 'Rafter tie').length, scabs: M.pieces.filter(p => p.name === 'Tie scab').map(p => Math.round(p.len / 25.4)), n: M.roof.ties }; });
+    t.eq(sc.how, 'scab'); t.eq(sc.ties, 2 * sc.n); t.eq(sc.scabs, Array(sc.n).fill(36));
+    // do not splice: the old message, shown on the page and in the check, not blocking anything
+    await t.eval(() => commit(() => { P.buildings[0].splice.tie = 'none'; }));
+    t.ok(await t.eval(() => frameModel(P.buildings[0]).errs[0].includes('rafter tie needs')), 'unspliced tie reported');
+    // with 20' boards turned on, nothing needs a splice
+    await t.eval(() => commit(() => { P.buildings[0].stock.lens = [0, 1, 2, 3, 4, 5, 6]; P.buildings[0].splice.tie = 'lap'; }));
+    t.eq(await t.eval(() => [frameModel(P.buildings[0]).roof.tieSplice, frameModel(P.buildings[0]).pieces.filter(p => /^part/.test(p.note)).length]), [null, 0]);
+  },
   'framing: shed roof, metric lumber catalog and the section dialogs': async t => {
     await t.open('#ind');
     await t.eval(() => { const b = newBuilding('building'); P.buildings.push(b); syncFramePages(b); sortPages(); goPage(P.pages.find(p => p.bld === b.id).id); });

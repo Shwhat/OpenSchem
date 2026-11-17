@@ -93,6 +93,9 @@ function frameWallSVG(pg, M, fw, o) {
   Dr.rect(cur, 0, L, T, 'frplate');
   fw.topP.pieces.forEach(p => Dr.rect(p.x0, fw.top, p.x1, fw.top + T, 'frplate'));
   if (fw.cap) fw.cap.pieces.forEach(p => Dr.rect(p.x0, fw.top + T, p.x1, fw.top + 2 * T, 'frplate'));
+  // splice marks: a short line across each plate joint
+  const mark = (x, y0) => Dr.line(x, y0 - T * 0.6, x, y0 + T * 1.6, 'frsplice');
+  fw.bottom.splices.forEach(x => mark(x, 0)); fw.topP.splices.forEach(x => mark(x, fw.top)); if (fw.cap) fw.cap.splices.forEach(x => mark(x, fw.top + T));
   Dr.line(x0 - 150, F ? -F.height : 0, x1 + 150, F ? -F.height : 0, 'frground');
   // openings: click and drag targets
   fw.ops.forEach(op => {
@@ -171,6 +174,7 @@ function frameFloorSVG(pg, M) {
   if (F.skids) F.skidPos.forEach(p => { if (along === 'x') Dr.rect(0, p, W, p + F.skidW, 'frskidp'); else Dr.rect(p, 0, p + F.skidW, D, 'frskidp'); });
   F.pos.forEach(x => { if (along === 'x') Dr.rect(x, T, x + T, D - T, 'frstud'); else Dr.rect(T, x, W - T, x + T, 'frstud'); });
   if (along === 'x') { Dr.rect(0, 0, W, T, 'frrim'); Dr.rect(0, D - T, W, D, 'frrim'); } else { Dr.rect(0, 0, T, D, 'frrim'); Dr.rect(W - T, 0, W, D, 'frrim'); }
+  F.rims.splices.forEach(x => { if (along === 'x') { Dr.line(x, -T, x, 2 * T, 'frsplice'); Dr.line(x, D - 2 * T, x, D + T, 'frsplice'); } else { Dr.line(-T, x, 2 * T, x, 'frsplice'); Dr.line(W - 2 * T, x, W + T, x, 'frsplice'); } });
   Dr.text(X(0), Y(0) + 5, 'FRONT', { size: 3, bold: true });
   Dr.dimH(X(0), X(W), Y(0) + 12, formatLength(W));
   Dr.dimV(X(W) + 8, Y(0), Y(D), formatLength(D));
@@ -180,6 +184,7 @@ function frameFloorSVG(pg, M) {
   line('Spacing', fmtCut(F.sp) + ' on center');
   line('Rim joists', `2 x ${F.size} at ${fmtCut(F.Lf)}`);
   line('Skids', F.skids ? `${F.skids} x ${F.skidSize} at ${fmtCut(F.Lf)}` : 'None');
+  if (F.rims.splices.length) line('Rim splices', F.rims.splices.map(fmtCut).join(', ') + ' (over joists)');
   line('Decking', `${F.deckSheets} sheets, ${F.deck}`);
   line('Floor height', fmtCut(F.height));
   ty += 2; Dr.text(tx, ty, 'Joist layout from the ' + (along === 'x' ? 'left' : 'front') + ' edge:', { size: 2.2, cls: 'tc' }); ty += 4.5;
@@ -215,7 +220,10 @@ function frameRoofSVG(pg, M) {
   line('Plumb cut', R.ang.toFixed(1) + '° from square');
   line('Notch over wall', 'seat ' + fmtCut(WD) + ', heel ' + fmtCut(R.heel));
   line('Height above plate', fmtCut(R.hap));
-  if (R.type === 'gable') { line('Ridge board', `${R.ridgeSize} at ${fmtCut(R.ridgeLen)}`); line('Rafter ties', `${R.ties} x ${sizeName(0)} at ${fmtCut(R.B)}`); }
+  if (R.type === 'gable') {
+    line('Ridge board', `${R.ridgeSize} at ${fmtCut(R.ridgeLen)}` + (R.ridge.pieces.length > 1 ? `, ${R.ridge.pieces.length} pieces, joints over rafters` : ''));
+    line('Rafter ties', `${R.ties} x ${sizeName(0)} at ${fmtCut(R.B)}` + (R.tieSplice ? (R.tieSplice.how === 'lap' ? `, 2 pieces lapped ${fmtCut(R.tieSplice.len)}` : `, 2 pieces with a ${fmtCut(R.tieSplice.len)} scab`) : ''));
+  }
   else line('High wall', `${WALL_NAMES[R.high]}, studs ${fmtCut(M.S + R.delta)}`);
   line('Peak height', formatLength(M.peakFromFloor) + ' from the floor');
   if (R.area) line('Roof area', formatArea(R.area));

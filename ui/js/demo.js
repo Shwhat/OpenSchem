@@ -3,7 +3,8 @@
 // building blocks, plus pages for drives, PLC cards, boxes, graphics, a panel layout, a note card page, round and
 // oval rooms, layers, parts with prices, loads and voltage drop, cables, revisions and to-dos, the IEC or NFPA symbol
 // library, a single-line page, pneumatic pages with tubes and the tubing list, and framing: a garden shed, a wood store
-// with a single-slope panel roof and a framed partition wall with their lumber lists and building views. The NFPA demo is the IEC demo converted
+// with a single-slope panel roof, a framed partition wall and a tool shed, with spliced plates, rims, ridge boards and
+// rafter ties (lapped and with a scab), their lumber lists and building views. The NFPA demo is the IEC demo converted
 // to NFPA symbols and device letters.
 // When a feature is added, add it here too and to the demo coverage test (tests/suites/05-demo.mjs).
 function buildDemo(std = 'IEC') {
@@ -171,7 +172,12 @@ function buildDemo(std = 'IEC') {
   store.cover.roofMat = 'Clear polycarbonate'; store.cover.roofDir = 'down'; store.cover.roofSheet = 2;
   const part = newBuilding('wall', { name: 'Workshop partition', len: 113.5 * IN_MM, bare: true });
   const pd = newFrameOpening('door', part.len); pd.w = 32 * IN_MM; pd.hdr = 'flat'; part.walls.single.ops.push(pd); part.cover.wall = false;
-  p.buildings = [shed, store, part]; p.buildings.forEach(syncFramePages);
+  // splicing: the garden shed is cut from 8' boards only (plates, rims, ridge and skids join over supports, rafter ties
+  // lap at the middle); the tool shed buys up to 10' boards and its 12' rafter ties are butted with a scab
+  shed.stock.lens = [0];
+  const tool = newBuilding('building', { name: 'Tool shed', w: 144 * IN_MM, d: 96 * IN_MM, bare: true });
+  tool.floor.on = false; tool.stock.lens = [0, 1]; tool.splice.tie = 'scab'; tool.walls.front.ops.push(newFrameOpening('door', tool.w));
+  p.buildings = [shed, store, part, tool]; p.buildings.forEach(syncFramePages);
   sortPages();
   return p;
 }

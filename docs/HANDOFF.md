@@ -60,6 +60,12 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - Member colors are in `MCOL` and match the elevation styles in `style.css`.
 - Tests: the building views test in `51-framing.mjs`; demo coverage checks the `bviews` report.
 
+### Code map for 1.19.0 additions (splicing)
+
+- `ui/js/framing.js`: `splitRun(x0, x1, centers, maxLen, avoid, minGap, minPiece)` puts joints on supports (stud, joist or rafter centers), keeps pieces at least `minPiece` long where the supports allow, and keeps `minGap` from the joints below (cap plates 610 mm from the top plate). `b.splice` = `{ tie: 'lap' | 'scab' | 'none', len (lap or scab length), min (shortest piece) }` (`spliceDefaults()`, `spliceOf()`; filled in by `ensureProject`). Rafter ties longer than the longest board become two pieces (`R.tieSplice`), lapped at the middle or butted with a `Tie scab` piece. `partNotes()` writes "part 1 of 2, joint over a stud" notes. Splice marks are drawn with class `frsplice`.
+- The New building dialog no longer refuses a building with a lumber problem; the problem shows on the page, in Properties and in the project check.
+- Demo: the garden shed buys 8' boards only (spliced plates, rims, ridge, skids and lapped ties); a tool shed (12' x 8', 10' boards) has scabbed rafter ties. Tests: the splicing test in `51-framing.mjs`, demo coverage in `05-demo.mjs`.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -90,7 +96,15 @@ Import the part data files that manufacturers publish on their websites for the 
 
 Questions to settle: which fields to keep (technical data, prices, images, documents, connection point patterns, macros); whether macros or graphics inside the archive are imported or ignored; behavior when a part already exists (probably the same Skip/Replace question as CSV import).
 
-### Note on Library.zip (in the project files)
+#### 2. Tile layouts (settled, building as 1.20.0)
+
+A tile layout page made from a floor plan room, a floor plan wall side, a framing wall (inside or outside) or a typed outline, linked to its source (follows changes; keeps the last outline if the source is deleted). Tiled area = source outline minus doors, windows and cabinet or fixture blocks; walls also get a height range; areas can be added or cut out on the tile page. Patterns: straight grid at any rotation, running bond 1/2 and 1/3, herringbone, basketweave, hexagon, versailles. Settings: tile size, grout joint, rotation, starting point (center, corner, picked point; joint or tile center on it), balanced cuts, minimum cut (default 1/3 tile). Page: tiles drawn, cut tiles shaded, slivers flagged, chalk lines dimensioned from the walls, starting tile marked. Reports per layout: tile cut list (grouped, offcuts reused) and tile order (counts, boxes with waste 10% or 15% for diagonal and herringbone, grout and thinset). Demo: bathroom floor, backsplash, shower wall.
+
+### 3. Decks (settled, building as 1.21.0)
+
+Freestanding, ledger attached, ground level, L-shapes and levels. New page > Deck (typed size or outline), drawn on a floor plan (linked), ledger on a floor plan or building wall. One deck height over flat ground. Sizes suggested from the AWC DCA 6 span tables by species (Southern pine, Douglas fir-larch, Hem-fir, Spruce-pine-fir), overridable, warnings when over. Footings, posts with brackets, beams, joists, rim, blocking, ledger, cantilevers; decking (5/4x6, 2x6, composite) square, diagonal, picture frame, breaker board, staggered butt joints over joists; stairs (rise, run, stringers, treads); railings (posts, rails, balusters, 4 inch rule). Pages: footing and post plan with stake-out, framing plan, decking plan, elevations, stair detail; building views in 3D; lumber list, cut list, cutting plan and hardware list. Suggestions follow the tables; the local building department decides.
+
+## Note on Library.zip (in the project files)
 
 Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_symbol, NFPA_single_symbol, NFPA_symbol, OS_SYM_ESS, PNE1ESS, SPECIAL. Each is a `.slk` file plus a `.sdb` folder of proprietary binary database files. Not an open format; not planned unless I ask. The 1.15.0 libraries were drawn from scratch instead.
 
@@ -141,6 +155,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 - 1.18.1 (bug fix, building views): shell walls no longer show steps and seams where pieces met, and doors and windows line up in their openings. Each shell wall is one solid (`wallShellSolid`: bands at the opening edges, only outside faces, opening sides, head and sill, side wall ends hidden behind the front and back walls), its doors and glass are drawn right after it (`solid.after`), the floor goes first and the roof last. The 3D window's Shell mode for a building now uses the same drawing as the report (the old `buildingScene` is gone; Lower walls facing me stays for floor plan levels).
 
+- 1.19.0 (splicing): runs longer than the longest board are spliced over supports, rafter ties lap or get a scab, splice settings in the building's Lumber settings, splice marks and part numbers, New building no longer blocks over a lumber problem (the rafter tie error on a 19'-5 3/4" building).
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -171,4 +187,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.18.1 fixes the building views shell (steps and seams at wall pieces, doors and windows out of line) and makes the 3D window's Shell mode match the report. It is committed and pushed to `main` (commit f9d6ff6); GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.1-amd64.tar.gz` and `openschem-1.18.1-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.19.0 (splicing) is committed and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.20.0 tile layouts and 1.21.0 decks (specs settled, see Open ideas). Manufacturer part library import is on hold.

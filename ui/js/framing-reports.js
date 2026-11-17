@@ -1,6 +1,6 @@
 // ---------- framing reports: lumber list, cut list and cutting plan per building ----------
 const FR_SECS = ['Floor', 'Front wall', 'Right wall', 'Back wall', 'Left wall', 'Wall', 'Roof'];
-const FR_ORDER = ['Skid', 'Rim joist', 'Floor joist', 'Bottom plate', 'Top plate', 'Cap plate', 'End stud', 'Stud', 'King stud', 'Jack stud', 'Header', 'Header spacer', 'Sill plate', 'Cripple over header', 'Cripple under sill', 'Gable stud', 'Rake wall stud', 'Ridge board', 'Rafter', 'Barge rafter', 'Rafter tie'];
+const FR_ORDER = ['Skid', 'Rim joist', 'Floor joist', 'Bottom plate', 'Top plate', 'Cap plate', 'End stud', 'Stud', 'King stud', 'Jack stud', 'Header', 'Header spacer', 'Sill plate', 'Cripple over header', 'Cripple under sill', 'Gable stud', 'Rake wall stud', 'Ridge board', 'Rafter', 'Barge rafter', 'Rafter tie', 'Tie scab'];
 const LUM_COLS = () => [{ h: 'Item', w: 90 }, { h: 'Size', w: 70 }, { h: 'Length or sheet size', w: 120 }, { h: 'Qty', w: 30, a: 'middle' }, { h: 'Notes', w: 90 }];
 const CUT_COLS = () => [{ h: 'Piece', w: 100 }, { h: 'Size', w: 60 }, { h: 'Length', w: 60 }, { h: 'Qty', w: 30, a: 'middle' }, { h: 'Notes', w: 150 }];
 const CPLAN_COLS = () => [{ h: 'Qty', w: 22, a: 'middle' }, { h: 'Board', w: 78 }, { h: 'Cut into', w: 250 }, { h: 'Offcut each', w: 50 }];

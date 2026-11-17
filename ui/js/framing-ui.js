@@ -55,6 +55,8 @@ function frameFields(b, section) {
     f('stock.pre', 'Buy studs precut to stud length', 'check');
     LC().stock.forEach((l, i) => f('len:' + i, 'Boards of ' + (lumberKey() === 'na' ? Math.round(l / IN_MM / 12) + "'" : (+(l / 1000).toFixed(1)) + ' m'), 'check', null, { get: bb => (bb.stock.lens || []).includes(i), set: (bb, v) => { const s = new Set(bb.stock.lens || []); if (v) s.add(i); else s.delete(i); bb.stock.lens = [...s].sort((a, c) => a - c); } }));
     f('kerf', 'Saw kerf', 'len');
+    if (bld) f('splice.tie', 'Rafter tie splices', 'sel', [['lap', 'Lap at the middle'], ['scab', 'Butt with a scab'], ['none', 'Do not splice']]);
+    f('splice.len', 'Lap or scab length', 'len'); f('splice.min', 'Shortest spliced piece', 'len');
   }
   return F;
 }
@@ -81,7 +83,7 @@ function frameSectionDlg(section, b) {
     flash(FRAME_SECTIONS[section] + ' updated');
   }, 'OK', section === 'roof' ? '<div class="note">The pitch is the rise for every 12 of run: 4 is a low slope, 6 is common for sheds, 12 is 45 degrees. Overhangs are measured level from the outside of the walls.</div>'
     : section === 'size' ? '<div class="note">Sizes are the outside of the framing. The stud length does not include the plates.</div>'
-    : section === 'lumber' ? '<div class="note">The lumber list uses the fewest boards from the lengths you can buy. The lumber catalog (North American or metric) is in Project properties.</div>' : '');
+    : section === 'lumber' ? '<div class="note">The lumber list uses the fewest boards from the lengths you can buy. Runs longer than the longest board are spliced: plates, rims, ridge boards and skids join over a stud, joist or rafter; rafter ties lap or get a scab at the middle. Rafters, studs and joists are never spliced. The lumber catalog (North American or metric) is in Project properties.</div>' : '');
 }
 
 // ---------- new buildings ----------
@@ -102,7 +104,6 @@ function newBuildingDlg(mode, from) {
     if (mode === 'building') { b.floor.on = !!v.floor; b.roof.on = v.roof !== 'none'; if (v.roof === 'shed') b.roof.type = 'shed'; if (v.roof === 'shed') b.roof.pitch = 2; }
     if (v.door) (mode === 'wall' ? b.walls.single : b.walls.front).ops.push(newFrameOpening('door', mode === 'wall' ? b.len : b.w));
     if (from && from.ops) for (const k of WALL_KEYS) b.walls[k].ops = from.ops[k] || [];
-    const M = frameModel0(b); if (M.errs && M.errs.length) { alert(M.errs.join('\n')); return false; }
     commit(() => { P.buildings.push(b); syncFramePages(b); sortPages(); curId = P.pages.find(p => p.bld === b.id).id; sel.clear(); });
     zoomFit(); flash((mode === 'wall' ? 'Wall ' : 'Building ') + b.name + ' added');
   }, 'Create', mode === 'wall' ? '<div class="note">A single framed wall gets one elevation page and its own lumber list.</div>'

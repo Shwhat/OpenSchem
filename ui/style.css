@@ -578,3 +578,5 @@ tr.pb-share td{background:var(--panel)}
 .v3cut{display:inline-flex;gap:4px;align-items:center}
 .v3ctl{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 :root[data-sheet=dark] #canvas .bvlbl{fill:#e2e6eb}
+.frsplice{stroke:#b25d00;stroke-width:.4}
+:root[data-sheet=dark] #canvas .frsplice{stroke:#f0b35a}

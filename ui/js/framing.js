@@ -65,12 +65,18 @@ function newBuilding(mode, o = {}) {
     floor: { on: mode === 'building', joist: 1, sp: c.spDef, pt: true, skids: 3, skid: 0, deck: m ? '18 mm plywood' : '3/4" T&G plywood' },
     roof: { on: mode === 'building', type: 'gable', ends: 'frontback', low: 'back', pitch: 6, rafter: 1, sp: c.rsp, eave: m ? 300 : 12 * IN_MM, rake: m ? 150 : 6 * IN_MM, ties: 'every' },
     cover: { wall: true, wallMat: m ? '11 mm OSB' : '7/16" OSB', wallSheet: 0, roof: true, roofMat: m ? '11 mm OSB' : '7/16" OSB', roofSheet: 0, roofDir: 'along' },
-    stock: { pre: c.pre, lens: c.stockOn.slice() }, kerf: c.kerf,
+    stock: { pre: c.pre, lens: c.stockOn.slice() }, kerf: c.kerf, splice: spliceDefaults(),
   };
   if (mode === 'building' && !o.bare) b.walls.front.ops.push(newFrameOpening('door', b.w));
   if (mode === 'wall' && !o.bare) b.walls.single.ops.push(newFrameOpening('door', b.len));
   return b;
 }
+// splicing: rafter ties lap or get a scab where they are longer than the longest board; plates, rims, ridge boards and
+// skids always join over a support. len is the lap (or the scab length), min the shortest piece allowed.
+const spliceDefaults = (metric = lumberKey() === 'metric') => metric ? { tie: 'lap', len: 600, min: 600 } : { tie: 'lap', len: 24 * IN_MM, min: 24 * IN_MM };
+const spliceOf = b => Object.assign(spliceDefaults(), b.splice || {});
+// "part 1 of 2" notes for a run cut into pieces
+const partNotes = (run, joint, extra) => run.pieces.map((p, i, a) => [a.length > 1 ? `part ${i + 1} of ${a.length}, ${joint}` : '', extra || ''].filter(Boolean).join(', '));
 function frameViews(b) {
   if (b.mode === 'wall') return ['wall'];
   return ['plan', 'front', 'right', 'back', 'left'].concat(b.floor.on ? ['floor'] : [], b.roof.on ? ['roof'] : []);
@@ -93,10 +99,13 @@ function layoutPositions(L, sp, T) {
   if (L - T > 0.01) xs.push(L - T);
   return xs;
 }
-function splitRun(x0, x1, centers, maxLen, avoid, minGap) {
-  const splices = []; let start = x0;
+// splices a run longer than the longest board: joints land on the supports (centers), leave no piece shorter than
+// minPiece where the supports allow, and keep minGap away from the joints of the layer below (avoid)
+function splitRun(x0, x1, centers, maxLen, avoid, minGap, minPiece) {
+  const splices = []; let start = x0; const mp = minPiece == null ? 300 : minPiece;
   while (x1 - start > maxLen + 0.01) {
-    const cands = centers.filter(c => c > start + 300 && c - start <= maxLen + 0.01 && c < x1 - 150);
+    const reach = centers.filter(c => c > start + 1 && c - start <= maxLen + 0.01 && c < x1 - 1);
+    let cands = reach.filter(c => c - start >= mp - 0.01 && x1 - c >= mp - 0.01); if (!cands.length) cands = reach;
     const ok = cands.filter(c => avoid.every(a => Math.abs(a - c) >= minGap - 0.01));
     let pick = (ok.length ? ok : cands).slice(-1)[0];
     if (pick === undefined) pick = start + maxLen;
@@ -151,8 +160,8 @@ function frameModel0(b) {
   if (!(S > 300)) errs.push('The stud length must be at least ' + fmtCut(300) + '.');
   if (!lens.length) errs.push('Pick at least one board length in the building\'s lumber settings.');
   if (errs.length) return { errs };
-  const maxLen = lens[lens.length - 1], kerf = Math.max(0, b.kerf || 0);
-  const M = { b, T, WD, S, sp, tp, maxLen, kerf, walls: [], floor: null, roof: null, pieces: [], sheets: [], errs, mode: b.mode };
+  const maxLen = lens[lens.length - 1], kerf = Math.max(0, b.kerf || 0), SP = spliceOf(b);
+  const M = { b, T, WD, S, sp, tp, maxLen, kerf, SP, walls: [], floor: null, roof: null, pieces: [], sheets: [], errs, mode: b.mode };
   const defs = [];
   if (b.mode === 'wall') {
     const L = b.len; if (!(L > 6 * T)) return { errs: ['The wall is too short to frame.'] };
@@ -186,7 +195,7 @@ function frameModel0(b) {
       if (r.type === 'gable') { run = B / 2 - T / 2; rafterLen = (run + eave) * sf; } else { run = B; rafterLen = (B + 2 * eave) * sf; }
       const ridgeSize = sizeName(Math.min(4, (+r.rafter || 0) + 1)), ridgeD = sizeDepth(Math.min(4, (+r.rafter || 0) + 1));
       const ridgeLen = Lr + 2 * rake;
-      const ridge = r.type === 'gable' ? splitRun(0, ridgeLen, pos.map(x => x + T / 2 + rake), maxLen, [], 0) : null;
+      const ridge = r.type === 'gable' ? splitRun(0, ridgeLen, pos.map(x => x + T / 2 + rake), maxLen, [], 0, SP.min) : null;
       const ties = r.type === 'gable' ? (r.ties === 'every' ? n : r.ties === 'other' ? Math.ceil(n / 2) : 0) : 0;
       const peak = r.type === 'gable' ? f(B / 2) + rd * sf : delta + rd * sf;
       M.roof = { type: r.type, p, slope, sf, ang, rsize, rd, axis, B, Lr, eave, rake, f, lowAt0, high, delta, pos, n, run, rafterLen, need: rafterLen + rd * slope, ridgeLen, ridge, ridgeSize, ridgeD, ties, peak, sp: r.sp, heel: WD * slope, hap: rd * sf - WD * slope };
@@ -211,7 +220,7 @@ function frameModel0(b) {
       const pd = C.postD[fl.skid ? 1 : 0], skidH = fl.skids ? pd[1] : 0, skidW = pd[0];
       const skidPos = []; for (let i = 0; i < fl.skids; i++) skidPos.push(fl.skids === 1 ? (Sf - skidW) / 2 : i * (Sf - skidW) / (fl.skids - 1));
       const size = sizeName(fl.joist) + (fl.pt ? ' ' + C.treated : '');
-      const rims = splitRun(0, Lf, pos.map(x => x + T / 2), maxLen, [], 0);
+      const rims = splitRun(0, Lf, pos.map(x => x + T / 2), maxLen, [], 0, SP.min);
       const sheetL = C.sheets[0];
       M.floor = { jd, size, sp: fl.sp, Lf, Sf, longAxis, pos, joistLen: Sf - 2 * T, rims, skids: fl.skids, skidSize: C.posts[fl.skid ? 1 : 0] + ' ' + C.treated, skidH, skidW, skidPos,
         height: skidH + jd + C.deck, deckT: C.deck, deck: fl.deck, deckSheets: Math.ceil(Lf / sheetL - 1e-6) * Math.ceil(Sf / C.sheetW - 1e-6), sheetL };
@@ -230,9 +239,11 @@ function frameModel0(b) {
   const P0 = (sec, name, size, len, note, need) => M.pieces.push({ sec, name, size, len, note: note || '', need: need === undefined ? len : need });
   if (M.floor) {
     const F = M.floor;
-    for (let k = 0; k < 2; k++) F.rims.pieces.forEach(p => P0('Floor', 'Rim joist', F.size, p.len));
+    const rn = partNotes(F.rims, 'joint over a joist');
+    for (let k = 0; k < 2; k++) F.rims.pieces.forEach((p, i) => P0('Floor', 'Rim joist', F.size, p.len, rn[i]));
     F.pos.forEach(() => P0('Floor', 'Floor joist', F.size, F.joistLen));
-    for (let i = 0; i < F.skids; i++) F.rims.pieces.forEach(p => P0('Floor', 'Skid', F.skidSize, p.len));
+    const sn = partNotes(F.rims, 'joint under a joist');
+    for (let i = 0; i < F.skids; i++) F.rims.pieces.forEach((p, j) => P0('Floor', 'Skid', F.skidSize, p.len, sn[j]));
     M.sheets.push({ sec: 'Floor', mat: F.deck, w: C.sheetW, l: F.sheetL, count: F.deckSheets });
   }
   if (M.roof) {
@@ -241,8 +252,21 @@ function frameModel0(b) {
     for (let i = 0; i < count; i++) P0('Roof', 'Rafter', R.rsize, R.rafterLen, note + ', notch over the wall', R.need);
     const barge = R.rake > 0.5 ? (R.type === 'gable' ? 4 : 2) : 0;
     for (let i = 0; i < barge; i++) P0('Roof', 'Barge rafter', R.rsize, R.rafterLen, note, R.need);
-    if (R.ridge) R.ridge.pieces.forEach(p => P0('Roof', 'Ridge board', R.ridgeSize, p.len));
-    for (let i = 0; i < R.ties; i++) P0('Roof', 'Rafter tie', sizeName(0), R.B, 'at the top plates, ends cut to the roof slope');
+    if (R.ridge) { const rn = partNotes(R.ridge, 'joint over a rafter'); R.ridge.pieces.forEach((p, i) => P0('Roof', 'Ridge board', R.ridgeSize, p.len, rn[i])); }
+    // rafter ties longer than the longest board: two pieces lapped at the middle, or butted with a scab across the joint
+    const tieNote = 'at the top plates, ends cut to the roof slope';
+    R.tieSplice = null;
+    for (let i = 0; i < R.ties; i++) {
+      if (R.B <= maxLen + 0.01 || SP.tie === 'none') { P0('Roof', 'Rafter tie', sizeName(0), R.B, tieNote); continue; }
+      if (SP.tie === 'scab') {
+        R.tieSplice = { how: 'scab', piece: R.B / 2, len: SP.len };
+        for (let k = 1; k <= 2; k++) P0('Roof', 'Rafter tie', sizeName(0), R.B / 2, `part ${k} of 2, butt joint at the middle, ${tieNote}`);
+        P0('Roof', 'Tie scab', sizeName(0), SP.len, 'nailed across the rafter tie joint');
+      } else {
+        R.tieSplice = { how: 'lap', piece: R.B / 2 + SP.len / 2, len: SP.len };
+        for (let k = 1; k <= 2; k++) P0('Roof', 'Rafter tie', sizeName(0), R.B / 2 + SP.len / 2, `part ${k} of 2, lapped ${fmtCut(SP.len)} at the middle, ${tieNote}`);
+      }
+    }
   }
   // sheathing and panels
   const cv = b.cover;
@@ -340,13 +364,15 @@ function frameWall(d, ops, M, errs) {
     xs.forEach(x => { const h = d.fill(x, x + T); if (h >= 76) fill.push({ kind: 'fill', x, y0: wallTop, y1: wallTop + h }); });
   }
   const centers = m.filter(q => q.kind === 'end' || q.kind === 'common' || q.kind === 'king').map(q => q.x + T / 2).sort((a, b) => a - b);
-  const bottom = splitRun(0, L, centers, M.maxLen, [], 0), topP = splitRun(0, L, centers, M.maxLen, [], 0);
-  const cap = tp === 2 ? splitRun(d.capStart, d.capEnd, centers, M.maxLen, topP.splices, 610) : null;
+  const mp = M.SP ? M.SP.min : 300;
+  const bottom = splitRun(0, L, centers, M.maxLen, [], 0, mp), topP = splitRun(0, L, centers, M.maxLen, [], 0, mp);
+  const cap = tp === 2 ? splitRun(d.capStart, d.capEnd, centers, M.maxLen, topP.splices, 610, mp) : null;
   const stud = sizeName(M.b.stud), sec = d.name, pieces = [];
   const P0 = (name, size, len, note, extra) => pieces.push(Object.assign({ sec, name, size, len, note: note || '', need: len }, extra || {}));
-  bottom.pieces.forEach(p => P0('Bottom plate', stud, p.len, ops.some(o => o.type === 'door') ? 'cut out at doors after the wall stands' : ''));
-  topP.pieces.forEach(p => P0('Top plate', stud, p.len));
-  if (cap) cap.pieces.forEach(p => P0('Cap plate', stud, p.len));
+  const bn = partNotes(bottom, 'joint under a stud', ops.some(o => o.type === 'door') ? 'cut out at doors after the wall stands' : ''), tn = partNotes(topP, 'joint over a stud');
+  bottom.pieces.forEach((p, i) => P0('Bottom plate', stud, p.len, bn[i]));
+  topP.pieces.forEach((p, i) => P0('Top plate', stud, p.len, tn[i]));
+  if (cap) { const cn = partNotes(cap, 'joints 24" from the top plate joints'.replace('24"', fmtCut(610))); cap.pieces.forEach((p, i) => P0('Cap plate', stud, p.len, cn[i])); }
   m.forEach(q => P0(FKIND[q.kind], stud, q.y1 - q.y0));
   ops.forEach(o => {
     for (let i = 0; i < o.hd.plies; i++) P0('Header', o.hd.size, o.w + 2 * T, o.label);
