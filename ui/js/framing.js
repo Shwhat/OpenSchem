@@ -33,7 +33,7 @@ const sizeName = i => LC().sizes[Math.max(0, Math.min(4, +i || 0))];
 const sizeDepth = i => LC().depth[Math.max(0, Math.min(4, +i || 0))];
 const WALL_KEYS = ['front', 'right', 'back', 'left'];
 const WALL_NAMES = { front: 'Front wall', right: 'Right wall', back: 'Back wall', left: 'Left wall', single: 'Wall' };
-const FRAME_VIEWS = { plan: 'Framing plan', front: 'Front wall', right: 'Right wall', back: 'Back wall', left: 'Left wall', floor: 'Floor framing', roof: 'Roof framing', wall: 'Wall framing' };
+const FRAME_VIEWS = { plan: 'Framing plan', front: 'Front wall', right: 'Right wall', back: 'Back wall', left: 'Left wall', floor: 'Floor framing', roof: 'Roof framing', wall: 'Wall framing', dfoot: 'Footing and post plan', dframe: 'Deck framing plan', ddeck: 'Decking plan', delev: 'Elevations', dstair: 'Stair detail' };
 const isFrame = pg => pg && pg.kind === 'frame';
 const bldOf = pg => pg && (P.buildings || []).find(b => b.id === pg.bld);
 
@@ -78,6 +78,7 @@ const spliceOf = b => Object.assign(spliceDefaults(), b.splice || {});
 // "part 1 of 2" notes for a run cut into pieces
 const partNotes = (run, joint, extra) => run.pieces.map((p, i, a) => [a.length > 1 ? `part ${i + 1} of ${a.length}, ${joint}` : '', extra || ''].filter(Boolean).join(', '));
 function frameViews(b) {
+  if (isDeck(b)) return ['dfoot', 'dframe', 'ddeck', 'delev'].concat(deckStairList(b).length ? ['dstair'] : []);
   if (b.mode === 'wall') return ['wall'];
   return ['plan', 'front', 'right', 'back', 'left'].concat(b.floor.on ? ['floor'] : [], b.roof.on ? ['roof'] : []);
 }
@@ -148,12 +149,14 @@ function packBoards(pieces, stocks, kerf) {
 // ---------- the framing of one building ----------
 const FRAMECACHE = new Map();
 function frameModel(b) {
+  if (isDeck(b)) deckSyncLink(b);
   const key = JSON.stringify(b) + lumberKey() + unitsOf() + (P.prec || 16);
   const c = FRAMECACHE.get(b.id); if (c && c.key === key) return c.M;
   let M; try { M = frameModel0(b); } catch (e) { M = { errs: ['Could not work out the framing: ' + e.message] }; }
   FRAMECACHE.set(b.id, { key, M }); return M;
 }
 function frameModel0(b) {
+  if (isDeck(b)) return deckModel0(b);
   const C = LC(), T = C.t, WD = sizeDepth(b.stud), errs = [];
   const S = b.studLen, sp = b.sp, tp = b.plates === 1 ? 1 : 2;
   const lens = (b.stock.lens || []).map(i => C.stock[i]).filter(Boolean).sort((a, b2) => a - b2);
@@ -391,6 +394,7 @@ function convertBuildingsLumber(from, to) {
   const near = (list, v) => { let bi = 0; list.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(list[bi] - v)) bi = i; }); return bi; };
   const sp = v => B.sp[Math.min(B.sp.length - 1, near(A.sp, v))];
   for (const b of P.buildings || []) {
+    if (isDeck(b)) { if (b.sp > 0) b.sp = sp(b.sp); b.stock.lens = (b.stock.lens || []).filter(i => i < B.stock.length); if (!b.stock.lens.length) b.stock.lens = B.stockOn.slice(); b.kerf = B.kerf; FRAMECACHE.delete(b.id); continue; }
     b.sp = sp(b.sp); b.floor.sp = sp(b.floor.sp); b.roof.sp = sp(b.roof.sp);
     const si = A.studs.findIndex(x => Math.abs(x - b.studLen) < 1); if (si >= 0) b.studLen = B.studs[Math.min(si, B.studs.length - 1)];
     b.cover.wallSheet = Math.min(b.cover.wallSheet, B.sheets.length - 1); b.cover.roofSheet = Math.min(b.cover.roofSheet, B.sheets.length - 1);

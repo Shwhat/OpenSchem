@@ -221,7 +221,7 @@ const DEFAULT_RIBBON = [
     { name: 'Legend', items: ['insertLegend'] },
     { name: 'Modify', items: ['rotateSel', 'delSel', 'toggleSnap', 'alignToGrid'] },
     { name: 'Sheets', items: ['newViewSheet', 'addView'] },
-    { name: 'Building', items: ['frameFromRoom', 'view3D', 'tileFromFloor'] },
+    { name: 'Building', items: ['frameFromRoom', 'deckFromFloor', 'view3D', 'tileFromFloor'] },
     { name: 'Exchange', items: ['importDXF', 'exportDXF', 'exportSVG', 'exportPNG'] },
     { name: 'Precision', items: ['toggleOsnap', 'toggleOrtho', 'togglePolar', 'toggleDyn', 'osnapDlg', 'scaleDlg', 'toggleCmdline'] },
   ] },
@@ -243,8 +243,16 @@ const DEFAULT_RIBBON = [
     { name: 'Building', items: ['frameSizeDlg', 'frameFloorDlg', 'frameRoofDlg', 'frameCoverDlg', 'frameLumberDlg'] },
     { name: 'Openings', items: ['selectMode', 'frameAddDoor', 'frameAddWindow', 'delSel'] },
     { name: 'New', items: ['newBuilding', 'newFramedWall', 'dupPage'] },
-    { name: 'Floor plan', items: ['frameToFloor', 'view3D', 'tileFromFrame'] },
+    { name: 'Floor plan', items: ['frameToFloor', 'view3D', 'tileFromFrame', 'deckFromFrame'] },
     { name: 'Output', items: ['frameGoLumber', 'frameExportXlsx', 'exportPDF'] },
+    { name: 'History', items: ['undo', 'redo'] },
+  ] },
+  { id: 'deck', name: 'Deck', contextual: true, ctx: 'deck', groups: [
+    { name: 'Deck', items: ['deckSizeDlg', 'deckFrameDlg', 'deckDeckingDlg', 'deckStairsDlg', 'deckRailDlg', 'frameLumberDlg'] },
+    { name: 'Add', items: ['deckAddStairs', 'deckAddSection'] },
+    { name: 'New', items: ['newDeck', 'dupPage'] },
+    { name: 'View', items: ['view3D'] },
+    { name: 'Output', items: ['frameGoLumber', 'deckGoHardware', 'frameExportXlsx', 'exportPDF'] },
     { name: 'History', items: ['undo', 'redo'] },
   ] },
   { id: 'tiles', name: 'Tiles', contextual: true, ctx: 'tile', groups: [
@@ -288,7 +296,7 @@ function cmdInfo(id) {
 }
 function renderToolbar() {
   const el = $('#toolbar'); if (!P) return;
-  const fp = isFloor(page()), frp = isFrame(page()); const kind = fp ? 'floor' : frp ? 'frame' : isTile(page()) ? 'tile' : 'sch';
+  const fp = isFloor(page()), frp = isFrame(page()); const kind = fp ? 'floor' : frp ? (isDeck(bldOf(page())) ? 'deck' : 'frame') : isTile(page()) ? 'tile' : 'sch';
   const def = ribbonDef(); const ctxOf = t => t.ctx || 'floor';
   if (kind !== lastPageKind) {
     const first = def.find(t => t.contextual && ctxOf(t) === kind);
@@ -351,7 +359,7 @@ function customizeRibbon() {
     const btns = kind => `<div class="cz-btns"><button type="button" class="btn small" data-czb="${kind}:add">Add</button><button type="button" class="btn small" data-czb="${kind}:ren">Rename</button><button type="button" class="btn small" data-czb="${kind}:del">Remove</button><button type="button" class="btn small" data-czb="${kind}:up">▲</button><button type="button" class="btn small" data-czb="${kind}:dn">▼</button></div>`;
     const avail = allCmds().filter(([id, l]) => !q || (l + ' ' + id).toLowerCase().includes(q.toLowerCase()));
     $('#dlgbody').innerHTML = `<div class="cz">
-      <div><h4>Tabs</h4>${list(W.map(x => x.name + (x.contextual ? (x.ctx === 'frame' ? ' (framing pages)' : x.ctx === 'tile' ? ' (tile layouts)' : ' (floor plans)') : '')), ti, 't')}${btns('t')}</div>
+      <div><h4>Tabs</h4>${list(W.map(x => x.name + (x.contextual ? (x.ctx === 'frame' ? ' (framing pages)' : x.ctx === 'tile' ? ' (tile layouts)' : x.ctx === 'deck' ? ' (deck pages)' : ' (floor plans)') : '')), ti, 't')}${btns('t')}</div>
       <div><h4>Groups in ${esc(t.name || '')}</h4>${list(t.groups.map(x => x.name), gi, 'g')}${btns('g')}</div>
       <div><h4>Buttons in ${esc(g.name || '')}</h4>${list(g.items.map(id => (cmdInfo(id) || { label: id }).label), ii, 'i')}<div class="cz-btns"><button type="button" class="btn small" data-czb="i:del">Remove</button><button type="button" class="btn small" data-czb="i:up">▲</button><button type="button" class="btn small" data-czb="i:dn">▼</button></div></div>
       <div><h4>Available commands</h4><input class="search" id="czq" placeholder="Search commands and symbols" value="${esc(q)}" style="margin:0 0 6px;width:100%"><div class="cz-list">${avail.map(([id, l]) => `<div class="cz-row" data-czadd="${esc(id)}" title="Add to the selected group">${esc(l)}</div>`).join('')}</div><div class="note">Click a command to add it to the selected group.</div></div>

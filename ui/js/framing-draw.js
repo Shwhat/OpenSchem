@@ -48,7 +48,8 @@ function framingPageSVG(pg, o = {}) {
   }
   let body = '', head = '';
   const v = pg.view;
-  if (v === 'plan') ({ body, head } = frameTopSVG(pg, M));
+  if (isDeck(b)) ({ body, head } = deckPageSVG(pg, M, v));
+  else if (v === 'plan') ({ body, head } = frameTopSVG(pg, M));
   else if (v === 'floor') ({ body, head } = frameFloorSVG(pg, M));
   else if (v === 'roof') ({ body, head } = frameRoofSVG(pg, M));
   else { const fw = M.walls.find(w => w.key === (v === 'wall' ? 'single' : v)); if (fw) ({ body, head } = frameWallSVG(pg, M, fw, o)); }

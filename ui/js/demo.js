@@ -4,7 +4,7 @@
 // oval rooms, layers, parts with prices, loads and voltage drop, cables, revisions and to-dos, the IEC or NFPA symbol
 // library, a single-line page, pneumatic pages with tubes and the tubing list, and framing: a garden shed, a wood store
 // with a single-slope panel roof, a framed partition wall and a tool shed, with spliced plates, rims, ridge boards and
-// rafter ties (lapped and with a scab), their lumber lists and building views, and tile layouts (bath and kitchen floors,
+// rafter ties (lapped and with a scab), their lumber lists and building views, four decks, and tile layouts (bath and kitchen floors,
 // a backsplash, a shower wall, a patio, a hexagon laundry floor and a shed wall). The NFPA demo is the IEC demo converted
 // to NFPA symbols and device letters.
 // When a feature is added, add it here too and to the demo coverage test (tests/suites/05-demo.mjs).
@@ -178,7 +178,18 @@ function buildDemo(std = 'IEC') {
   shed.stock.lens = [0];
   const tool = newBuilding('building', { name: 'Tool shed', w: 144 * IN_MM, d: 96 * IN_MM, bare: true });
   tool.floor.on = false; tool.stock.lens = [0, 1]; tool.splice.tie = 'scab'; tool.walls.front.ops.push(newFrameOpening('door', tool.w));
-  p.buildings = [shed, store, part, tool]; p.buildings.forEach(syncFramePages);
+  // ---- decks: a ledger deck on the house wall (L-shape, stairs), a freestanding garden deck on two levels joined by
+  // steps (composite, diagonal), a ground level deck on the garden shed (picture frame) and a side deck (breaker board) ----
+  const FT = f => f * 12 * IN_MM;
+  const back = newDeck({ name: 'Back deck', kind: 'ledger', w: FT(20), d: FT(12), h: FT(3), link: { kind: 'wall', level: lv.id, wall: left.id } });
+  back.plats.push({ id: uid(), x: 0, y: FT(12), w: FT(10), d: FT(6), h: FT(3) }); back.stairs.push(newDeckStair(back, { plat: 1, at: FT(3), w: FT(4) }));
+  const garden = newDeck({ name: 'Garden deck', kind: 'free', w: FT(14), d: FT(10), h: FT(2.5) });
+  garden.plats.push({ id: uid(), x: FT(2), y: FT(10), w: FT(10), d: FT(8), h: FT(1) }); garden.species = 'dfl'; Object.assign(garden.dk, { mat: 'comp', lay: 'diag' }); garden.stairs.push(newDeckStair(garden, { plat: 1, at: FT(3), w: FT(4) }));
+  const shedDeck = newDeck({ name: 'Shed deck', kind: 'ground', w: FT(10), d: FT(6), h: 16 * IN_MM, link: { kind: 'bwall', bld: shed.id, wall: 'front' } });
+  shedDeck.species = 'hf'; Object.assign(shedDeck.dk, { mat: '2x6', lay: 'frame' }); shedDeck.rail.mode = 'off';
+  const side = newDeck({ name: 'Side deck', kind: 'free', w: FT(16), d: FT(10), h: FT(5) });
+  side.species = 'spf'; side.dk.lay = 'breaker'; side.fast = 'bolt'; side.cant = FT(1); side.stairs.push(newDeckStair(side, { side: 'left', at: FT(2), w: FT(4) }));
+  p.buildings = [shed, store, part, tool, back, garden, shedDeck, side]; p.buildings.forEach(syncFramePages);
 
   // ---- tile layouts: the bath and kitchen floors from their rooms, a backsplash on the kitchen wall, a shower wall and
   // a patio typed in, the laundry floor in hexagons and a wall inside the garden shed ----

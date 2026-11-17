@@ -27,6 +27,8 @@ js/framing-floor.js
 js/framing-render.js
 js/tiles.js
 js/tiles-draw.js
+js/decks.js
+js/decks-draw.js
 js/demo-home.js
 js/ribbon.js
 js/framing-ui.js
@@ -48,6 +50,7 @@ js/panels.js
 js/navigator.js
 js/menus.js
 js/tiles-ui.js
+js/decks-ui.js
 js/dialogs.js
 js/demo-industrial.js
 js/demo.js

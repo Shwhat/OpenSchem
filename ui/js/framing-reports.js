@@ -1,6 +1,6 @@
 // ---------- framing reports: lumber list, cut list and cutting plan per building ----------
-const FR_SECS = ['Floor', 'Front wall', 'Right wall', 'Back wall', 'Left wall', 'Wall', 'Roof'];
-const FR_ORDER = ['Skid', 'Rim joist', 'Floor joist', 'Bottom plate', 'Top plate', 'Cap plate', 'End stud', 'Stud', 'King stud', 'Jack stud', 'Header', 'Header spacer', 'Sill plate', 'Cripple over header', 'Cripple under sill', 'Gable stud', 'Rake wall stud', 'Ridge board', 'Rafter', 'Barge rafter', 'Rafter tie', 'Tie scab'];
+const FR_SECS = ['Posts', 'Beams', 'Joists', 'Decking', 'Stairs', 'Railing', 'Floor', 'Front wall', 'Right wall', 'Back wall', 'Left wall', 'Wall', 'Roof'];
+const FR_ORDER = ['Skid', 'Rim joist', 'Floor joist', 'Bottom plate', 'Top plate', 'Cap plate', 'End stud', 'Stud', 'King stud', 'Jack stud', 'Header', 'Header spacer', 'Sill plate', 'Cripple over header', 'Cripple under sill', 'Gable stud', 'Rake wall stud', 'Ridge board', 'Rafter', 'Barge rafter', 'Rafter tie', 'Tie scab', 'Post', 'Beam ply', 'Ledger', 'End joist', 'Joist', 'Blocking', 'Border blocking', 'Decking', 'Border board', 'Breaker board', 'Stringer', 'Tread', 'Stair post', 'Handrail', 'Railing post', 'Rail cap', 'Top rail', 'Bottom rail', 'Baluster'];
 const LUM_COLS = () => [{ h: 'Item', w: 90 }, { h: 'Size', w: 70 }, { h: 'Length or sheet size', w: 120 }, { h: 'Qty', w: 30, a: 'middle' }, { h: 'Notes', w: 90 }];
 const CUT_COLS = () => [{ h: 'Piece', w: 100 }, { h: 'Size', w: 60 }, { h: 'Length', w: 60 }, { h: 'Qty', w: 30, a: 'middle' }, { h: 'Notes', w: 150 }];
 const CPLAN_COLS = () => [{ h: 'Qty', w: 22, a: 'middle' }, { h: 'Board', w: 78 }, { h: 'Cut into', w: 250 }, { h: 'Offcut each', w: 50 }];
@@ -34,8 +34,8 @@ function buildFramingReports(reps) {
   (P.buildings || []).forEach((b, bi) => {
     const M = frameModel(b); if (!M.boards) return;
     const link = v => { const pg = P.pages.find(p => p.bld === b.id && p.view === v); return pg ? pg.id : ''; };
-    const secPage = sec => link(sec === 'Floor' ? 'floor' : sec === 'Roof' ? 'roof' : sec === 'Wall' ? 'wall' : sec.split(' ')[0].toLowerCase());
-    const first = link(b.mode === 'wall' ? 'wall' : 'plan');
+    const secPage = sec => isDeck(b) ? link(sec === 'Posts' ? 'dfoot' : sec === 'Decking' ? 'ddeck' : sec === 'Stairs' && P.pages.some(p => p.bld === b.id && p.view === 'dstair') ? 'dstair' : sec === 'Railing' ? 'delev' : 'dframe') : link(sec === 'Floor' ? 'floor' : sec === 'Roof' ? 'roof' : sec === 'Wall' ? 'wall' : sec.split(' ')[0].toLowerCase());
+    const first = link(b.mode === 'wall' ? 'wall' : isDeck(b) ? 'dframe' : 'plan');
     const n = bi + 1;
     // lumber list
     const rows = [{ cells: ['Boards to buy', '', '', '', ''], cls: 'grp', link: first, goto: 'page:' + first }];
@@ -74,6 +74,7 @@ async function frameExportXlsx() {
     const sp = frameSpacerSheets(M); if (sp) lum.push(['Header spacers', LC().spacer, sp.n + ' strips', sp.sheets]);
     sheets.push({ name: nm('Lumber ' + b.name), rows: lum });
     sheets.push({ name: nm('Cut list ' + b.name), rows: [['Section', 'Piece', 'Size', 'Length', 'Length (mm)', 'Qty', 'Notes']].concat(frameGroupPieces(M.pieces).map(x => [x.sec, x.name, x.size, fmtCut(x.len), Math.round(x.len), x.qty, x.note])) });
+    if (M.hw) sheets.push({ name: nm('Hardware ' + b.name), rows: [['Item', 'Size or type', 'Qty', 'Notes']].concat(M.hw.map(h => [h.item, h.size, h.qty, h.note])) });
     sheets.push({ name: nm('Cutting plan ' + b.name), rows: [['Qty', 'Board', 'Cut into', 'Offcut each']].concat(frameCutPlan(M).map(x => [x.qty, x.bd.size + ' ' + x.bd.stock.label, x.cuts.map(p => p.name + ' ' + fmtCut(p.len)).join(', '), fmtCut(x.bd.offcut)])) });
   }
   const bytes = buildXlsx(sheets);

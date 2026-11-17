@@ -28,6 +28,7 @@ const spOpts = (cur) => { const l = LC().sp.map(v => [String(v), fmtCut(v) + ' o
 const sizeOpts = n => LC().sizes.slice(0, n).map((s, i) => [String(i), s]);
 const sheetLabel = l => lumberKey() === 'na' ? `4' x ${Math.round(l / IN_MM / 12)}'` : `${LC().sheetW} x ${Math.round(l)} mm`;
 function frameFields(b, section) {
+  if (isDeck(b) && section !== 'lumber') return deckFields(b, section);
   const bld = b.mode === 'building', F = [];
   const f = (k, label, type, opts, extra) => F.push(Object.assign({ k, label, type, opts }, extra || {}));
   if (section === 'size') {
@@ -60,7 +61,7 @@ function frameFields(b, section) {
   }
   return F;
 }
-const FRAME_SECTIONS = { size: 'Size and walls', floor: 'Floor', roof: 'Roof', cover: 'Sheathing and panels', lumber: 'Lumber' };
+const FRAME_SECTIONS = { size: 'Size and walls', floor: 'Floor', roof: 'Roof', cover: 'Sheathing and panels', lumber: 'Lumber', dsize: 'Size and height', dframe: 'Framing', ddeck: 'Decking', dstairs: 'Stairs', drail: 'Guards' };
 const fieldGet = (b, fd) => fd.get ? fd.get(b) : getPath(b, fd.k);
 const fieldShow = (b, fd) => { const v = fieldGet(b, fd); return fd.type === 'len' ? fmtCut(v) : fd.type === 'pitch' ? String(+(+v).toFixed(3)) : fd.type === 'check' ? !!v : String(v ?? ''); };
 // returns an error message, or applies the value
@@ -115,6 +116,7 @@ function frameWallKey(pg) { return pg.view === 'wall' ? 'single' : WALL_KEYS.inc
 function frameOpFind(id) { for (const b of P.buildings || []) for (const [k, w] of Object.entries(b.walls)) { const o = (w.ops || []).find(x => x.id === id); if (o) return { b, k, o, list: w.ops }; } return null; }
 function frameAddOpening(type) {
   const pg = page(), b = bldOf(pg); if (!b) { flash('Open a framing page first'); return; }
+  if (isDeck(b)) { flash('Decks have no doors or windows'); return; }
   const k = frameWallKey(pg), M = frameModel(b); const fw = M.walls && M.walls.find(w => w.key === k);
   const len = fw ? fw.len : (k === 'single' ? b.len : (k === 'front' || k === 'back') ? b.w : b.d - 2 * sizeDepth(b.stud));
   const o = newFrameOpening(type, len);
@@ -183,6 +185,7 @@ function frameUp() {
 // ---------- Properties panel ----------
 function renderFrameProps(pg) {
   const el = $('#props'), b = bldOf(pg);
+  if (isDeck(b)) { renderDeckProps(pg, b); return; }
   if (!b) { el.innerHTML = '<div class="ident">Framing page</div><div class="note">The building for this page was deleted.</div>'; return; }
   const ids = [...sel].filter(id => frameOpFind(id));
   if (ids.length === 1) {

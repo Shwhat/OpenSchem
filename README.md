@@ -92,6 +92,15 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Building views report for each building: framing (every member, colored like the elevations), finished shell (walls, roof, doors and windows) and exploded framing (walls pulled out from the corners, roof lifted), each in four views from the corners with wall names and width, depth and peak height, drawn as vector graphics for print and PDF
 - Make floor plan turns a building into a floor plan level with its walls, doors, windows and a room for furniture from the block library; 3D view shows a floor plan level (walls, doors, windows, rooms and blocks) and lowers the walls facing you; for a building it switches between the shell, the framing and the exploded framing, drawn the same way as the Building views report
 
+**Decks**
+- Decks with New page > Deck, Deck on a floor plan (from a selected room, which the deck then follows, or from the house wall for the ledger) or Deck on this wall from a building's wall elevation
+- Attached with a ledger, freestanding or ground level; rectangles, L-shapes and several levels joined by steps, each at one height over flat ground
+- Joists, beams, posts and footings suggested from the AWC DCA 6 span tables (2012 IRC edition) for southern pine, Douglas fir-larch, hem-fir and spruce-pine-fir, with cantilevers within the table limits; sizes can be changed, with a warning where they go over the tables. Suggestions follow the tables; the local building department has the final say
+- Low decks hang the joists from flush beams and set the beams on the piers
+- Decking in 5/4x6 or 2x6 wood or composite (with its own joist spacing), square to the joists, diagonal, with a picture frame border or a breaker board, butt joints over joists and staggered
+- Stairs with risers, treads and stringers worked out from the height (7 3/4" risers or less, 10" treads or more, cut stringers at 18" or less and 6' spans), landings, handrails; guards over 30" with posts, rails and balusters with openings under 4"
+- Pages: footing and post plan with stake-out dimensions, framing plan, decking plan, front and side elevations and the stair stringer detail; building views (framing, finished, exploded), lumber list, cut list, cutting plan and a hardware list (hangers, brackets, bolts, screws or hidden fasteners, concrete bags)
+
 **Tile layouts**
 - Tile layout pages for floors and walls: New page > Tile layout for a typed outline, Tile layout on a floor plan for a selected room or one side of a selected wall, or Tile this wall on a framing wall elevation (inside or outside face)
 - Layouts stay linked to their room or wall and follow its changes; if the source is deleted the layout keeps its last outline and says so
@@ -125,7 +134,7 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 
 ## Demo projects
 
-Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page, a framed garden shed, wood store and partition wall, tile layouts for the bath and kitchen floors, a backsplash and a shower wall, and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
+Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page, a framed garden shed, wood store and partition wall, tile layouts for the bath and kitchen floors, a backsplash and a shower wall, four decks, and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
 
 ## Running with Docker
 

@@ -107,7 +107,7 @@ function tileFromFloor() {
   }, 'Create', '<div class="note">Doors, windows and cabinets or fixtures against the wall are left out. Leave the heights empty to tile the whole wall; a backsplash is usually from the counter (36" or 900 mm) up to the wall cabinets.</div>');
 }
 function tileFromFrame() {
-  const pg = page(), b = bldOf(pg); if (!b || !isFrame(pg)) { flash('Open a framing wall elevation first'); return; }
+  const pg = page(), b = bldOf(pg); if (!b || !isFrame(pg) || isDeck(b)) { flash('Open a framing wall elevation first'); return; }
   const key = frameWallKey(pg); if (pg.view === 'plan' || pg.view === 'floor' || pg.view === 'roof') { flash('Open one of the wall elevations first'); return; }
   dialog('Tile this wall', [['name', 'Name', b.name + ' ' + (WALL_NAMES[key] || 'wall').toLowerCase()], ['face', 'Face', 'in', 'select', [['in', 'Inside'], ['out', 'Outside']]], ['z0', 'Tile from height', ''], ['z1', 'Tile up to height', '']], v => {
     const T = newTileLayout(v.name || 'Wall', 'wall', { kind: 'fwall', bld: b.id, wall: key, face: v.face });

@@ -600,3 +600,31 @@ tr.pb-share td{background:var(--panel)}
 :root[data-sheet=dark] #canvas .tlwall{stroke:#e2e6eb}
 :root[data-sheet=dark] #canvas .tlhole,:root[data-sheet=dark] #canvas .tlcut{fill:#1e2228}
 :root[data-sheet=dark] #canvas .tlchalk,:root[data-sheet=dark] #canvas .tlstp,:root[data-sheet=dark] #canvas .tlst{stroke:#8fb3ff}
+/* decks */
+.dkhouse{fill:#e8e2d6;stroke:#5d6775;stroke-width:.25}
+.dkoutline{fill:none;stroke:#1d232c;stroke-width:.4}
+.dkbeamc{stroke:#8a6d1d;stroke-width:.25;stroke-dasharray:3,1,.6,1}
+.dkfoot{fill:rgba(150,150,150,.15);stroke:#6b6b6b;stroke-width:.25;stroke-dasharray:1,.6}
+.dkpost{fill:#c49a63;stroke:#5a4220;stroke-width:.2}
+.dkbeam{fill:rgba(217,179,122,.35);stroke:#8a6d1d;stroke-width:.25;stroke-dasharray:1.2,.6}
+.dkledger{fill:#c4914f;stroke:#5a4220;stroke-width:.2}
+.dkrim{fill:#e0bf8a;stroke:#5a4220;stroke-width:.2}
+.dkjoist{fill:#ecd3a6;stroke:#5a4220;stroke-width:.15}
+.dkjoistf{fill:none;stroke:#b8a582;stroke-width:.12;stroke-dasharray:1,.8}
+.dkblock{stroke:#5a4220;stroke-width:.35}
+.dkboard{fill:rgba(176,122,74,.28);stroke:#7a5230;stroke-width:.12}
+.dkcomp{fill:rgba(141,143,138,.35);stroke:#55574f}
+.dkborder{fill:rgba(140,90,50,.45)}
+.dkstair{fill:rgba(217,179,122,.25);stroke:#8a6d1d;stroke-width:.3}
+.dkstep{stroke:#8a6d1d;stroke-width:.2}
+.dkgrade{stroke:#4a3a28;stroke-width:.4}
+.dkfootel{fill:#d9d9d9;stroke:#6b6b6b;stroke-width:.2}
+.dkpostel{fill:#c49a63;stroke:#5a4220;stroke-width:.15}
+.dkbeamel{fill:#d9b37a;stroke:#5a4220;stroke-width:.15}
+.dkrimel,.dkjoistel{fill:#ecd3a6;stroke:#5a4220;stroke-width:.15}
+.dkdeckel{fill:#b07a4a;stroke:#5a4220;stroke-width:.12}
+.dkrailel{fill:#e2c79a;stroke:#5a4220;stroke-width:.12}
+.dkbal{stroke:#7a5230;stroke-width:.25}
+.dkstairel,.dkstringer{fill:#ecd3a6;stroke:#5a4220;stroke-width:.25}
+:root[data-sheet=dark] #canvas .dkoutline,:root[data-sheet=dark] #canvas .dkgrade{stroke:#e2e6eb}
+:root[data-sheet=dark] #canvas .dkhouse{fill:#2a313b}

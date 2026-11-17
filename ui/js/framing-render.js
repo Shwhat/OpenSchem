@@ -74,6 +74,7 @@ function wallShellSolid(M, fw, at) {
 
 // ---------- the solids for one view kind ----------
 function frameSolids(M, kind) {
+  if (M.mode === 'deck') return deckSolids(M, kind);
   M._solids = M._solids || {}; if (M._solids[kind]) return M._solids[kind];
   const S = [], T = M.T, WD = M.WD, W = M.W || M.L, D = M.D || WD, F = M.floor, R = M.roof;
   const ex = kind === 'exploded' ? Math.max(600, 0.3 * Math.max(W, D)) : 0, lift = kind === 'exploded' ? Math.max(900, 0.45 * M.wallTop) : 0;
@@ -208,8 +209,8 @@ function bviewSVG(M, kind, yaw, cell, withDims) {
 // ---------- the Building views report ----------
 function buildBuildingViewReports(reps) {
   (P.buildings || []).forEach((b, bi) => {
-    const M = frameModel(b); if (!M.walls || !M.walls.length || (M.errs && M.errs.length)) return;
-    const kinds = b.mode === 'wall' ? BV_KINDS.slice(0, 2) : BV_KINDS;
+    const M = frameModel(b); if ((M.errs && M.errs.length) || (!isDeck(b) && (!M.walls || !M.walls.length))) return;
+    const kinds = b.mode === 'wall' ? BV_KINDS.slice(0, 2) : isDeck(b) ? [['framing', 'Framing'], ['shell', 'Finished'], ['exploded', 'Exploded']] : BV_KINDS;
     kinds.forEach(([k, name], i) => reps.push({ id: `rep:bviews:${b.id}:${i + 1}`, report: 'bviews', bld: b.id, view3: k, fn: '', loc: '', num: `BV${bi + 1}.${i + 1}`, desc: `Building views ${b.name}`, title: `Building views ${b.name}`, sub: name, cols: [], rows: [], sheet: i + 1, sheets: kinds.length, items: [], wires: [] }));
   });
 }
@@ -219,6 +220,7 @@ function buildingViewsSVG(rp) {
   s += `<text class="t" x="${SH.x0 + 3}" y="${SH.hdr + 10}" font-size="5" font-weight="bold">${esc(rp.title)}: ${esc(rp.sub)}</text>`;
   if (rp.sheets > 1) s += `<text class="t" x="${SH.x1 - 3}" y="${SH.hdr + 10}" font-size="3" text-anchor="end">Sheet ${rp.sheet} of ${rp.sheets}</text>`;
   if (!M || !M.walls) return s;
+  if (M.mode === 'deck') { const dn = { framing: 'Footings, posts, beams, joists, stair stringers and guard posts, seen from the four corners.', shell: 'The finished deck with decking, guards and stairs, seen from the four corners.', exploded: 'The framing, decking and guards pulled apart in layers.' }; s += `<text class="t tc" x="${SH.x0 + 3}" y="${SH.hdr + 16}" font-size="2.8">${esc(dn[rp.view3])}</text>`; const x0 = SH.x0 + 2, x1 = SH.x1 - 2, y0 = SH.hdr + 20, y1 = SH.tb - 2, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2; const cells = [[x0, y0, xm, ym], [xm, y0, x1, ym], [xm, ym, x1, y1], [x0, ym, xm, y1]]; s += `<path class="frext" d="M${xm},${y0}V${y1}M${x0},${ym}H${x1}"/>`; BV_VIEWS.forEach(([, yaw], i) => { s += bviewSVG(M, rp.view3, yaw, cells[i], i === 0); }); return s; }
   const notes = { framing: 'Every stud, plate, header, joist and rafter as built, seen from the four corners.', shell: 'Walls, roof, doors and windows as finished surfaces, seen from the four corners.', exploded: 'The framing with the walls pulled out from the corners and the roof lifted, seen from the four corners.' };
   s += `<text class="t tc" x="${SH.x0 + 3}" y="${SH.hdr + 16}" font-size="2.8">${esc(notes[rp.view3])}</text>`;
   if (rp.view3 !== 'shell') {

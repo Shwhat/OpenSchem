@@ -76,6 +76,14 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - `ui/js/tiles-ui.js` (after `menus.js`): commands, the contextual Tiles tab (`ctx: 'tile'`), `newTileDlg`, `tileFromFloor` (selected room or wall), `tileFromFrame` (framing wall elevation), settings fields (`tileFields`, scope `tl` in Properties), mouse tools, delete and duplicate.
 - Demo: bath floor (diagonal), kitchen floor (herringbone), kitchen backsplash (wall side, 36" to 54", added area), shower wall (typed, 1/3 bond from a corner, niche cut out), laundry floor (hexagon), patio (typed L-shape, versailles), garden shed wall inside (basketweave, picked start). Tests: `52-tiles.mjs`, coverage in `05-demo.mjs`.
 
+### Code map for 1.21.0 additions (decks)
+
+- Decks are buildings with `mode: 'deck'` (`isDeck(b)`), so they share the framing pages (kind `frame`, views `dfoot`, `dframe`, `ddeck`, `delev`, `dstair`), the lumber list, cut list, cutting plan, building views and Excel export. `frameModel0` hands decks to `deckModel0`; `frameModel` runs `deckSyncLink` first (links: `{ kind: 'room' | 'wall', level, ... }` on a floor plan, `{ kind: 'bwall', bld, wall }` on a building; `b._lost` when the source is gone).
+- `ui/js/decks.js`: the tables in `DCA6` (Table 2 joists, Table 3A beams, Table 4 posts and footings, Table 5 ledger fasteners, from the AWC DCA 6 guide, 2012 IRC edition; IRC Table R507.7 for decking spacing), `newDeck`, `newDeckStair`. A deck is a list of platforms `{ x, y, w, d, h }` (x along the house, y out from it, h top of decking above grade). Per platform: the smallest joist that spans with the table cantilever, beam lines, the beam with the fewest posts (only beams that fit under a low deck), flush beams and piers when low, posts and footings from Table 4, ledger fasteners, joists, rims, blocking (`M.plats[i]`). `deckBoards` (square, diagonal, picture frame, breaker; joints over joists through `splitRun`), `deckStairList` (stairs plus automatic steps between platforms of different heights), `deckStairs`, `deckRails` (guards over 30", openings under 4"). Hardware collects into `M.hw`; table overruns go to `M.warns` (project check warnings), remarks to `M.notes`.
+- `ui/js/decks-draw.js`: `deckPageSVG` (plans with the house at the top, elevations, stair detail), `deckSolids` (3D; decking, treads and guards marked `last`), `buildDeckReports` (report kind `hardware`).
+- `ui/js/decks-ui.js` (after `menus.js`): commands, the contextual Deck tab (`ctx: 'deck'`, chosen in `renderToolbar` when a framing page belongs to a deck), `deckFields` (sections `dsize`, `dframe`, `ddeck`, `dstairs`, `drail` in `FRAME_SECTIONS`), `renderDeckProps`, `newDeckDlg`, `deckFromFloor`, `deckFromFrame`.
+- Demo: back deck (ledger on the house wall, L-shape, stairs), garden deck (freestanding, two levels with steps, composite diagonal, Douglas fir), shed deck (ground level on the garden shed wall, 2x6 picture frame, hem-fir), side deck (freestanding, breaker board, spruce-pine-fir, bolts, set cantilever). Tests: `53-decks.mjs`, coverage in `05-demo.mjs`.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -110,7 +118,7 @@ Questions to settle: which fields to keep (technical data, prices, images, docum
 
 A tile layout page made from a floor plan room, a floor plan wall side, a framing wall (inside or outside) or a typed outline, linked to its source (follows changes; keeps the last outline if the source is deleted). Tiled area = source outline minus doors, windows and cabinet or fixture blocks; walls also get a height range; areas can be added or cut out on the tile page. Patterns: straight grid at any rotation, running bond 1/2 and 1/3, herringbone, basketweave, hexagon, versailles. Settings: tile size, grout joint, rotation, starting point (center, corner, picked point; joint or tile center on it), balanced cuts, minimum cut (default 1/3 tile). Page: tiles drawn, cut tiles shaded, slivers flagged, chalk lines dimensioned from the walls, starting tile marked. Reports per layout: tile cut list (grouped, offcuts reused) and tile order (counts, boxes with waste 10% or 15% for diagonal and herringbone, grout and thinset). Demo: bathroom floor, backsplash, shower wall.
 
-### 3. Decks (settled, building as 1.21.0)
+### 3. Decks (built in 1.21.0)
 
 Freestanding, ledger attached, ground level, L-shapes and levels. New page > Deck (typed size or outline), drawn on a floor plan (linked), ledger on a floor plan or building wall. One deck height over flat ground. Sizes suggested from the AWC DCA 6 span tables by species (Southern pine, Douglas fir-larch, Hem-fir, Spruce-pine-fir), overridable, warnings when over. Footings, posts with brackets, beams, joists, rim, blocking, ledger, cantilevers; decking (5/4x6, 2x6, composite) square, diagonal, picture frame, breaker board, staggered butt joints over joists; stairs (rise, run, stringers, treads); railings (posts, rails, balusters, 4 inch rule). Pages: footing and post plan with stake-out, framing plan, decking plan, elevations, stair detail; building views in 3D; lumber list, cut list, cutting plan and hardware list. Suggestions follow the tables; the local building department decides.
 
@@ -169,6 +177,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 - 1.20.0 (tile layouts): tile layout pages from a floor plan room, a floor plan wall side, a framing wall or a typed outline, linked to the source; six patterns; start point, balanced cuts and smallest cut; tile cut list and tile order report pages and Excel export.
 
+- 1.21.0 (decks): ledger, freestanding and ground level decks, L-shapes and levels with steps, sizes suggested from the DCA 6 tables by species, decking layouts, stairs, guards, footing and post plan, framing and decking plans, elevations, stair detail, building views, lumber, cut list, cutting plan and hardware list.
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -195,9 +205,10 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - Framing: sheathing and panel counts do not subtract doors and windows. Peak height ignores the ridge board depth.
 - Make floor plan copies the building once; later changes to the building do not update that floor plan. Building from room needs a rectangular room drawn square to the page.
 - Building views: solids are sorted back to front by their centers (floor first, roof surfaces last, doors and glass right after their wall), so a few places in the framing view where members cross can overlap in the wrong order. The building's 3D window does not lower the walls facing you. Gable and rake studs are drawn to their long point, not cut to the slope.
+- Decks: flat ground and one height per section; DCA 6 single-span joists (longer joists get beams under the joints with a warning); beam load from the joist span plus cantilever (a conservative reading of Table 3A); no hip or curved shapes, built-in benches, skirting or lighting; guard post spacing and stair guards use common defaults (6', 36"); frost depth is a setting. Metric lumber uses the tables for the nearest North American size.
 - Tile layouts: the cut size of an angled or notched cut is the box around the piece in the tile's directions, with the percentage kept; offcuts are only reused for straight cuts. Blocks are left out of walls from the floor up to their height (no wall cabinets). Grout and thinset are estimates. Very small tiles over large areas are refused above about 30,000 tiles.
 - 3D view: blocks get a height from their name or category; faces are sorted back to front, so a few views can show a face in the wrong order.
 
 ## Where we left off
 
-1.20.0 (tile layouts) is committed (acad0f9) and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.21.0 decks (spec settled, see Open ideas). Manufacturer part library import is on hold.
+1.19.0 (splicing), 1.20.0 (tile layouts) and 1.21.0 (decks) are committed and pushed to `main`; GitHub Actions publishes the images. 218 browser tests and the Go server tests pass. Image archives for 1.21.0 delivered. Waiting for my testing. Manufacturer part library import is on hold.

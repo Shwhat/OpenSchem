@@ -2,7 +2,7 @@
 // Branches are collapsed unless they hold the open page, so the tree shows one page open at a time.
 // Expanding or collapsing a branch by hand is remembered until another page is opened inside it.
 const NAV = { open: {}, filter: '', todo: false, lastCur: null };
-const REPORT_KINDS = { lumber: 'Lumber lists', cutlist: 'Framing cut lists', cutplan: 'Cutting plans', bviews: 'Building views', tilecuts: 'Tile cut lists', tileorder: 'Tile orders', cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
+const REPORT_KINDS = { lumber: 'Lumber lists', cutlist: 'Framing cut lists', cutplan: 'Cutting plans', bviews: 'Building views', hardware: 'Deck hardware lists', tilecuts: 'Tile cut lists', tileorder: 'Tile orders', cover: 'Cover sheet', toc: 'Table of contents', panel: 'Panel schedules', bom: 'Bill of materials', term: 'Terminal diagrams', conn: 'Connection list', cables: 'Cable overview', cabdiag: 'Cable diagrams', rev: 'Revision overview' };
 
 function navTree() {
   const sch = { key: 'sch', label: home() ? 'Circuits' : 'Schematic', kids: [] };
@@ -224,7 +224,7 @@ function renderPageTabs() {
 
 // ---------- right-click menu on the navigator ----------
 // New page makes the kind of page you are looking at; the arrow next to it picks another kind
-const NEW_PAGE_KINDS = [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Building (framing)', 'newBuilding'], ['Framed wall', 'newFramedWall'], ['Tile layout', 'newTileLayout'], ['Custom report', 'newCustomReport']];
+const NEW_PAGE_KINDS = [['Schematic page', 'addPage'], ['Floor plan page', 'addFloorPage'], ['Panel layout page', 'newLayoutPage'], ['Building (framing)', 'newBuilding'], ['Framed wall', 'newFramedWall'], ['Deck', 'newDeck'], ['Tile layout', 'newTileLayout'], ['Custom report', 'newCustomReport']];
 function newPageAct(pg = page()) { return pg && pg.custom ? 'newCustomReport' : pg && !pg.report ? (isFloor(pg) ? 'addFloorPage' : isLayout(pg) ? 'newLayoutPage' : isFrame(pg) ? 'newBuilding' : isTile(pg) ? 'newTileLayout' : 'addPage') : 'addPage'; }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-newpagemenu]'); if (!b) return;
