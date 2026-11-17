@@ -160,4 +160,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.17.0 is built locally and not committed (framing, from the standalone OpenFrame planner, which is retired). 207 browser tests (6 new in `51-framing.mjs`) and the Go server tests pass. `48-ux.mjs` was updated for the two new kinds on the New page menu. Image archives `openschem-1.17.0-amd64.tar.gz` and `openschem-1.17.0-arm64.tar.gz` delivered (the amd64 image was started and answered, health check OK). Waiting for my testing. Manufacturer part library import is on hold.
+1.17.0 is committed and pushed to `main` (commit 5525d21, on top of 6ae2b74 Remove licensing); GitHub Actions publishes the images. It adds framing (from the standalone OpenFrame planner, which is retired). 207 browser tests (6 new in `51-framing.mjs`) and the Go server tests pass. `48-ux.mjs` was updated for the two new kinds on the New page menu. Image archives `openschem-1.17.0-amd64.tar.gz` and `openschem-1.17.0-arm64.tar.gz` delivered (the amd64 image was started and answered, health check OK). Waiting for my testing. Manufacturer part library import is on hold.
