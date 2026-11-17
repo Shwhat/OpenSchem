@@ -83,7 +83,7 @@ const DEF_SETTINGS = { terms: 'eng', tagStyle: 'eng', numbering: 'house', fpSymb
 function S() { if (!P.settings) P.settings = Object.assign({}, DEF_SETTINGS); return P.settings; }
 function ensureProject(p) {
   p.settings = Object.assign({}, DEF_SETTINGS, p.settings || {}); p.std = p.std === 'NFPA' ? 'NFPA' : 'IEC';
-  p.levels = p.levels || []; p.buildings = p.buildings || []; p.buildings.forEach(b => { if (!b.splice) b.splice = spliceDefaults((p.lumber || (p.units === 'metric' ? 'metric' : 'na')) === 'metric'); }); p.pool = p.pool || []; p.circuits = p.circuits || {}; p.assets = p.assets || {};
+  p.levels = p.levels || []; p.buildings = p.buildings || []; p.tiles = p.tiles || []; p.buildings.forEach(b => { if (!b.splice) b.splice = spliceDefaults((p.lumber || (p.units === 'metric' ? 'metric' : 'na')) === 'metric'); }); p.pool = p.pool || []; p.circuits = p.circuits || {}; p.assets = p.assets || {};
   for (const pg of p.pages) { pg.items = pg.items || []; pg.wires = pg.wires || []; pg.cables = pg.cables || []; pg.gfx = pg.gfx || []; if (pg.kind === 'layout') pg.lay = pg.lay || []; }
   p.revs = p.revs || []; p.todos = p.todos || [];
   p.units = p.units === 'metric' ? 'metric' : 'imperial';

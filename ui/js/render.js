@@ -215,6 +215,7 @@ function pageSVG0(pg, o = {}) {
   if (pg.kind === 'floor') return floorSVG(pg, o);
   if (pg.kind === 'layout') return layoutSVG(pg, o);
   if (pg.kind === 'frame') return framingPageSVG(pg, o);
+  if (pg.kind === 'tile') return tilePageSVG(pg);
   const all = allPages(); const idx = all.indexOf(pg);
   const g = gs();
   let s = `<defs><pattern id="gp" x="${-g / 2}" y="${-g / 2}" width="${g}" height="${g}" patternUnits="userSpaceOnUse"><circle cx="${g / 2}" cy="${g / 2}" r="${g < 3 ? 0.12 : 0.17}" class="grid"/></pattern></defs>`;

@@ -4,6 +4,7 @@ function delSel() {
   if (isFloor(page())) { fpDelete(); return; }
   if (isLayout(page())) { layDelete(); return; }
   if (isFrame(page())) { frameDelete(); return; }
+  if (isTile(page())) { tileDelete(); return; }
   commit(() => {
     for (const pg of P.pages) { pg.items = pg.items.filter(i => !sel.has(i.id)); pg.wires = pg.wires.filter(w => !sel.has(w.id)); pg.cables = (pg.cables || []).filter(c => !sel.has(c.id)); pg.gfx = (pg.gfx || []).filter(g => !sel.has(g.id)); }
     for (const lv of P.levels) lv.places = lv.places.filter(pl => !sel.has(pl.item));
@@ -19,7 +20,7 @@ function transformSel(fn, items) {
     reAutoConnect(pg, items);
   });
 }
-function rotateSel() { if (isFloor(page())) { fpRotate(); return; } if (isFrame(page())) return; if (isLayout(page())) { const pg = page(); const ls = pg.lay.filter(o => sel.has(o.id)); if (ls.length) commit(() => ls.forEach(o => { [o.w, o.h] = [o.h, o.w]; })); return; } transformSel(it => { it.rot = ((it.rot || 0) + 90) % 360; }); }
+function rotateSel() { if (isFloor(page())) { fpRotate(); return; } if (isFrame(page()) || isTile(page())) return; if (isLayout(page())) { const pg = page(); const ls = pg.lay.filter(o => sel.has(o.id)); if (ls.length) commit(() => ls.forEach(o => { [o.w, o.h] = [o.h, o.w]; })); return; } transformSel(it => { it.rot = ((it.rot || 0) + 90) % 360; }); }
 function mirrorSel() { if (isFloor(page()) || page().report) return; transformSel(it => { it.mir = !it.mir || undefined; }); }
 function copySel() {
   const pg = page(); if (!sel.size || isFloor(pg) || pg.report) return;
@@ -33,7 +34,7 @@ async function paste() {
 }
 // copy a whole schematic page, to paste it as a new page in this or another project
 function copyPage() {
-  const pg = page(); if (pg.report || isFloor(pg) || isLayout(pg) || isFrame(pg)) { flash('Open a schematic page to copy it'); return; }
+  const pg = page(); if (pg.report || isFloor(pg) || isLayout(pg) || isFrame(pg) || isTile(pg)) { flash('Open a schematic page to copy it'); return; }
   clip = clone({ page: { fn: pg.fn, loc: pg.loc, desc: pg.desc, size: pg.size, type: pg.type }, items: pg.items, wires: pg.wires, cables: pg.cables || [], gfx: pg.gfx || [] });
   flash(`Copied page ${pageName(pg)}`);
 }
@@ -98,6 +99,7 @@ function delPage() {
   if (P.pages.length < 2) { alert('A project needs at least one page.'); return; }
   const pg = page();
   if (isFrame(pg)) { frameDeleteBuilding(pg); return; }
+  if (isTile(pg)) { tileDeleteLayout(pg); return; }
   const lastOfLevel = isFloor(pg) && !P.pages.some(p => p !== pg && isFloor(p) && p.level === pg.level);
   if (!confirm(`Delete page ${pageName(pg)} "${pg.desc}"?` + (lastOfLevel ? '\n\nThis is the last page of this level, so its rooms, image and floor-plan placements are deleted too.' : ''))) return;
   commit(() => {
@@ -111,6 +113,7 @@ function dupPage() {
   if (notOnReport()) return;
   const pg = page();
   if (isFrame(pg)) { frameDuplicate(pg); return; }
+  if (isTile(pg)) { tileDuplicate(pg); return; }
   if (isFloor(pg)) {
     commit(() => { const np = clone(pg); np.id = uid(); np.num = String(Math.max(0, ...P.pages.filter(p => isFloor(p) && p.level === pg.level).map(p => parseInt(p.num, 10) || 0)) + 1); np.desc = pg.desc + ' (copy)'; P.pages.push(np); sortPages(); curId = np.id; sel.clear(); });
     return;

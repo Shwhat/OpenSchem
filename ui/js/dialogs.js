@@ -83,6 +83,7 @@ function checkProject() {
   buildIndex(); NETS = computeNets();
   const msgs = [];
   const add = (lv, text, id) => msgs.push({ lv, text, id });
+  for (const { T, e, lvl } of tileErrors()) { const pg = P.pages.find(p => p.tile === T.id); add(lvl, `${T.name}: ${e}`, pg ? 'page:' + pg.id : ''); }
   for (const { b, M } of frameErrors()) { const pg = P.pages.find(p => p.bld === b.id); for (const e of M.errs) add('e', `${b.name}: ${e}`, pg ? 'page:' + pg.id : ''); }
   for (const d of IX.dev.values()) {
     const id = fl(d.fn, d.loc) + '-' + d.tag;

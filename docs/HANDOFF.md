@@ -66,6 +66,16 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - The New building dialog no longer refuses a building with a lumber problem; the problem shows on the page, in Properties and in the project check.
 - Demo: the garden shed buys 8' boards only (spliced plates, rims, ridge, skids and lapped ties); a tool shed (12' x 8', 10' boards) has scabbed rafter ties. Tests: the splicing test in `51-framing.mjs`, demo coverage in `05-demo.mjs`.
 
+### Code map for 1.20.0 additions (tile layouts)
+
+- `ui/js/tiles.js`: tile layouts in `P.tiles` (`newTileLayout(name, surf, src)`, `tileDefaults(surf)`, one page each of kind `tile` with `pg.tile`, `syncTilePages`). `src` is `{ kind: 'room' | 'wall' | 'fwall' | 'typed', ... }`; `tileSourceGeom()` reads the live outline and the parts left out (openings, and blocks for which `tileBlockCut()` is true), `tileGeom()` keeps the last outline in `T.last` (used with `lost` when the source is gone), applies the wall height range (`T.z0`, `T.z1`) and adds `T.adds` and `T.cuts`. Surface coordinates are real mm, x right, y up; walls are seen from the tiled side (`wallSideFlip`).
+- Geometry: convex clipping (`clipLine`, `clipConvex`, `minusConvex`), `hull`, `lineInBox`. Each tile is clipped to the surface: added areas first, then the outline less them, then the convex holes out; the pieces give the exact area and the cut size in the tile's own directions.
+- Patterns (`patternTiles`): grid, bond (`bond` 1/2 or 1/3), herring, basket, hex (`w` across flats), versailles (`w` is the small square; module 5 x 3 units with 2x3, 2x2, 2x1 and 1x1 tiles). The reference tile (`ref`) sits on the start point by `tileStart()` (corner, middle or picked point; joint or tile middle). `tileLayout(T)` caches by geometry and settings in `TILECACHE`; with balanced cuts it tries joint and tile middle on each axis and keeps the one with the fewest too-thin cuts.
+- Quantities: `tileCutPlan()` (straight cuts from offcuts where they fit), `tileOrder()` (boxes with `tileWaste()`, grout from the joint volume, thinset by trowel notch), `tileErrors()` for the project check.
+- `ui/js/tiles-draw.js`: `tilePageSVG()` (tiles, holes, added and cut-out areas with `data-id`, slivers circled, start tile, chalk lines and their crossing dimensioned), report kinds `tilecuts` and `tileorder` (`buildTileReports`), `tileExportXlsx()`. `TLM` holds the tile page tool (start, add, cut).
+- `ui/js/tiles-ui.js` (after `menus.js`): commands, the contextual Tiles tab (`ctx: 'tile'`), `newTileDlg`, `tileFromFloor` (selected room or wall), `tileFromFrame` (framing wall elevation), settings fields (`tileFields`, scope `tl` in Properties), mouse tools, delete and duplicate.
+- Demo: bath floor (diagonal), kitchen floor (herringbone), kitchen backsplash (wall side, 36" to 54", added area), shower wall (typed, 1/3 bond from a corner, niche cut out), laundry floor (hexagon), patio (typed L-shape, versailles), garden shed wall inside (basketweave, picked start). Tests: `52-tiles.mjs`, coverage in `05-demo.mjs`.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -96,7 +106,7 @@ Import the part data files that manufacturers publish on their websites for the 
 
 Questions to settle: which fields to keep (technical data, prices, images, documents, connection point patterns, macros); whether macros or graphics inside the archive are imported or ignored; behavior when a part already exists (probably the same Skip/Replace question as CSV import).
 
-#### 2. Tile layouts (settled, building as 1.20.0)
+#### 2. Tile layouts (built in 1.20.0)
 
 A tile layout page made from a floor plan room, a floor plan wall side, a framing wall (inside or outside) or a typed outline, linked to its source (follows changes; keeps the last outline if the source is deleted). Tiled area = source outline minus doors, windows and cabinet or fixture blocks; walls also get a height range; areas can be added or cut out on the tile page. Patterns: straight grid at any rotation, running bond 1/2 and 1/3, herringbone, basketweave, hexagon, versailles. Settings: tile size, grout joint, rotation, starting point (center, corner, picked point; joint or tile center on it), balanced cuts, minimum cut (default 1/3 tile). Page: tiles drawn, cut tiles shaded, slivers flagged, chalk lines dimensioned from the walls, starting tile marked. Reports per layout: tile cut list (grouped, offcuts reused) and tile order (counts, boxes with waste 10% or 15% for diagonal and herringbone, grout and thinset). Demo: bathroom floor, backsplash, shower wall.
 
@@ -157,6 +167,8 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 - 1.19.0 (splicing): runs longer than the longest board are spliced over supports, rafter ties lap or get a scab, splice settings in the building's Lumber settings, splice marks and part numbers, New building no longer blocks over a lumber problem (the rafter tie error on a 19'-5 3/4" building).
 
+- 1.20.0 (tile layouts): tile layout pages from a floor plan room, a floor plan wall side, a framing wall or a typed outline, linked to the source; six patterns; start point, balanced cuts and smallest cut; tile cut list and tile order report pages and Excel export.
+
 ## Skipped for now
 
 - Home Assistant integration.
@@ -183,8 +195,9 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 - Framing: sheathing and panel counts do not subtract doors and windows. Peak height ignores the ridge board depth.
 - Make floor plan copies the building once; later changes to the building do not update that floor plan. Building from room needs a rectangular room drawn square to the page.
 - Building views: solids are sorted back to front by their centers (floor first, roof surfaces last, doors and glass right after their wall), so a few places in the framing view where members cross can overlap in the wrong order. The building's 3D window does not lower the walls facing you. Gable and rake studs are drawn to their long point, not cut to the slope.
+- Tile layouts: the cut size of an angled or notched cut is the box around the piece in the tile's directions, with the percentage kept; offcuts are only reused for straight cuts. Blocks are left out of walls from the floor up to their height (no wall cabinets). Grout and thinset are estimates. Very small tiles over large areas are refused above about 30,000 tiles.
 - 3D view: blocks get a height from their name or category; faces are sorted back to front, so a few views can show a face in the wrong order.
 
 ## Where we left off
 
-1.19.0 (splicing) is committed (1984636) and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.20.0 tile layouts and 1.21.0 decks (specs settled, see Open ideas). Manufacturer part library import is on hold.
+1.20.0 (tile layouts) is committed and pushed to `main`; GitHub Actions publishes the images. Next in the same build request: 1.21.0 decks (spec settled, see Open ideas). Manufacturer part library import is on hold.

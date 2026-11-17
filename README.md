@@ -92,6 +92,15 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - Building views report for each building: framing (every member, colored like the elevations), finished shell (walls, roof, doors and windows) and exploded framing (walls pulled out from the corners, roof lifted), each in four views from the corners with wall names and width, depth and peak height, drawn as vector graphics for print and PDF
 - Make floor plan turns a building into a floor plan level with its walls, doors, windows and a room for furniture from the block library; 3D view shows a floor plan level (walls, doors, windows, rooms and blocks) and lowers the walls facing you; for a building it switches between the shell, the framing and the exploded framing, drawn the same way as the Building views report
 
+**Tile layouts**
+- Tile layout pages for floors and walls: New page > Tile layout for a typed outline, Tile layout on a floor plan for a selected room or one side of a selected wall, or Tile this wall on a framing wall elevation (inside or outside face)
+- Layouts stay linked to their room or wall and follow its changes; if the source is deleted the layout keeps its last outline and says so
+- The tiled area leaves out doors, windows, cased openings and blocks such as cabinets, tubs, showers and appliances (tile runs under a toilet); walls take a height range (a backsplash from 36" to 54"), and areas can be added or cut out on the tile page
+- Patterns: straight grid at any rotation (45 degrees for a diagonal), running bond (1/2 or 1/3 offset), herringbone, basketweave, hexagon and versailles
+- Tile size, grout joint and thickness; start from the middle, a corner or a picked point, with a joint or the middle of a tile on it; balanced cuts; smallest cut (1/3 tile unless set) with thinner cuts flagged
+- The page shows every tile (cut tiles shaded, too-thin cuts in red), the starting tile, and the chalk lines with their position measured from the walls
+- Report pages per layout: a tile cut list (each cut's size and shape, equal cuts grouped, straight cuts taken from offcuts where they fit) and a tile order (full and cut tiles, boxes with 10% waste or 15% for diagonal and herringbone, grout and thinset estimates), also as Excel
+
 **Parts and loads**
 - Parts database in the data folder (part number, manufacturer, order number, type number, description, category, technical data, price, watts, datasheet, size) with search, CSV import and export, and a picker in device properties
 - Part numbers follow the convention manufacturer code plus order number (PXC.3031212, SIE.3RT2015-1BB41). The part number is built from the two and is the unique key: saving a part that already exists offers to open the existing one, and a CSV import that contains existing parts asks once whether to skip or replace them
@@ -116,7 +125,7 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 
 ## Demo projects
 
-Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page, a framed garden shed, wood store and partition wall, and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
+Help > Open IEC demo project and Open NFPA demo project open two projects that each use every feature (pump station control panel, single-line diagram, clamp station pneumatics with tubes and the tubing list, home wiring, floor plans, panel layout, note card page, a framed garden shed, wood store and partition wall, tile layouts for the bath and kitchen floors, a backsplash and a shower wall, and more). They are built by `ui/js/demo.js` from the building blocks in `ui/js/demo-industrial.js` and `ui/js/demo-home.js`; the NFPA demo is the IEC demo converted to NFPA symbols and device letters. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`.
 
 ## Running with Docker
 

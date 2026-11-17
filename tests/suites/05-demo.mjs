@@ -63,12 +63,17 @@ export const tests = {
             ['lumber', 'cutlist', 'cutplan', 'bviews'].every(r => reps.has(r)), B.every(b => !frameModel(b).errs.length),
             B.some(b => frameModel(b).roof && frameModel(b).roof.tieSplice && frameModel(b).roof.tieSplice.how === 'lap'), B.some(b => frameModel(b).roof && frameModel(b).roof.tieSplice && frameModel(b).roof.tieSplice.how === 'scab'),
             B.some(b => frameModel(b).pieces.some(p => /^part 1 of \d, joint over a stud/.test(p.note))), B.some(b => frameModel(b).pieces.some(p => p.name === 'Rim joist' && /joint over a joist/.test(p.note)))]; })(),
+        tiles: (() => { const TT = P.tiles || []; const Ls = TT.map(tileLayout); const t = T => T.tile;
+          return [...['room', 'wall', 'fwall', 'typed'].map(k => TT.some(T => T.src.kind === k)), ...TILE_PATTERNS.map(([k]) => TT.some(T => t(T).pattern === k)),
+            TT.some(T => t(T).pattern === 'bond' && Math.abs(t(T).bond - 1 / 3) < 0.01), TT.some(T => t(T).rot === 45), TT.some(T => t(T).start === 'corner'), TT.some(T => t(T).start === 'point'), TT.some(T => t(T).balance && t(T).start === 'center'),
+            TT.some(T => T.z0 != null || T.z1 != null), TT.some(T => T.adds.length), TT.some(T => T.cuts.length), Ls.every(L => !L.err), Ls.some(L => L.geom.neg.some(n => n.label === 'Opening' || n.label === 'Door')), Ls.some(L => L.geom.neg.some(n => /Bathtub|Range|Refrigerator|Water heater/.test(n.label))),
+            Ls.some(L => L.slivers.length), ['tilecuts', 'tileorder'].every(r => reps.has(r)), TT.some(T => tileCutPlan(T, tileLayout(T)).rows.some(r => r.from !== 'New tile'))]; })(),
         layoutPlaced: P.pages.some(p => p.kind === 'layout' && p.lay.some(o => o.t === 'dev') && p.lay.some(o => o.t === 'rail') && p.lay.some(o => o.t === 'duct')),
       };
     });
     t.eq(f.industrial, [], 'industrial symbols missing'); t.eq(f.home, [], 'home symbols missing'); t.eq(f.boxes, [], 'boxes missing');
     t.ok(f.mixedCard, 'PLC card with inputs and outputs'); t.ok(f.insideBox, 'symbols inside a device box');
-    t.eq(f.pageKinds, ['floor', 'frame', 'layout', 'sch'], hash); t.eq(f.framing, Array(16).fill(true), 'framing: wall, gable and shed roofs, floor on skids and none, doors, windows, flat and double headers, roof panels, framing reports, no problems, lapped and scabbed tie splices, plate and rim splices'); t.ok(f.card, 'note card page');
+    t.eq(f.pageKinds, ['floor', 'frame', 'layout', 'sch', 'tile'], hash); t.eq(f.tiles, Array(24).fill(true), 'tiles: room, wall, framing wall and typed sources, all six patterns, 1/3 bond, 45 degrees, corner, picked and balanced starts, height range, added and cut-out areas, openings and blocks left out, slivers flagged, tile reports, offcuts reused'); t.eq(f.framing, Array(16).fill(true), 'framing: wall, gable and shed roofs, floor on skids and none, doors, windows, flat and double headers, roof panels, framing reports, no problems, lapped and scabbed tie splices, plate and rim splices'); t.ok(f.card, 'note card page');
     t.eq(f.gfx, [], 'graphics missing'); t.ok(f.text && f.cables, 'text and cables');
     t.eq(f.rooms, ['circle', 'ellipse', 'rect'], 'room shapes'); t.ok(f.floorOnly && f.legs, 'floor-only device and switch legs');
     t.ok(f.layer, 'user layer in use'); t.ok(f.parts && f.partSize, 'parts with prices and sizes');

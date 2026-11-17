@@ -4,7 +4,8 @@
 // oval rooms, layers, parts with prices, loads and voltage drop, cables, revisions and to-dos, the IEC or NFPA symbol
 // library, a single-line page, pneumatic pages with tubes and the tubing list, and framing: a garden shed, a wood store
 // with a single-slope panel roof, a framed partition wall and a tool shed, with spliced plates, rims, ridge boards and
-// rafter ties (lapped and with a scab), their lumber lists and building views. The NFPA demo is the IEC demo converted
+// rafter ties (lapped and with a scab), their lumber lists and building views, and tile layouts (bath and kitchen floors,
+// a backsplash, a shower wall, a patio, a hexagon laundry floor and a shed wall). The NFPA demo is the IEC demo converted
 // to NFPA symbols and device letters.
 // When a feature is added, add it here too and to the demo coverage test (tests/suites/05-demo.mjs).
 function buildDemo(std = 'IEC') {
@@ -178,6 +179,20 @@ function buildDemo(std = 'IEC') {
   const tool = newBuilding('building', { name: 'Tool shed', w: 144 * IN_MM, d: 96 * IN_MM, bare: true });
   tool.floor.on = false; tool.stock.lens = [0, 1]; tool.splice.tie = 'scab'; tool.walls.front.ops.push(newFrameOpening('door', tool.w));
   p.buildings = [shed, store, part, tool]; p.buildings.forEach(syncFramePages);
+
+  // ---- tile layouts: the bath and kitchen floors from their rooms, a backsplash on the kitchen wall, a shower wall and
+  // a patio typed in, the laundry floor in hexagons and a wall inside the garden shed ----
+  const TL = (name, surf, src, set) => { const T = newTileLayout(name, surf, src); Object.assign(T.tile, set); p.tiles.push(T); syncTilePages(T); return T; };
+  const room = n => lv.rooms.find(r => r.name === n).id; p.tiles = [];
+  TL('Bath floor', 'floor', { kind: 'room', level: lv.id, room: room('Bath') }, { w: 12 * IN_MM, h: 24 * IN_MM, pattern: 'grid', rot: 45 });
+  TL('Kitchen floor', 'floor', { kind: 'room', level: lv.id, room: room('Kitchen') }, { w: 12 * IN_MM, h: 4 * IN_MM, pattern: 'herring', rot: 45 });
+  const bs = TL('Kitchen backsplash', 'wall', { kind: 'wall', level: lv.id, wall: kd.id, side: roomAt(lv, axPt(kd, wallAxis(kd), wallAxis(kd).len / 2, wallAxis(kd).L + 3)) === kit ? 'L' : 'R', label: 'Kitchen side' }, { w: 6 * IN_MM, h: 3 * IN_MM, joint: IN_MM / 16, pattern: 'bond', bond: 0.5 });
+  bs.z0 = 36 * IN_MM; bs.z1 = 54 * IN_MM; bs.adds.push({ id: uid(), pts: ccwRect(8 * IN_MM, 54 * IN_MM, 38 * IN_MM, 72 * IN_MM) });
+  const sw = TL('Shower wall', 'wall', { kind: 'typed', pts: ccwRect(0, 0, 60 * IN_MM, 96 * IN_MM) }, { w: 24 * IN_MM, h: 12 * IN_MM, joint: IN_MM / 8, pattern: 'bond', bond: 1 / 3, start: 'corner', corner: 'll' });
+  sw.z1 = 84 * IN_MM; sw.cuts.push({ id: uid(), pts: ccwRect(23 * IN_MM, 48 * IN_MM, 37 * IN_MM, 72 * IN_MM) });
+  TL('Laundry floor', 'floor', { kind: 'room', level: lv.id, room: room('Laundry') }, { w: 8 * IN_MM, pattern: 'hex', minCut: 2 * IN_MM });
+  TL('Patio', 'floor', { kind: 'typed', pts: [[0, 0], [16 * 12 * IN_MM, 0], [16 * 12 * IN_MM, 8 * 12 * IN_MM], [8 * 12 * IN_MM, 8 * 12 * IN_MM], [8 * 12 * IN_MM, 14 * 12 * IN_MM], [0, 14 * 12 * IN_MM]] }, { w: 8 * IN_MM, pattern: 'versailles', joint: 3 / 8 * IN_MM, thick: IN_MM, perBox: 6, waste: 12 });
+  TL('Shed workbench wall', 'wall', { kind: 'fwall', bld: shed.id, wall: 'back', face: 'in' }, { w: 8 * IN_MM, h: 4 * IN_MM, pattern: 'basket', start: 'point', pt: [30 * IN_MM, 40 * IN_MM], balance: false, on: 'tile' }).z0 = 34 * IN_MM;
   sortPages();
   return p;
 }

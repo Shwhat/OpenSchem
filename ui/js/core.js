@@ -186,15 +186,16 @@ const allPages = () => orderedPages(REPORTS);
 const pageIdx = pg => P.pages.indexOf(pg);
 function sortPages() {
   const li = id => (P.levels || []).findIndex(l => l.id === id);
-  const kr = p => p.kind === 'frame' ? 3 : p.kind === 'floor' ? 2 : p.kind === 'layout' ? 1 : 0;
-  const bi = id => (P.buildings || []).findIndex(b => b.id === id);
+  const kr = p => p.kind === 'tile' ? 4 : p.kind === 'frame' ? 3 : p.kind === 'floor' ? 2 : p.kind === 'layout' ? 1 : 0;
+  const bi = id => (P.buildings || []).findIndex(b => b.id === id), ti = id => (P.tiles || []).findIndex(t => t.id === id);
   P.pages.sort((a, b) => (kr(a) - kr(b)) ||
-    (a.kind === 'frame' ? (bi(a.bld) - bi(b.bld)) || natCmp(a.num, b.num) : a.kind === 'floor' ? (li(a.level) - li(b.level)) || natCmp(a.num, b.num) : natCmp(a.fn, b.fn) || natCmp(a.loc, b.loc) || natCmp(a.num, b.num)));
+    (a.kind === 'tile' ? ti(a.tile) - ti(b.tile) : a.kind === 'frame' ? (bi(a.bld) - bi(b.bld)) || natCmp(a.num, b.num) : a.kind === 'floor' ? (li(a.level) - li(b.level)) || natCmp(a.num, b.num) : natCmp(a.fn, b.fn) || natCmp(a.loc, b.loc) || natCmp(a.num, b.num)));
 }
 const fl = (fn, loc) => (fn ? '=' + fn : '') + (loc ? '+' + loc : '');
 const pageName = pg => pg.report ? pg.title + (pg.sheets > 1 ? ' ' + pg.sheet : '')
   : pg.kind === 'floor' ? ((levelOf(pg) || {}).name || 'Floor') + '/' + pg.num
   : pg.kind === 'frame' ? ((bldOf(pg) || {}).name || 'Building') + '/' + pg.num
+  : pg.kind === 'tile' ? ((tileOf(pg) || {}).name || 'Tile layout') + '/' + pg.num
   : home() ? ([friendlyCkt(pg.fn), niceRoom(pg.loc)].filter(Boolean).join(' · ') || 'Page') + '/' + pg.num
   : fl(pg.fn, pg.loc) + '/' + pg.num;
 const devKey = it => `${it.fn || ''}\u0001${it.loc || ''}\u0001${it.tag || ''}`;

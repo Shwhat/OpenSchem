@@ -580,3 +580,23 @@ tr.pb-share td{background:var(--panel)}
 :root[data-sheet=dark] #canvas .bvlbl{fill:#e2e6eb}
 .frsplice{stroke:#b25d00;stroke-width:.4}
 :root[data-sheet=dark] #canvas .frsplice{stroke:#f0b35a}
+/* tile layouts */
+.tlf{fill:#eef2f7;stroke:#7d8794;stroke-width:.12}
+.tlc{fill:#c9d5e6;stroke:#5d6775;stroke-width:.12}
+.tls{fill:#f3b4ae;stroke:#b3261e;stroke-width:.2}
+.tlst{stroke:#1f5fbf;stroke-width:.45}
+.tlsm{fill:none;stroke:#b3261e;stroke-width:.35}
+.tlwall{fill:none;stroke:#1d232c;stroke-width:.5}
+.tlhole{fill:#fff;stroke:#5d6775;stroke-width:.25;stroke-dasharray:1,.6}
+.tladd{fill:rgba(47,125,50,.06);stroke:#2f7d32;stroke-width:.3;stroke-dasharray:1.4,.8;cursor:pointer}
+.tlcut{fill:rgba(255,255,255,.85);stroke:#a33;stroke-width:.3;stroke-dasharray:1.4,.8;cursor:pointer}
+.tlsel{stroke:#1f6fff;stroke-width:.6}
+.tlprev{pointer-events:none}
+.tlchalk{stroke:#1f5fbf;stroke-width:.3;stroke-dasharray:2.4,1.2}
+.tlstp{fill:none;stroke:#1f5fbf;stroke-width:.4}
+:root[data-sheet=dark] #canvas .tlf{fill:#2a313b;stroke:#7d8794}
+:root[data-sheet=dark] #canvas .tlc{fill:#3d4d66;stroke:#9aa5b3}
+:root[data-sheet=dark] #canvas .tls{fill:#6e2d2a;stroke:#ff8a8a}
+:root[data-sheet=dark] #canvas .tlwall{stroke:#e2e6eb}
+:root[data-sheet=dark] #canvas .tlhole,:root[data-sheet=dark] #canvas .tlcut{fill:#1e2228}
+:root[data-sheet=dark] #canvas .tlchalk,:root[data-sheet=dark] #canvas .tlstp,:root[data-sheet=dark] #canvas .tlst{stroke:#8fb3ff}
