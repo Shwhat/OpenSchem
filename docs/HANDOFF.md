@@ -169,4 +169,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.18.0 adds the Building views report and the Shell, Framing and Exploded modes of the 3D window. It is committed and pushed to `main`; GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.0-amd64.tar.gz` and `openschem-1.18.0-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.18.0 adds the Building views report and the Shell, Framing and Exploded modes of the 3D window. It is committed and pushed to `main` (commit e975e1c); GitHub Actions publishes the images. 208 browser tests and the Go server tests pass. Image archives `openschem-1.18.0-amd64.tar.gz` and `openschem-1.18.0-arm64.tar.gz` delivered. Waiting for my testing. Manufacturer part library import is on hold.
