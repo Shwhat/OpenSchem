@@ -628,3 +628,22 @@ tr.pb-share td{background:var(--panel)}
 .dkstairel,.dkstringer{fill:#ecd3a6;stroke:#5a4220;stroke-width:.25}
 :root[data-sheet=dark] #canvas .dkoutline,:root[data-sheet=dark] #canvas .dkgrade{stroke:#e2e6eb}
 :root[data-sheet=dark] #canvas .dkhouse{fill:#2a313b}
+/* About guide */
+.abhead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;font-size:15px}
+.about{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px;align-items:start}
+.abtoc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:4px;position:sticky;top:0}
+.abtoc a{padding:4px 8px;border-radius:3px;color:var(--text);text-decoration:none}
+.abtoc a:hover{background:#e8edf4}
+.abtoc a.on{background:var(--accent-soft);color:#0f3f86;font-weight:600}
+.abselect{display:none}
+.abpage{border:1px solid var(--line);border-radius:4px;background:var(--panel2);padding:4px 16px 12px;max-height:62vh;overflow:auto;line-height:1.5}
+.abpage h1{font-size:18px;margin:10px 0 8px}.abpage h2{font-size:14.5px;margin:16px 0 6px}.abpage h3{font-size:13px;margin:12px 0 4px}
+.abpage table{border-collapse:collapse;margin:6px 0 10px;width:100%}
+.abpage th,.abpage td{border:1px solid var(--line2);padding:4px 7px;text-align:left;vertical-align:top}
+.abpage th{background:var(--panel);font-weight:600}
+.abpage code{font-family:Consolas,monospace;font-size:12px;background:var(--panel);padding:0 3px;border-radius:3px}
+.abpage a{color:var(--accent)}
+.abpager{display:flex;gap:12px;border-top:1px solid var(--line);margin-top:16px;padding-top:8px}
+:root[data-theme=dark] .abtoc a:hover{background:#2f3640}
+:root[data-theme=dark] .abtoc a.on{color:#cfe0ff}
+@media (max-width:900px){.about{grid-template-columns:minmax(0,1fr)}.abtoc{display:none}.abselect{display:block;width:100%}}

@@ -74,7 +74,7 @@ export const tests = {
     await p.waitForFunction(() => typeof P !== 'undefined' && P && P.pages);
     t.eq(await p.textContent('#acct'), name, 'the account menu shows the user name');
     await p.dispatchEvent('#acct', 'mousedown');
-    t.eq(await p.$$eval('#dropdown .dd span:first-child', els => els.map(e => e.textContent)), ['Change password...', 'Sign out']);
+    t.eq(await p.$$eval('#dropdown .dd span:first-child', els => els.map(e => e.textContent)), ['About OpenSchem', 'Change password...', 'Sign out']);
     await p.dispatchEvent('.menu[data-menu=file]', 'mousedown');
     const items = await p.$$eval('#dropdown .dd span:first-child', els => els.map(e => e.textContent));
     t.ok(items.includes('Share project...') && items.includes('Download project (.osp)'), 'server items in the File menu');

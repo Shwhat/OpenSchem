@@ -125,6 +125,7 @@ This branch runs OpenSchem as a web server in a Docker container (amd64 and arm6
 - CSV and Excel (.xlsx) export, Excel import that updates existing devices by ID, and vector PDF export with bookmarks and clickable cross-references; PDF export and printing let you choose the pages
 
 **Project tools**
+- About OpenSchem guide (Help menu and account menu): overview, capabilities, a page per area, technical details and release notes, built in and available offline
 - Revision tracking with title block marking
 - Project check (missing main functions, duplicate connection points, open interruption points)
 - To-do list with items linked to devices and pages, and a Pages filter that shows only pages with an open to-do
@@ -216,6 +217,10 @@ OPENSCHEM_DATA=./data ./openschem
 ```
 
 Go 1.24 or later. The server has no dependencies outside the Go standard library. The interface can also be opened without a server for development: `python3 tools/assemble.py` writes `build/openschem.html` (files then go through downloads and settings through browser storage).
+
+## About guide
+
+The About OpenSchem guide is written in `ui/about/NN-slug.md` (one page per file, ordered by `NN`, titled by its first `# ` heading, release notes last). After changing a page, run `python3 tools/about.py` to bundle the pages into `ui/js/about-pages.js`.
 
 ## Testing
 

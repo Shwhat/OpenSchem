@@ -3,6 +3,8 @@
 vendor/jspdf.umd.min.js
 vendor/svg2pdf.umd.min.js
 js/core.js
+js/about-pages.js
+js/about.js
 js/residential.js
 js/layers.js
 js/boxes.js

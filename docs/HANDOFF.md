@@ -84,6 +84,11 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - `ui/js/decks-ui.js` (after `menus.js`): commands, the contextual Deck tab (`ctx: 'deck'`, chosen in `renderToolbar` when a framing page belongs to a deck), `deckFields` (sections `dsize`, `dframe`, `ddeck`, `dstairs`, `drail` in `FRAME_SECTIONS`), `renderDeckProps`, `newDeckDlg`, `deckFromFloor`, `deckFromFrame`.
 - Demo: back deck (ledger on the house wall, L-shape, stairs), garden deck (freestanding, two levels with steps, composite diagonal, Douglas fir), shed deck (ground level on the garden shed wall, 2x6 picture frame, hem-fir), side deck (freestanding, breaker board, spruce-pine-fir, bolts, set cantilever). Tests: `53-decks.mjs`, coverage in `05-demo.mjs`.
 
+### Code map for 1.22.0 additions (About guide)
+
+- `ui/about/NN-slug.md`: the About OpenSchem guide (overview, capabilities, a page per area, technical, release notes last). `python3 tools/about.py` bundles them into `ui/js/about-pages.js` (`ABOUT_PAGES`); `00-static.mjs` fails when the bundle is out of date, a `/about/slug` link points nowhere, a page has an em dash, or the newest release note is not `APP_VERSION`.
+- `ui/js/about.js`: `aboutDlg(slug)` (page list, drop-down under 900 px, Previous and Next, version from `APP_VERSION`) and a small Markdown renderer (`mdRender`). Opened from Help > About OpenSchem, the account menu, and the address `#about` or `#about/slug`. Test: `54-about.mjs`.
+
 ## Rules for working with me
 
 - Do not build the program or make program changes until I say "build it". Until then, ask clarifying questions and settle the spec with me.
@@ -93,6 +98,7 @@ Retired. Do not build or maintain it. The last Windows code is at commit 1f0de32
 - Never use em dashes in any output.
 - Answer questions simply, without extra unrequested actions.
 - The demo projects (Help > Open IEC demo project and Open NFPA demo project, built by `buildDemo(std)` in `ui/js/demo.js` from `demo-industrial.js` and `demo-home.js`; the NFPA demo is the IEC demo converted) must show every project feature. When a feature is added, add it to the demo and to the coverage test in `tests/suites/05-demo.mjs`, which checks both demos. Server features (accounts, sharing) are covered by `91-server.mjs` instead.
+- Every change to what the app does, or the rules it follows, also updates the About guide (`ui/about/`): the affected pages and a new entry at the top of the release notes, then `python3 tools/about.py`. It also raises the version (patch for fixes, minor for features). The version is shown in the guide.
 - Use a task list, update the README feature list, and keep the keyboard shortcut list (`shortcuts()` in `ui/js/dialogs.js`) current.
 - Check every item on the bug list below on the next build.
 - We are in full development and there are no old projects or saved settings to protect. Do not write upgrade conversions (migrations) for old project files or old settings. Change the saved data layout freely. Note: in 1.13.0 a step 3 -> 4 was added to `ui/js/migrate.js` (FORMAT_VERSION 4) against this rule; it can stay or be removed, but add no new steps.
@@ -177,6 +183,7 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 - 1.20.0 (tile layouts): tile layout pages from a floor plan room, a floor plan wall side, a framing wall or a typed outline, linked to the source; six patterns; start point, balanced cuts and smallest cut; tile cut list and tile order report pages and Excel export.
 
+- 1.22.0 (About guide): About OpenSchem guide with overview, capabilities, a page per area, technical details and release notes back to 1.3.1, from Help and the account menu.
 - 1.21.0 (decks): ledger, freestanding and ground level decks, L-shapes and levels with steps, sizes suggested from the DCA 6 tables by species, decking layouts, stairs, guards, footing and post plan, framing and decking plans, elevations, stair detail, building views, lumber, cut list, cutting plan and hardware list.
 
 ## Skipped for now
@@ -211,4 +218,4 @@ Library.zip holds symbol libraries, not part libraries: IEC_single_symbol, IEC_s
 
 ## Where we left off
 
-1.19.0 (splicing, 1984636), 1.20.0 (tile layouts, acad0f9) and 1.21.0 (decks, 3a94fb9) are committed and pushed to `main`; GitHub Actions publishes the images. 218 browser tests and the Go server tests pass. Image archives for 1.21.0 delivered. Waiting for my testing. Manufacturer part library import is on hold.
+1.22.0 (About guide) is committed and pushed to `main`; GitHub Actions publishes the images. Waiting for my testing. Manufacturer part library import is on hold.

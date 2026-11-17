@@ -77,6 +77,7 @@ async function start() {
     if (a) { try { const o = JSON.parse(a); if (o.project && confirm('OpenSchem found unsaved work from a previous session. Restore it?')) { host.pending = o.srv || null; loadProject(o.project, o.path || ''); dirty = true; updateTitle(); } else host.autosave(''); } catch (e) {} }
   }
   // #demo opens the demo project; #ind and #home open its two building blocks (used by the tests)
+  if (/^#about(\/|$)/.test(location.hash)) setTimeout(() => aboutDlg(location.hash.slice(7)), 0);
   if (location.hash === '#demo') loadProject(buildDemo('IEC'), '');
   if (location.hash === '#demo-nfpa') loadProject(buildDemo('NFPA'), '');
   if (location.hash === '#ind') loadProject(demoIndustrial(), '');
