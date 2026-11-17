@@ -46,6 +46,5 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/Shwhat/OpenSchem
             org.opencontainers.image.version=${{ steps.v.outputs.version }}
-            org.opencontainers.image.licenses=GPL-3.0-only
           cache-from: type=gha
           cache-to: type=gha,mode=max

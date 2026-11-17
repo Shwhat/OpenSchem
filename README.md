@@ -208,7 +208,3 @@ Projects are JSON. Each file records its format version (`ver`) and the app vers
 
 - [jsPDF](https://github.com/parallax/jsPDF) (MIT), license in `ui/vendor/jspdf.LICENSE`
 - [svg2pdf.js](https://github.com/yWorks/svg2pdf.js) (MIT), license in `ui/vendor/svg2pdf.LICENSE`
-
-## License
-
-OpenSchem is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).

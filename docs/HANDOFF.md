@@ -4,7 +4,7 @@
 
 OpenSchem is my electrical schematic editor with structured device tagging (=Function +Location -Device). It covers both industrial controls and documenting my home's 120 V wiring. It is a server version (Go web server in Docker) on the `main` branch of one repository.
 
-- Repository: https://github.com/Shwhat/OpenSchem (public, GPL-3.0; the old lowercase address still redirects). Clone it and work in it. All work goes on `main`.
+- Repository: https://github.com/Shwhat/OpenSchem (public; the old lowercase address still redirects). Clone it and work in it. All work goes on `main`.
 - Interface: plain HTML and JavaScript in `ui/`. The load order is in `ui/manifest.txt`, and `files.js` must stay last.
 - Tests: `npm test` runs every suite in `tests/suites/` in headless Chromium. `npm test -- name` runs one suite. Every change gets tests, and all tests must pass before a build. A page error during a test fails it. The DXF tests read files in `tests/fixtures/` (made by `make_dxf.py` with ezdxf). In the cloud workspace Playwright is found at `/opt/npm-tools/node_modules/playwright` with browsers in `/opt/pw-browsers`; do not run `npx playwright install`. The full run takes about 25 minutes, so run it in the background.
 - Bump `APP_VERSION` in `ui/js/migrate.js`, `package.json` and `package-lock.json` with each delivered build. A new `APP_VERSION` resets the saved ribbon layout so new buttons always appear.
